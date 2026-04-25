@@ -30,14 +30,6 @@ directly into each mod binary, so `libcjson-dev` is **not** a required
 host dependency — this matters in particular for the MinGW cross-compile
 targets, where no system `libcjson` is available.
 
-For producing the Windows binaries the server hands out to remote
-clients, the Linux build host needs a MinGW-w64 toolchain providing
-both `i686-w64-mingw32-gcc` (32-bit) and `x86_64-w64-mingw32-gcc`
-(64-bit). On Debian/Ubuntu: `sudo apt install -y mingw-w64`. The
-toolchain files at `cmake/Toolchain-cross-mingw-linux.cmake` (32-bit)
-and `cmake/Toolchain-cross-mingw-x64-linux.cmake` (64-bit) are
-imported from upstream ETLegacy and need no local edits.
-
 ## Configuration options
 
 Set with `-D<NAME>=<VALUE>` on the `cmake -B build` line.
@@ -63,6 +55,37 @@ Outputs in `build/vanguard/`:
 
 Pack these into a `.pk3` along with the contents of `assets/` to get a
 distributable mod folder.
+
+## Mod distribution `.pk3`
+
+ETLegacy refuses to UDP-download loose `.so`/`.dll` modules to clients on
+connect (security feature). To make remote join work without the player
+manually installing the mod, every architecture variant plus the matching
+ETLegacy mod-asset subset is bundled into one zip-format `.pk3` produced
+by upstream's `mod_pk3` target (with Vanguard-specific patches in
+`cmake/ETLBuildMod.cmake`).
+
+`bootstrap.sh` builds the three platforms in the right order and emits
+`build/vanguard/vanguard_v0.1.0.pk3` as part of the Linux build's `ALL`
+target. To repack ad-hoc after touching a single platform's binaries:
+
+    cmake --build build --target mod_pk3
+
+The archive contains 12 module binaries — `cgame`, `qagame`, `tvgame`,
+`ui` for Linux x86_64, Windows x86_64 and Windows x86 — plus the open-
+source ETLegacy mod assets from `etmain/` (gfx, scripts, sound, ui,
+weapons, …). It does **not** contain the genuine Activision paks
+(`pak0/1/2.pk3`, `mp_bin.pk3`) even when those are present in your
+local `etmain/` for testing — they are filtered explicitly.
+
+The loose binaries stay in `build/vanguard/` next to the `.pk3` so the
+dedicated server can `dlopen()` them directly; only remote clients pull
+the `.pk3` over the wire (visible as a brief "Awaiting downloads…" screen
+on first connect, then cached in their game folder).
+
+Override the version by reconfiguring with `CI_ETL_TAG=v0.2.0
+CI_ETL_DESCRIBE=v0.2.0 cmake -B build …` — these env vars are upstream's
+`ETLVersion.cmake` overrides and become the `_${VERSION}.pk3` suffix.
 
 ## Protected build (core devs only)
 

@@ -14,6 +14,10 @@
 *.exp
 *.lib
 *.pdb
+# Generated multi-arch mod distribution archive (built by the mod_pk3 target
+# in cmake/ETLBuildMod.cmake). The .pk3 the server hands out at connect time
+# is a build output, not source.
+*.pk3
 
 # QVM toolchain intermediates
 *.asm

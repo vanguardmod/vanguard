@@ -83,6 +83,50 @@ filesystem.
    pushed to vanguardmod.com, signed, and offered to registered servers
    on next check-in.
 
+## Distribution strategy: self-contained `.pk3`
+
+ETLegacy refuses to UDP-download loose `.so` / `.dll` modules from a
+server (security feature — a hostile server could otherwise push native
+code to every connecting client). Mods therefore have to bundle their
+modules inside a `.pk3`, and the engine fetches that `.pk3` over UDP
+when the client lacks it locally.
+
+Two strategies were considered:
+
+  - **Lean.** Pack only `cgame` and `ui` (the client-side modules) for
+    the host platform actually being built. This is what upstream
+    ETLegacy does for its own `legacy_*.pk3`. Smallest archive, but a
+    Windows player connecting to a Linux-built mod gets nothing
+    runnable; you'd have to publish per-platform `.pk3`s and rely on
+    the player picking the right one.
+
+  - **Self-contained (chosen).** Pack every architecture variant of
+    every module — `cgame`, `qagame`, `tvgame`, `ui` × Linux x86_64,
+    Windows x86_64, Windows x86 — into one multi-arch `.pk3`. Larger
+    (~23 MiB plus mod assets), but a single archive serves every
+    client and every listen-server / TV-spectator scenario. The engine
+    picks the right binary by filename at load time.
+
+The trade-off: ~10 MiB of extra download per first-time connect in
+exchange for one canonical artefact and zero per-platform packaging
+churn. For a competitive mod with cup spectators (`tvgame`) and
+self-hosted scrim servers (listen-server `qagame`), the self-contained
+flavour is the only one that "just works" across the user base.
+
+The `.pk3` is produced by upstream's `BUILD_MOD_PK3=ON` target with
+Vanguard-specific patches in `cmake/ETLBuildMod.cmake`:
+
+  - Activision pak0/1/2 and `mp_bin.pk3` are filtered out of the
+    bundled etmain set, so the genuine WET paydata can sit in your
+    local `etmain/` for testing without leaking into a redistributable.
+  - Cross-built Windows DLLs from `build-windows/` and
+    `build-windows-32/` are staged into the working dir before tar.
+  - The tar list is extended with `qagame` and `tvgame` (upstream
+    packs only client-side `cgame` + `ui`) and the Windows DLL
+    basenames.
+
+See `docs/BUILDING.md` for the build commands.
+
 ## Why not put WolfGuard into a QVM too?
 
 Because the moment you ship the bytecode in a `.pk3`, you've shipped the

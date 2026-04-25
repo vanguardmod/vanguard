@@ -223,6 +223,16 @@ if(BUILD_MOD_PK3)
 	# etmain
 	file(GLOB_RECURSE	ETMAIN_FILES			CONFIGURE_DEPENDS	"${CMAKE_CURRENT_SOURCE_DIR}/etmain/*")
 	file(GLOB			ETMAIN_FILES_SHALLOW	CONFIGURE_DEPENDS	"${CMAKE_CURRENT_SOURCE_DIR}/etmain/*")
+
+	# Vanguard: filter pak0/1/2.pk3 and mp_bin.pk3 — these are genuine Activision
+	# Wolfenstein: Enemy Territory paydata that some devs keep in etmain/ for
+	# local play. Upstream's source tree never contains them, so upstream's
+	# unfiltered GLOB is safe there; for us it would silently bundle 200+ MB of
+	# copyrighted content into a redistributable .pk3. Re-add this filter when
+	# re-syncing from etlegacy.git master.
+	list(FILTER ETMAIN_FILES         EXCLUDE REGEX "/(pak[0-2]|mp_bin)\\.pk3$")
+	list(FILTER ETMAIN_FILES_SHALLOW EXCLUDE REGEX "/(pak[0-2]|mp_bin)\\.pk3$")
+
 	set(ETMAIN_FILE_LIST_REL "")
 	foreach(FILE ${ETMAIN_FILES_SHALLOW})
 		file(RELATIVE_PATH REL "${CMAKE_CURRENT_SOURCE_DIR}/etmain" ${FILE})
@@ -233,6 +243,45 @@ if(BUILD_MOD_PK3)
 		list(APPEND ETMAIN_FILE_LIST_REL ${REL})
 	endforeach()
 	list(SORT ETMAIN_FILE_LIST_REL)
+
+	# Vanguard: collect cross-built Windows DLLs from build-windows{,-32}/${MODNAME}
+	# so the resulting .pk3 carries every architecture (Linux .so via TARGET_FILE_NAME
+	# below, Windows x64 + x86 .dll via this glob). Empty list = degraded build that
+	# only ships Linux modules, which is a useful fallback for "linux-only" CI runs.
+	# Re-add this block when re-syncing ETLBuildMod.cmake from upstream.
+	set(VANGUARD_WIN_DLL_FILES "")
+	set(VANGUARD_WIN_DLL_NAMES "")
+	foreach(_vg_win_dir
+		"${CMAKE_CURRENT_SOURCE_DIR}/build-windows/${MODNAME}"
+		"${CMAKE_CURRENT_SOURCE_DIR}/build-windows-32/${MODNAME}")
+		if(EXISTS "${_vg_win_dir}")
+			file(GLOB _vg_dlls CONFIGURE_DEPENDS "${_vg_win_dir}/*.dll")
+			foreach(_vg_dll ${_vg_dlls})
+				list(APPEND VANGUARD_WIN_DLL_FILES "${_vg_dll}")
+				get_filename_component(_vg_name "${_vg_dll}" NAME)
+				list(APPEND VANGUARD_WIN_DLL_NAMES "${_vg_name}")
+			endforeach()
+		endif()
+	endforeach()
+	if(VANGUARD_WIN_DLL_FILES)
+		message(STATUS "Vanguard: bundling ${VANGUARD_WIN_DLL_NAMES} into mod pk3")
+	else()
+		message(STATUS "Vanguard: no Windows cross-build DLLs found, mod pk3 will be Linux-only")
+	endif()
+
+	# Vanguard: server-side modules (qagame/tvgame) are also packed so that
+	# listen-server hosts and tv spectator setups can run self-contained from
+	# a single mod pk3. Upstream packs only cgame+ui (client-side); add these
+	# back to the list when re-syncing.
+	set(VANGUARD_SERVER_MOD_TARGETS "")
+	set(VANGUARD_SERVER_MOD_FILES "")
+	if(BUILD_SERVER_MOD)
+		list(APPEND VANGUARD_SERVER_MOD_TARGETS qagame tvgame)
+		list(APPEND VANGUARD_SERVER_MOD_FILES
+			"$<TARGET_FILE_NAME:qagame>"
+			"$<TARGET_FILE_NAME:tvgame>"
+		)
+	endif()
 
 	# Record the full file list so removals can be detected without reacting to edits.
 	set(ETMAIN_FILE_LIST_CONTENT "")
@@ -271,13 +320,28 @@ if(BUILD_MOD_PK3)
 		VERBATIM
 	)
 
+	# Vanguard: stage cross-built Windows DLLs into the working dir before tar.
+	# Held as an injected list of COMMAND clauses so the custom_command stays
+	# linear and re-syncable. Empty when no DLLs were found at configure time.
+	set(VANGUARD_WIN_DLL_STAGE_CMD "")
+	if(VANGUARD_WIN_DLL_FILES)
+		list(APPEND VANGUARD_WIN_DLL_STAGE_CMD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${VANGUARD_WIN_DLL_FILES}
+				"${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/"
+		)
+	endif()
+
 	add_custom_command(
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/${MODNAME}_${ETL_CMAKE_VERSION_SHORT}.pk3
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/etmain ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}
 		# Version header is generated in the build tree and staged into ui/ for menu includes.
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/ui/version_generated.h
-		COMMAND ${CMAKE_COMMAND} -E tar c ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/${MODNAME}_${ETL_CMAKE_VERSION_SHORT}.pk3 --format=zip $<TARGET_FILE_NAME:cgame> $<TARGET_FILE_NAME:ui> ${ETMAIN_FILES_SHALLOW_REL} ui/version_generated.h
-		DEPENDS cgame ui ${ETMAIN_FILES} ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h remove_old_pk3_files "${ETMAIN_STAGE_STAMP}"
+		# Vanguard: stage Windows DLLs (no-op if VANGUARD_WIN_DLL_FILES is empty).
+		${VANGUARD_WIN_DLL_STAGE_CMD}
+		# Vanguard: tar list extended with qagame/tvgame and Windows DLL basenames.
+		COMMAND ${CMAKE_COMMAND} -E tar c ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/${MODNAME}_${ETL_CMAKE_VERSION_SHORT}.pk3 --format=zip $<TARGET_FILE_NAME:cgame> $<TARGET_FILE_NAME:ui> ${VANGUARD_SERVER_MOD_FILES} ${VANGUARD_WIN_DLL_NAMES} ${ETMAIN_FILES_SHALLOW_REL} ui/version_generated.h
+		DEPENDS cgame ui ${VANGUARD_SERVER_MOD_TARGETS} ${VANGUARD_WIN_DLL_FILES} ${ETMAIN_FILES} ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h remove_old_pk3_files "${ETMAIN_STAGE_STAMP}"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/
 		VERBATIM
 	)
