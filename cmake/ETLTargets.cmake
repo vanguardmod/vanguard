@@ -34,9 +34,19 @@ add_library(qagame_libraries INTERFACE)
 add_library(tvgame_libraries INTERFACE)
 
 # JSON library helper target
+# Vanguard vendors cJSON in vendor/cjson/ so the build does not depend on the
+# host providing libcjson-dev (matters for MinGW cross-compile in particular).
+# Adding vendor/ to the include path lets the existing #include <cjson/cJSON.h>
+# in src/qcommon/json/json.h resolve against vendor/cjson/cJSON.h.
 add_library(etl_json INTERFACE)
-target_sources(etl_json INTERFACE "${PROJECT_SOURCE_DIR}/src/qcommon/json/json.c")
-target_include_directories(etl_json INTERFACE "${PROJECT_SOURCE_DIR}/src/qcommon/json/")
+target_sources(etl_json INTERFACE
+	"${PROJECT_SOURCE_DIR}/src/qcommon/json/json.c"
+	"${PROJECT_SOURCE_DIR}/vendor/cjson/cJSON.c"
+)
+target_include_directories(etl_json INTERFACE
+	"${PROJECT_SOURCE_DIR}/src/qcommon/json/"
+	"${PROJECT_SOURCE_DIR}/vendor"
+)
 
 # Link the shared libraries to all output bins
 target_link_libraries(engine_libraries INTERFACE shared_libraries)
