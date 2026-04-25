@@ -30,6 +30,14 @@ directly into each mod binary, so `libcjson-dev` is **not** a required
 host dependency — this matters in particular for the MinGW cross-compile
 targets, where no system `libcjson` is available.
 
+For producing the Windows binaries the server hands out to remote
+clients, the Linux build host needs a MinGW-w64 toolchain providing
+both `i686-w64-mingw32-gcc` (32-bit) and `x86_64-w64-mingw32-gcc`
+(64-bit). On Debian/Ubuntu: `sudo apt install -y mingw-w64`. The
+toolchain files at `cmake/Toolchain-cross-mingw-linux.cmake` (32-bit)
+and `cmake/Toolchain-cross-mingw-x64-linux.cmake` (64-bit) are
+imported from upstream ETLegacy and need no local edits.
+
 ## Configuration options
 
 Set with `-D<NAME>=<VALUE>` on the `cmake -B build` line.

@@ -70,9 +70,13 @@ if [ "$SKIP_DEPS" -eq 0 ]; then
     # cJSON is vendored under vendor/cjson/ and built directly into each mod,
     # so libcjson-dev is intentionally not installed (this also matters for
     # MinGW cross builds that have no system libcjson available).
+    # mingw-w64 is required for the Windows x64 + x86 cross builds that the
+    # server delivers to Windows clients on connect. Both compiler triples
+    # (i686-w64-mingw32, x86_64-w64-mingw32) come from the mingw-w64 metapkg.
     sudo apt install -y \
         build-essential cmake git pkg-config \
-        libsqlite3-dev
+        libsqlite3-dev \
+        mingw-w64
 else
     log "Skipping apt install (--skip-deps)"
 fi
@@ -174,39 +178,90 @@ EOF
 # 8. Configure & build
 # -----------------------------------------------------------------------------
 
+# Common CMake flags shared between Linux and Windows cross builds.
+COMMON_CMAKE_FLAGS=(
+    -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF
+    -DBUILD_MOD=ON -DBUILD_MOD_PK3=OFF
+    -DBUNDLED_LIBS=OFF
+    -DFEATURE_LUA=OFF -DFEATURE_OMNIBOT=OFF
+    -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF
+    -DINSTALL_EXTRA=OFF
+)
+
 if [ "$SKIP_BUILD" -ne 0 ]; then
     log "Skipping configure/build (--skip-build)"
-    cat <<'HINT'
+    cat <<HINT
 
 To build later:
 
-    cmake -B build \
-        -DCROSS_COMPILE32=OFF \
-        -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF \
-        -DBUILD_MOD=ON -DBUILD_MOD_PK3=OFF \
-        -DBUNDLED_LIBS=OFF \
-        -DFEATURE_LUA=OFF -DFEATURE_OMNIBOT=OFF \
-        -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
-        -DINSTALL_EXTRA=OFF
+    # Linux x86_64 (server-side native)
+    cmake -B build -DCROSS_COMPILE32=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build -j
+
+    # Windows x86_64 (delivered to 64-bit clients)
+    cmake -B build-windows \\
+        -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \\
+        -DCROSS_COMPILE32=OFF ${COMMON_CMAKE_FLAGS[*]}
+    cmake --build build-windows -j
+
+    # Windows x86 (delivered to 32-bit clients)
+    cmake -B build-windows-32 \\
+        -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \\
+        -DCROSS_COMPILE32=ON ${COMMON_CMAKE_FLAGS[*]}
+    cmake --build build-windows-32 -j
 
 HINT
     exit 0
 fi
 
-log "Configuring CMake (mod-only build, all engine targets and optional features off)"
+# -- Linux x86_64 -------------------------------------------------------------
+log "Configuring Linux x86_64 (mod-only)"
 rm -rf build
-cmake -B build \
-    -DCROSS_COMPILE32=OFF \
-    -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF \
-    -DBUILD_MOD=ON -DBUILD_MOD_PK3=OFF \
-    -DBUNDLED_LIBS=OFF \
-    -DFEATURE_LUA=OFF -DFEATURE_OMNIBOT=OFF \
-    -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
-    -DINSTALL_EXTRA=OFF
-
-log "Building"
+cmake -B build -DCROSS_COMPILE32=OFF "${COMMON_CMAKE_FLAGS[@]}"
+log "Building Linux x86_64"
 cmake --build build -j
+
+# -- Windows x86_64 (cross) ---------------------------------------------------
+if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+    log "Configuring Windows x86_64 cross build"
+    rm -rf build-windows
+    cmake -B build-windows \
+        -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-x64-linux.cmake" \
+        -DCROSS_COMPILE32=OFF \
+        "${COMMON_CMAKE_FLAGS[@]}"
+    log "Building Windows x86_64"
+    cmake --build build-windows -j
+else
+    log "WARNING: x86_64-w64-mingw32-gcc not found, skipping Windows x64 build"
+fi
+
+# -- Windows x86 (cross) ------------------------------------------------------
+if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
+    log "Configuring Windows x86 cross build"
+    rm -rf build-windows-32
+    cmake -B build-windows-32 \
+        -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-linux.cmake" \
+        -DCROSS_COMPILE32=ON \
+        "${COMMON_CMAKE_FLAGS[@]}"
+    log "Building Windows x86"
+    cmake --build build-windows-32 -j
+else
+    log "WARNING: i686-w64-mingw32-gcc not found, skipping Windows x86 build"
+fi
+
+# -- Stage Windows DLLs alongside the Linux .so for the dedicated server -----
+# build/vanguard/ is what the dedicated server reads at runtime — keep loose
+# binaries there for direct local loading so a connecting Windows client can
+# pick the matching architecture from the same mod folder.
+SERVER_MOD_DIR="${REPO_ROOT}/build/vanguard"
+if [ -d "${SERVER_MOD_DIR}" ]; then
+    for variant in build-windows build-windows-32; do
+        if compgen -G "${REPO_ROOT}/${variant}/vanguard/*.dll" > /dev/null; then
+            log "Staging ${variant}/vanguard/*.dll into build/vanguard/"
+            cp "${REPO_ROOT}/${variant}/vanguard/"*.dll "${SERVER_MOD_DIR}/"
+        fi
+    done
+fi
 
 # -----------------------------------------------------------------------------
 # 9. Summary
@@ -217,8 +272,8 @@ echo "=================================================================="
 echo " VanguardMod bootstrap complete"
 echo "=================================================================="
 echo
-echo " Build artefacts in build/legacy/:"
-ls -la build/legacy/ 2>/dev/null | awk 'NR>1 && /\.so$/ {printf "   %-30s %s\n", $NF, $5}'
+echo " Build artefacts in build/vanguard/:"
+ls -la "${SERVER_MOD_DIR}" 2>/dev/null | awk 'NR>1 && ($NF ~ /\.(so|dll)$/) {printf "   %-30s %s\n", $NF, $5}'
 echo
 echo " Upstream commit: ${UPSTREAM_COMMIT:0:12}"
 echo " See UPSTREAM.txt for full import metadata."
