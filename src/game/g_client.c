@@ -49,6 +49,8 @@
 #include "g_mdx.h"
 #endif
 
+#include "wolfguard.h"
+
 // new bounding box
 vec3_t playerMins = { -18, -18, -24 };
 vec3_t playerMaxs = { 18, 18, 48 };
@@ -2635,6 +2637,9 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	// count current clients and rank for scoreboard
 	CalculateRanks();
 
+	/* VanguardMod: notify WolfGuard about the successful connect. */
+	WG_OnClientConnect(clientNum, cs_guid, cs_ip);
+
 	return NULL;
 }
 
@@ -3551,6 +3556,9 @@ void ClientDisconnect(int clientNum)
 	{
 		return;
 	}
+
+	/* VanguardMod: notify WolfGuard before any per-feature teardown runs. */
+	WG_OnClientDisconnect(clientNum);
 
 #ifdef FEATURE_RATING
 	// rating already recorded before intermission
