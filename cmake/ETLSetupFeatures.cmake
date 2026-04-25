@@ -412,17 +412,8 @@ if(BUILD_CLIENT OR BUILD_SERVER)
     endif()
 endif()
 
-if(NOT BUNDLED_CJSON)
-	if(NOT ANDROID)
-		find_package(cJSON REQUIRED)
-		target_link_libraries(etl_json INTERFACE ${CJSON_LIBRARIES})
-	else()
-		#It fails with linking CJSON_LIBRARY at Android NDK Path do it manually
-		target_link_libraries(etl_json INTERFACE ${CMAKE_ANDROID_NATIVE_LIB_DIRECTORIES}"cjson")
-	endif()
-else()
-	target_link_libraries(etl_json INTERFACE bundled_cjson)
-endif()
+# cJSON is vendored under vendor/cjson/ and compiled directly into etl_json
+# (see cmake/ETLTargets.cmake). No find_package / system libcjson lookup.
 
 target_link_libraries(qagame_libraries INTERFACE etl_json)
 target_link_libraries(tvgame_libraries INTERFACE etl_json)

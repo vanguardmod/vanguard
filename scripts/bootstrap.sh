@@ -67,9 +67,12 @@ fi
 if [ "$SKIP_DEPS" -eq 0 ]; then
     log "Installing build dependencies via apt (will prompt for sudo)"
     sudo apt update -qq
+    # cJSON is vendored under vendor/cjson/ and built directly into each mod,
+    # so libcjson-dev is intentionally not installed (this also matters for
+    # MinGW cross builds that have no system libcjson available).
     sudo apt install -y \
         build-essential cmake git pkg-config \
-        libcjson-dev libsqlite3-dev
+        libsqlite3-dev
 else
     log "Skipping apt install (--skip-deps)"
 fi

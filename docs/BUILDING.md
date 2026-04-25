@@ -25,6 +25,11 @@ The QVM toolchain (`lcc` / `q3asm`) is vendored by the ETLegacy Mod SDK
 under `tools/` after running `./scripts/bootstrap.sh`. You do not need
 to install one separately.
 
+cJSON is vendored under `vendor/cjson/` (v1.7.18, MIT) and compiled
+directly into each mod binary, so `libcjson-dev` is **not** a required
+host dependency — this matters in particular for the MinGW cross-compile
+targets, where no system `libcjson` is available.
+
 ## Configuration options
 
 Set with `-D<NAME>=<VALUE>` on the `cmake -B build` line.
