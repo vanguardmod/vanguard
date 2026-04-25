@@ -1,0 +1,26 @@
+# Auto-detect text and normalise to LF in the repo
+* text=auto eol=lf
+
+# Source files: explicit LF
+*.c       text eol=lf
+*.h       text eol=lf
+*.cmake   text eol=lf
+*.md      text eol=lf
+*.sh      text eol=lf
+CMakeLists.txt text eol=lf
+
+# Windows-only batch files: keep CRLF
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+
+# Binaries
+*.qvm     binary
+*.pk3     binary
+*.so      binary
+*.dll     binary
+*.dylib   binary
+*.png     binary
+*.jpg     binary
+*.tga     binary
+*.wav     binary
+*.ogg     binary
