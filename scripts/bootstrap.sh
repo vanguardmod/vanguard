@@ -179,9 +179,11 @@ EOF
 # -----------------------------------------------------------------------------
 
 # Common CMake flags shared between Linux and Windows cross builds.
+# BUILD_MOD_PK3 is intentionally NOT set here — each build picks it on/off
+# explicitly (only the Linux build emits the redistributable .pk3).
 COMMON_CMAKE_FLAGS=(
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF
-    -DBUILD_MOD=ON -DBUILD_MOD_PK3=OFF
+    -DBUILD_MOD=ON
     -DBUNDLED_LIBS=OFF
     -DFEATURE_LUA=OFF -DFEATURE_OMNIBOT=OFF
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF
@@ -194,32 +196,37 @@ if [ "$SKIP_BUILD" -ne 0 ]; then
 
 To build later:
 
-    # Linux x86_64 (server-side native)
-    cmake -B build -DCROSS_COMPILE32=OFF ${COMMON_CMAKE_FLAGS[*]}
-    cmake --build build -j
-
-    # Windows x86_64 (delivered to 64-bit clients)
+    # Windows x86_64 (delivered to 64-bit clients) — must run before Linux
+    # so the multi-arch pk3 picks up the cross-built DLLs at configure time.
     cmake -B build-windows \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \\
-        -DCROSS_COMPILE32=OFF ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows -j
 
     # Windows x86 (delivered to 32-bit clients)
     cmake -B build-windows-32 \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \\
-        -DCROSS_COMPILE32=ON ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
+
+    # Linux x86_64 + the multi-arch vanguard_v0.1.0.pk3 the server hands out.
+    CI_ETL_TAG=v0.1.0 CI_ETL_DESCRIBE=v0.1.0 cmake -B build \\
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON ${COMMON_CMAKE_FLAGS[*]}
+    cmake --build build -j
 
 HINT
     exit 0
 fi
 
-# -- Linux x86_64 -------------------------------------------------------------
-log "Configuring Linux x86_64 (mod-only)"
-rm -rf build
-cmake -B build -DCROSS_COMPILE32=OFF "${COMMON_CMAKE_FLAGS[@]}"
-log "Building Linux x86_64"
-cmake --build build -j
+# Vanguard release version. Injected into upstream's git-describe-driven
+# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.1.0.pk3 instead
+# of falling back to the imported ETLEGACY_VERSION (2.83.x).
+export CI_ETL_TAG="${VANGUARD_VERSION:-v0.1.0}"
+export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
+
+# Order matters: Windows cross builds run *before* the Linux configure so the
+# Linux build's BUILD_MOD_PK3=ON target can pick up the cross-built DLLs and
+# bundle them into a single multi-arch .pk3 (see cmake/ETLBuildMod.cmake).
 
 # -- Windows x86_64 (cross) ---------------------------------------------------
 if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
@@ -228,6 +235,7 @@ if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
     cmake -B build-windows \
         -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-x64-linux.cmake" \
         -DCROSS_COMPILE32=OFF \
+        -DBUILD_MOD_PK3=OFF \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86_64"
     cmake --build build-windows -j
@@ -242,6 +250,7 @@ if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
     cmake -B build-windows-32 \
         -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-linux.cmake" \
         -DCROSS_COMPILE32=ON \
+        -DBUILD_MOD_PK3=OFF \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86"
     cmake --build build-windows-32 -j
@@ -249,19 +258,21 @@ else
     log "WARNING: i686-w64-mingw32-gcc not found, skipping Windows x86 build"
 fi
 
-# -- Stage Windows DLLs alongside the Linux .so for the dedicated server -----
-# build/vanguard/ is what the dedicated server reads at runtime — keep loose
-# binaries there for direct local loading so a connecting Windows client can
-# pick the matching architecture from the same mod folder.
+# -- Linux x86_64 + multi-arch pk3 --------------------------------------------
+# BUILD_MOD_PK3=ON triggers upstream's mod_pk3 target (cmake/ETLBuildMod.cmake)
+# which we patched to also bundle qagame/tvgame and the Windows DLLs found in
+# build-windows{,-32}/${MODNAME}/. Configure must happen *after* the Windows
+# builds because the .dll list is captured by file(GLOB) at configure time.
+log "Configuring Linux x86_64 (mod + multi-arch pk3)"
+rm -rf build
+cmake -B build \
+    -DCROSS_COMPILE32=OFF \
+    -DBUILD_MOD_PK3=ON \
+    "${COMMON_CMAKE_FLAGS[@]}"
+log "Building Linux x86_64 + mod_pk3"
+cmake --build build -j
+
 SERVER_MOD_DIR="${REPO_ROOT}/build/vanguard"
-if [ -d "${SERVER_MOD_DIR}" ]; then
-    for variant in build-windows build-windows-32; do
-        if compgen -G "${REPO_ROOT}/${variant}/vanguard/*.dll" > /dev/null; then
-            log "Staging ${variant}/vanguard/*.dll into build/vanguard/"
-            cp "${REPO_ROOT}/${variant}/vanguard/"*.dll "${SERVER_MOD_DIR}/"
-        fi
-    done
-fi
 
 # -----------------------------------------------------------------------------
 # 9. Summary
@@ -273,7 +284,7 @@ echo " VanguardMod bootstrap complete"
 echo "=================================================================="
 echo
 echo " Build artefacts in build/vanguard/:"
-ls -la "${SERVER_MOD_DIR}" 2>/dev/null | awk 'NR>1 && ($NF ~ /\.(so|dll)$/) {printf "   %-30s %s\n", $NF, $5}'
+ls -la "${SERVER_MOD_DIR}" 2>/dev/null | awk 'NR>1 && ($NF ~ /\.(so|dll|pk3)$/) {printf "   %-30s %s\n", $NF, $5}'
 echo
 echo " Upstream commit: ${UPSTREAM_COMMIT:0:12}"
 echo " See UPSTREAM.txt for full import metadata."
