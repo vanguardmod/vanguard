@@ -2,6 +2,10 @@
 /build/
 /build-*/
 /cmake-build-*/
+
+# Test server runtime artefacts
+/scripts/testserver/server.log
+/vanguard
 *.qvm
 *.so
 *.so.*
