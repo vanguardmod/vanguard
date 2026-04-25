@@ -49,6 +49,8 @@
 #define Q_OSS_STR_INC
 #include "../qcommon/q_oss.h"
 
+#include "wolfguard.h"
+
 #include "json.h"
 
 level_locals_t level;
@@ -1879,6 +1881,10 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	// --- maybe not the best place to do this... seems to be some race conditions on map_restart
 	G_spawnPrintf(DP_MVSPAWN, level.time + 2000, NULL);
 #endif
+
+	/* VanguardMod: bring up the WolfGuard layer for this map. */
+	WG_Init(level.rawmapname, NULL);
+	G_Printf("VanguardMod: WolfGuard %s provider active\n", WG_GetInfo()->provider_name);
 }
 
 /**
@@ -1960,6 +1966,9 @@ void G_ShutdownGame(int restart)
 
 	// write all the client session data so we can get it back
 	G_WriteSessionData(restart);
+
+	/* VanguardMod: tear down the WolfGuard layer. Idempotent. */
+	WG_Shutdown();
 }
 
 //===================================================================
@@ -4587,6 +4596,9 @@ void G_RunFrame(int levelTime)
 	level.previousTime = level.time;
 	level.time         = levelTime;
 	level.frameTime    = level.time - level.previousTime;
+
+	/* VanguardMod: per-frame WolfGuard tick. */
+	WG_OnFrame(level.time);
 
 	level.axisAirstrikeCounter   -= level.frameTime;
 	level.alliedAirstrikeCounter -= level.frameTime;
