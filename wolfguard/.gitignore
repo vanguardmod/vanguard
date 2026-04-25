@@ -1,0 +1,3 @@
+# Belt-and-braces: never commit the private WolfGuard repo into the public
+# VanguardMod repo, regardless of where the user clones it.
+private/

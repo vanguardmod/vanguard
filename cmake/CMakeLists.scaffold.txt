@@ -1,0 +1,70 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(VanguardMod
+    VERSION 0.1.0
+    DESCRIPTION "Wolfenstein: Enemy Territory competitive mod for ETLegacy"
+    LANGUAGES C
+)
+
+# ---------------------------------------------------------------------------
+# Project-wide options
+# ---------------------------------------------------------------------------
+
+set(VANGUARD_MOD_NAME "vanguard" CACHE STRING
+    "Mod folder name (output directory inside the build tree)")
+
+set(VANGUARD_OUTPUT_DIR "${CMAKE_BINARY_DIR}/${VANGUARD_MOD_NAME}")
+file(MAKE_DIRECTORY ${VANGUARD_OUTPUT_DIR})
+
+# Enforce out-of-source builds — keeps the tree clean.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR
+        "In-source builds are not allowed. Use:\n"
+        "  cmake -B build && cmake --build build")
+endif()
+
+# Default to Release if the user didn't pick one.
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+        Debug Release RelWithDebInfo MinSizeRel)
+endif()
+
+# ---------------------------------------------------------------------------
+# WolfGuard layer — public null stub or private real impl
+# ---------------------------------------------------------------------------
+
+include(${CMAKE_SOURCE_DIR}/cmake/WolfGuard.cmake)
+
+# ---------------------------------------------------------------------------
+# Mod source tree (populated from the ETLegacy Mod SDK; see BOOTSTRAP.md)
+# ---------------------------------------------------------------------------
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/CMakeLists.txt")
+    add_subdirectory(src)
+else()
+    message(WARNING
+        "\n"
+        "  src/ does not contain a CMakeLists.txt yet.\n"
+        "  VanguardMod expects the ETLegacy Mod SDK source layout under src/.\n"
+        "  Run ./scripts/bootstrap.sh, or follow BOOTSTRAP.md.\n")
+endif()
+
+# ---------------------------------------------------------------------------
+# Configuration summary
+# ---------------------------------------------------------------------------
+
+message(STATUS "")
+message(STATUS "==== VanguardMod build configuration ====")
+message(STATUS "  Version:        ${PROJECT_VERSION}")
+message(STATUS "  Build type:     ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Mod name:       ${VANGUARD_MOD_NAME}")
+message(STATUS "  Output dir:     ${VANGUARD_OUTPUT_DIR}")
+message(STATUS "  WolfGuard:      ${VANGUARD_WITH_WOLFGUARD}")
+if(VANGUARD_BUILD_PROTECTED)
+    message(STATUS "  Build flavour:  PROTECTED (native qagame, WolfGuard linked)")
+else()
+    message(STATUS "  Build flavour:  COMMUNITY (null provider)")
+endif()
+message(STATUS "==========================================")
+message(STATUS "")

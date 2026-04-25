@@ -1,0 +1,66 @@
+# Build outputs
+/build/
+/build-*/
+/cmake-build-*/
+*.qvm
+*.so
+*.so.*
+*.dll
+*.dylib
+*.exp
+*.lib
+*.pdb
+
+# QVM toolchain intermediates
+*.asm
+*.obj
+*.bytecode
+
+# CMake artefacts
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+.DS_Store
+Thumbs.db
+
+# Local overrides (not for the repo)
+local.cmake
+*.local
+.env
+.env.local
+
+# Bootstrap import staging
+_sdk-import/
+_etlegacy-import/
+
+# Bootstrap-disabled upstream files (kept on disk, never committed)
+*.disabled
+
+# Build/run logs
+build.log
+*.log
+
+# Proprietary Wolfenstein: Enemy Territory assets — Activision/Splash Damage
+# These belong to a legitimate WET install and MUST NEVER be committed.
+etmain/pak0.pk3
+etmain/pak1.pk3
+etmain/pak2.pk3
+etmain/mp_bin.pk3
+
+# Closed-source WolfGuard implementation (only on trusted core devs' machines)
+wolfguard/private/
