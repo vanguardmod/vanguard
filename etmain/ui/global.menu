@@ -59,6 +59,15 @@ menuDef {
 		decoration
 	}
 
+	/* VANGUARD: upstream's faint ETLegacy "LEGACY" wordmark
+	 * watermark is suppressed. The asset (etl_logo_huge_dark)
+	 * sat behind every menu's background_1 layer and bled through
+	 * our own VanguardMod logo in the welcome panel. This itemDef
+	 * is kept (commented out, not deleted) so the slot is
+	 * documented for a future VanguardMod-themed watermark — at
+	 * that point swap the asset to ui/assets/vanguardmod/logo_*
+	 * and reintroduce a forecolor with low alpha (~0.15). */
+	/*
 	itemDef {
 		name		"image"
 		rect		$evalint(WINDOW_WIDTH/2-100) 140 200 200
@@ -67,6 +76,7 @@ menuDef {
 		visible		1
 		decoration
 	}
+	*/
 }
 
 menuDef {

@@ -70,30 +70,50 @@ menuDef {
 #endif
 
 
+/* VANGUARD: replace upstream ETLegacy pause-menu logo with our
+ * brand. Asset swapped to ui/assets/vanguardmod/logo_small (256x256
+ * source, 32-bit RGBA). The original 128x64 rect was a 2:1 landscape
+ * fit for the ETLegacy wordmark; our logo is square, so the rect is
+ * also adjusted to 64x64 to preserve aspect. Both #ifdef branches
+ * (OLD_CLIENT and the else) are patched identically — the OLD_CLIENT
+ * gate is currently always false because v0.1.2 disabled it
+ * (src/ui/ui_main.c) but we keep the symmetry so a future
+ * re-enable doesn't reintroduce the upstream logo. */
+/* VANGUARD: version label is repositioned to sit centered under
+ * the logo. Upstream had the label at x=60 (text starting 60 px
+ * from menu-left) while the logo sits at x=15..79 (centre 47),
+ * so the two appeared offset rather than as a vertical pair.
+ * The new rect spans the same x-range as the logo (15..79) and
+ * uses ITEM_ALIGN_CENTER so the version number is centred under
+ * the logo no matter how long the version string grows.
+ *
+ * Original LABEL parameters (ETLegacy upstream):
+ *   OLD_CLIENT branch: LABEL( 60, 274, 132, 10, ..., ITEM_ALIGN_LEFT, 0, 8 )
+ *   else branch:       LABEL( 60, WINDOW_HEIGHT+68, 132, 10, ..., ITEM_ALIGN_LEFT, 0, 8 ) */
 #ifdef OLD_CLIENT
 	itemDef {
 		name        "legacy_logo"
-		rect        15 WINDOW_HEIGHT 128 64
+		rect        15 WINDOW_HEIGHT 64 64
 		style       WINDOW_STYLE_SHADER
-		background  "ui/assets/etl_logo"
+		background  "ui/assets/vanguardmod/logo_small"
 		forecolor   1 1 1 1
 		visible     1
 		decoration
 	}
 
-	LABEL( 60, 274, 132, 10, "^1"ETLEGACY_VERSION, .2, ITEM_ALIGN_LEFT, 0, 8 )
+	LABEL( 15, WINDOW_HEIGHT+68, 64, 10, "^1"ETLEGACY_VERSION, .2, ITEM_ALIGN_CENTER, 32, 8 )
 #else
 	itemDef {
 		name        "legacy_logo"
-		rect        15 WINDOW_HEIGHT 128 64
+		rect        15 WINDOW_HEIGHT 64 64
 		style       WINDOW_STYLE_SHADER
-		background  "ui/assets/etl_logo"
+		background  "ui/assets/vanguardmod/logo_small"
 		forecolor   1 1 1 1
 		visible     1
 		decoration
 	}
 
-	LABEL( 60, WINDOW_HEIGHT+68, 132, 10, "^1"ETLEGACY_VERSION, .2, ITEM_ALIGN_LEFT, 0, 8 )
+	LABEL( 15, WINDOW_HEIGHT+68, 64, 10, "^1"ETLEGACY_VERSION, .2, ITEM_ALIGN_CENTER, 32, 8 )
 #endif
 
 #ifdef NON_RELEASE_BUILD
