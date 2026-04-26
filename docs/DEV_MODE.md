@@ -1,6 +1,6 @@
 # VanguardMod dev mode
 
-Server-controlled hitbox / bullet visualisation, gated by the
+Server-authorised, client-rendered hitbox visualisation, gated by the
 `vanguard_dev` cvar. Built for hitbox tuning, match-dispute analysis
 and mod development. **Not** for use on public, cup, or live-match
 servers.
@@ -8,9 +8,10 @@ servers.
 ## At a glance
 
   - **Server cvar:** `vanguard_dev` (default `0`, `CVAR_SERVERINFO`).
-    The master switch.
-  - **Client cvars:** `cg_vanguardDevHitboxes` (`0` / `1` / `2`) and
-    `cg_vanguardDevAlpha` (`0.0` – `1.0`). Render filters; passive.
+    The master switch — published to clients via the serverinfo
+    configstring.
+  - **Client cvars:** `cg_vanguardDevHitboxes` (binary, `0`/`1`) and
+    `cg_vanguardDevAlpha` (`0.0` – `1.0`). Local render controls.
   - **Sample configs:** `configs/vanguard_dev.cfg` (turn on),
     `configs/vanguard_competitive.cfg` (turn off + lock down).
 
@@ -22,52 +23,67 @@ broken out into three coloured parts:
 
   - **Red** — head hitbox
   - **Yellow** — torso (the body / damage box)
-  - **Green** — legs hitbox
+  - **Green** — legs hitbox (only rendered while prone)
 
-The colours follow the player through stance changes (standing,
+The boxes follow the player through stance changes (standing,
 crouching, prone), through damage states, and through animation
-movement. With `cg_vanguardDevHitboxes 2` you additionally see the
-red-line bullet trace each shot leaves on the server's authoritative
-trace, useful for "did my shot actually hit where I aimed" analysis.
+movement. The renderer reads the same snapshot data cgame already
+has, so the boxes update at full client framerate, not at server
+tick rate.
 
-The boxes are rendered with the engine's railgun-trail shader, so
-their thickness is fixed by the renderer; only the alpha
-(`cg_vanguardDevAlpha`) is tunable from the client side.
+The boxes are drawn with the engine's railgun-trail shader, so their
+thickness is fixed by the renderer; the alpha (`cg_vanguardDevAlpha`)
+is tunable client-side.
 
 ## Architecture
 
-Dev mode is server-controlled. A client cannot synthesise hitbox
-visuals by itself — the engine only spawns the railtrail entities
-cgame renders if the *server* emits the matching `EV_RAILTRAIL`
-events, and the server only does that when its
-`g_debugPlayerHitboxes` / `g_debugBullets` cvars are non-zero.
-Toggling `vanguard_dev` is the only path to those events.
+Dev mode is **server-authorised, client-rendered**. The server's only
+job is to publish `vanguard_dev` in `CS_SERVERINFO`. The hitbox
+geometry itself is rendered locally per frame by `cgame`
+(`src/cgame/cg_vanguard_dev.c`) from existing player snapshot data —
+`cent->lerpOrigin`, `cent->lerpAngles`, `cent->currentState.eFlags`
+plus the local player's predicted state.
 
-The client cvars are **passive filters**: `cg_vanguardDevHitboxes 0`
-suppresses every railtrail drawing call locally, but cannot generate
-hitbox data the server did not send. This means a competitive server
-running `vanguard_dev 0` (the default) cannot leak hitbox visuals to
-clients no matter what cvars they set. Safety from architecture, not
-from code-hiding.
+This split exists for one reason: **network cost**. The earlier
+implementation routed visualisation through the server's
+`g_debugPlayerHitboxes` path, which broadcasts ~24 `EV_RAILTRAIL`
+events per visible player per frame. With two players in view the
+snapshot saturation pushed observed pings from ~30 ms to ~900 ms —
+unusable for tuning. Doing the same drawing on the client uses zero
+extra bandwidth: snapshots already carry origin/angles/eFlags for
+every visible player, and the geometry is reproducible from those
+fields plus a handful of `bg_public.h` constants.
 
-This file, the implementation, and the full client- and server-side
-state are in the public Vanguard repo. The point is that *anyone*
-auditing the code can verify the gating is intact — that is precisely
-why publishing it is the safe option, not a risk.
+Safety properties:
+
+  - A server running `vanguard_dev 0` (the default) cannot leak
+    hitboxes — `cgs.vanguardDev` stays `0` and the renderer no-ops.
+    The client cvar `cg_vanguardDevHitboxes` is a local filter only;
+    flipping it on while the server is in `0` does nothing.
+  - Outside dev mode the renderer adds zero work to `CG_DrawActiveFrame`
+    (single integer check, early return).
+  - The full implementation is in the public repo — anyone auditing
+    can verify the gating.
+
+The head- and leg-box origin math mirrors `G_BuildHead` /
+`G_BuildLeg`'s no-MDX fallback path in `src/game/g_combat.c`. For the
+local player we use `cg.predictedPlayerState` directly so boxes
+match the server's antilag exactly. For other players we synthesize
+viewheight from `EF_*` flags via `bg_public.h` constants — pmove
+sets `ps.viewheight` to exactly those values, so the result matches.
+The only approximation is `pmext.proneLegsOffset` for non-local
+prone-crawling players (we use 0; stationary prone matches exactly).
 
 ## Cvar lifecycle (server)
 
 When `vanguard_dev` flips `0 -> 1`:
 
-  1. Current values of `g_debugPlayerHitboxes`, `g_debugBullets` and
-     `sv_cheats` are remembered.
-  2. `g_debugPlayerHitboxes` and `g_debugBullets` are forced to `1`,
-     and `sv_cheats` is forced to `1` so the engine's cheat-gated
-     client tooling (`noclip`, `cg_thirdperson`, `give`, ...) is
-     usable for inspecting player models from any angle — the actual
-     point of dev mode for hitbox tuning.
-  3. A loud red `DEV MODE ACTIVE` banner is printed to the server log.
-  4. If the server is publicly heartbeating (`dedicated >= 2` *and*
+  1. Current `sv_cheats` value is remembered, then `sv_cheats` is
+     forced to `1` so the engine's CVAR_CHEAT client tooling
+     (`noclip`, `cg_thirdperson`, `give`, ...) becomes available
+     for inspecting player models from any angle.
+  2. A loud red `DEV MODE ACTIVE` banner is printed to the server log.
+  3. If the server is publicly heartbeating (`dedicated >= 2` *and*
      at least one `sv_master1`..`sv_master5` slot populated), a
      second "DEV MODE ON A PUBLIC SERVER, this is unsafe" banner
      follows. A LAN dedicated server (`dedicated 1`) is exempt —
@@ -80,11 +96,16 @@ be spotted in any log scrape.
 
 When `vanguard_dev` flips `1 -> 0`:
 
-  1. `g_debugPlayerHitboxes`, `g_debugBullets` and `sv_cheats` are
-     restored to the values they had at the `0 -> 1` moment.
+  1. `sv_cheats` is restored to its pre-toggle value.
   2. A green disable line is printed.
 
 `G_ShutdownGame` (map change, server quit) also runs this restore.
+
+The render-side cvars (`g_debugPlayerHitboxes`, `g_debugBullets`)
+are **not** touched by dev mode — they belong to upstream's
+server-broadcast debug mechanism, which we do not use any more. Set
+them by hand if you want the legacy server-side overlay for some
+reason.
 
 ## When to use it
 
@@ -115,18 +136,27 @@ Pterodactyl (the panel many ETLegacy hosts use) marks `sv_cheats` as
 read-only at the engine layer. When dev mode tries to flip it on,
 the engine logs `sv_cheats is read only` and the cvar stays at `0`.
 
-Consequence: hitbox visualisation **still works** (it depends only on
-`g_debugPlayerHitboxes` / `g_debugBullets`, which dev mode also
-forces), but every CVAR_CHEAT-protected client tool — `noclip`,
-`cg_thirdperson`, `give`, `notarget`, `freeze` — refuses to run with
-"cheats not enabled". For inspecting bot models from arbitrary
-angles you then need a self-hosted dev server (the test-server
-harness in `scripts/testserver/` is not Pterodactyl-managed and
-allows the toggle).
+Consequence: hitbox visualisation **still works** — it is rendered
+purely client-side and depends on nothing the server has to flip —
+but every CVAR_CHEAT-protected client tool (`noclip`, `cg_thirdperson`,
+`give`, `notarget`, `freeze`) refuses to run with "cheats not enabled".
+For inspecting bot models from arbitrary angles you then need a
+self-hosted dev server (the test-server harness in
+`scripts/testserver/` is not Pterodactyl-managed and allows the
+toggle).
 
 The dev-mode disable path runs `sv_cheats` restore unconditionally,
 so a host that locks the cvar is not corrupted by dev mode being
 toggled — the restore is just a no-op the engine ignores.
+
+### Prone-crawling legs box approximation
+
+For non-local prone players the legs-box offset is approximated as
+`0` (the server-side `pmext.proneLegsOffset` is not propagated to
+other clients). A stationary prone target matches the server
+exactly; a crawling one will show legs slightly above or below the
+true collision box. The local player always uses the exact pmext
+offset.
 
 ## Before / after screenshots
 
@@ -172,10 +202,13 @@ rcon exec configs/vanguard_competitive.cfg
 
 ## Related
 
-  - Upstream cvars `g_debugPlayerHitboxes` (player bounding boxes),
-    `g_debugBullets` (shot trace lines) and `sv_cheats` (engine
-    cheat-protected client tooling). Vanguard takes ownership of all
-    three while `vanguard_dev=1` and restores them on disable.
+  - `sv_cheats` is the only cvar the server-side dev mode flips
+    (and restores on disable). Upstream's `g_debugPlayerHitboxes`
+    and `g_debugBullets` are independent — dev mode does not touch
+    them and the client renderer does not need them.
+  - The client renderer (`src/cgame/cg_vanguard_dev.c`) ports the
+    head/leg origin math from `G_BuildHead` / `G_BuildLeg` in
+    `src/game/g_combat.c`, no-MDX fallback path.
   - `cmake/ETLBuildMod.cmake` packs the `configs/` folder above into
     `vanguard_v0.1.0.pk3`, so any client connecting to a dev-mode
     server already has both presets locally as

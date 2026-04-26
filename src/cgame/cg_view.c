@@ -34,6 +34,7 @@
  */
 
 #include "cg_local.h"
+#include "cg_vanguard_dev.h"
 
 /*
 =============================================================================
@@ -2708,6 +2709,7 @@ void CG_DrawActiveFrame(int serverTime, qboolean demoPlayback)
 		if (!cg.hyperspace)
 		{
 			CG_AddPacketEntities();         // after calcViewValues, so predicted player state is correct
+			CG_VanguardDev_DrawHitboxes();  // VanguardMod: client-side hitbox visualisation, gated on cgs.vanguardDev
 			CG_AddMarks();
 
 			DEBUGTIME

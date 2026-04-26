@@ -754,7 +754,6 @@ void CG_RailTrail2(const vec3_t color, const vec3_t start, const vec3_t end, int
 {
 	localEntity_t *le;
 	refEntity_t   *re;
-	float         alpha;
 
 	if (index >= 0)
 	{
@@ -787,23 +786,10 @@ void CG_RailTrail2(const vec3_t color, const vec3_t start, const vec3_t end, int
 	VectorCopy(start, re->origin);
 	VectorCopy(end, re->oldorigin);
 
-	/* VanguardMod: when the server is in dev mode, the railtrail is
-	 * being repurposed as a hitbox / bullet visualisation rather than
-	 * a weapon effect. Honour the local cg_vanguardDevAlpha so admins
-	 * can tune visibility against the surrounding scene. Outside dev
-	 * mode the fully-opaque upstream behaviour is preserved. */
-	alpha = 1.0f;
-	if (cgs.vanguardDev)
-	{
-		alpha = cg_vanguardDevAlpha.value;
-		if (alpha < 0.0f) { alpha = 0.0f; }
-		if (alpha > 1.0f) { alpha = 1.0f; }
-	}
-
 	le->color[0] = color[0];
 	le->color[1] = color[1];
 	le->color[2] = color[2];
-	le->color[3] = alpha;
+	le->color[3] = 1.0f;
 
 	AxisClear(re->axis);
 }
@@ -819,59 +805,6 @@ void CG_RailTrail2(const vec3_t color, const vec3_t start, const vec3_t end, int
 void CG_RailTrail(vec3_t color, vec3_t start, vec3_t end, int type, int index)
 {
 	vec3_t diff, v1, v2, v3, v4, v5, v6;
-	vec3_t devColor;
-
-	/* VanguardMod: render-side filter for server dev mode.
-	 *
-	 *   cg_vanguardDevHitboxes 0 — suppress every railtrail from the
-	 *                              dev-mode server (player wants a
-	 *                              clean view despite vanguard_dev=1)
-	 *   cg_vanguardDevHitboxes 1 — only the box railtrails (player
-	 *                              hitboxes); skip the line traces
-	 *   cg_vanguardDevHitboxes 2 — boxes plus bullet-trace lines
-	 *
-	 * This is a passive filter — the server still emits the events, we
-	 * just choose not to draw them locally. Outside dev mode none of
-	 * this kicks in and CG_RailTrail behaves exactly as upstream. */
-	if (cgs.vanguardDev)
-	{
-		int detail = cg_vanguardDevHitboxes.integer;
-		if (detail <= 0)
-		{
-			return;
-		}
-		if (detail < 2 && type == 0)
-		{
-			return;
-		}
-		/* Override the upstream colour for the player-hitbox path so
-		 * the three body parts read at a glance:
-		 *   head  -> red    (HITBOXBIT_HEAD)
-		 *   legs  -> green  (HITBOXBIT_LEGS)
-		 *   torso -> yellow (no body-part bits set)
-		 *
-		 * The server packs these bits into the +1 entity index it puts
-		 * in es->effect1Time (see G_RailBox in g_combat.c), so we
-		 * decode them here. Lines (type=0) keep their server colour. */
-		if (type == 1)
-		{
-			int idxBits = (index > 0) ? (index - 1) : 0;
-
-			if (idxBits & HITBOXBIT_HEAD)
-			{
-				devColor[0] = 1.0f; devColor[1] = 0.0f; devColor[2] = 0.0f;
-			}
-			else if (idxBits & HITBOXBIT_LEGS)
-			{
-				devColor[0] = 0.0f; devColor[1] = 1.0f; devColor[2] = 0.0f;
-			}
-			else
-			{
-				devColor[0] = 1.0f; devColor[1] = 1.0f; devColor[2] = 0.0f;
-			}
-			color = devColor;
-		}
-	}
 
 	if (!type)     // just a line
 	{

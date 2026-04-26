@@ -7,12 +7,14 @@
  * vg_Movement_*) live in this same file under their own static state
  * blocks so the upstream-resync diff stays small.
  *
- * Architectural note: dev mode is server-controlled by design. Clients
- * cannot synthesize hitbox visuals on their own — the engine will only
- * spawn the railtrail entities cgame renders if the server emits the
- * matching EV_RAILTRAIL events, and that is exactly what
- * g_debugPlayerHitboxes / g_debugBullets gate. Toggling vanguard_dev
- * on a server is therefore the only path to hitboxes-on-screen.
+ * Architectural note: dev mode is server-controlled by design — the
+ * 'vanguard_dev' cvar is CVAR_SERVERINFO so cgame learns of it via
+ * the configstring, and clients cannot synthesize the authority on
+ * their own. The actual hitbox geometry is rendered locally by
+ * cgame (src/cgame/cg_vanguard_dev.c) from existing snapshot data;
+ * this module only manages the cvar, the sv_cheats lifecycle and
+ * the operator banner. No EV_RAILTRAIL or other broadcast traffic
+ * is emitted, so dev mode is network-cost free.
  */
 
 #include "g_local.h"
@@ -40,11 +42,9 @@ typedef struct
 
 	int      lastReminderTime;
 
-	/* Saved cvar values from the moment we flipped dev mode on, so
-	 * 1->0 transitions restore whatever the admin had set manually
+	/* Saved sv_cheats from the moment we flipped dev mode on, so a
+	 * 1->0 transition restores whatever the admin had set manually
 	 * before they enabled the master switch. */
-	int      savedDebugPlayerHitboxes;
-	int      savedDebugBullets;
 	int      savedSvCheats;
 } vg_devmode_state_t;
 
@@ -103,7 +103,7 @@ static void vg_DevMode_PrintBanner(qboolean publicServer)
 {
 	G_Printf(S_COLOR_RED "==========================================================\n");
 	G_Printf(S_COLOR_RED "VanguardMod: DEV MODE ACTIVE — do not run on public servers\n");
-	G_Printf(S_COLOR_RED "  hitbox visualisation is being broadcast to every client\n");
+	G_Printf(S_COLOR_RED "  every client is authorised to render hitbox overlays\n");
 	G_Printf(S_COLOR_RED "  set 'vanguard_dev 0' to disable\n");
 	if (publicServer)
 	{
@@ -115,28 +115,20 @@ static void vg_DevMode_PrintBanner(qboolean publicServer)
 }
 
 /**
- * @brief Capture current upstream debug-cvar values and force them on.
- *        Called only on the 0->1 edge of vanguard_dev.
+ * @brief Capture sv_cheats and unlock it. Called only on the 0->1 edge
+ *        of vanguard_dev. Hitbox visualisation itself is rendered
+ *        client-side (cg_vanguard_dev.c) from snapshot data and
+ *        requires no server cvars to be flipped — the only thing dev
+ *        mode unlocks server-side is sv_cheats, so the engine's
+ *        CVAR_CHEAT client tools (noclip, cg_thirdperson, give, ...)
+ *        become available for inspecting player models from any
+ *        angle. The PUBLIC SERVER warning in the banner covers the
+ *        abuse surface.
  */
 static void vg_DevMode_Enable(void)
 {
-	s_devmode.savedDebugPlayerHitboxes = vg_DevMode_ReadCvarInt("g_debugPlayerHitboxes");
-	s_devmode.savedDebugBullets        = vg_DevMode_ReadCvarInt("g_debugBullets");
-	s_devmode.savedSvCheats            = vg_DevMode_ReadCvarInt("sv_cheats");
+	s_devmode.savedSvCheats = vg_DevMode_ReadCvarInt("sv_cheats");
 
-	/* Visualisation only — hitboxes (& 1) for the player railbox path,
-	 * bullet traces for shot diagnostics. We deliberately do NOT touch
-	 * any cvar that would expose a wallhack-style advantage (r_showtris,
-	 * cg_drawTraces, etc. are out of scope for this toggle). */
-	vg_DevMode_SetCvarInt("g_debugPlayerHitboxes", 1);
-	vg_DevMode_SetCvarInt("g_debugBullets", 1);
-
-	/* sv_cheats unlocks the engine's CVAR_CHEAT-protected client tooling
-	 * (noclip, cg_thirdperson, give, etc.) which is exactly what mod
-	 * authors and hitbox tuners need to inspect player models from any
-	 * angle. The PUBLIC SERVER warning above already covers the abuse
-	 * surface; restoring on disable keeps an admin who deliberately
-	 * pre-set sv_cheats from being silently overridden. */
 	vg_DevMode_SetCvarInt("sv_cheats", 1);
 
 	s_devmode.active            = qtrue;
@@ -146,18 +138,17 @@ static void vg_DevMode_Enable(void)
 }
 
 /**
- * @brief Restore the upstream debug cvars to whatever they were before
- *        dev mode took ownership. Called on the 1->0 edge.
+ * @brief Restore sv_cheats to its pre-toggle value. Called on the
+ *        1->0 edge. A no-op restore is safe on hosts that lock the
+ *        cvar (Pterodactyl) — the engine just refuses the set.
  */
 static void vg_DevMode_Disable(void)
 {
-	vg_DevMode_SetCvarInt("g_debugPlayerHitboxes", s_devmode.savedDebugPlayerHitboxes);
-	vg_DevMode_SetCvarInt("g_debugBullets",        s_devmode.savedDebugBullets);
-	vg_DevMode_SetCvarInt("sv_cheats",             s_devmode.savedSvCheats);
+	vg_DevMode_SetCvarInt("sv_cheats", s_devmode.savedSvCheats);
 
 	s_devmode.active = qfalse;
 
-	G_Printf(S_COLOR_GREEN "VanguardMod: dev mode disabled (debug cvars restored)\n");
+	G_Printf(S_COLOR_GREEN "VanguardMod: dev mode disabled (sv_cheats restored)\n");
 }
 
 /* ------------------------------------------------------------------ */
