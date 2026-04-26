@@ -2549,6 +2549,7 @@ typedef struct cgs_s
 	// parsed from serverinfo
 	gametype_t gametype;
 	int antilag;
+	int vanguardDev;                                ///< VanguardMod dev mode flag (vanguard_dev cvar from server)
 
 	float timelimit;
 	int maxclients;

@@ -265,6 +265,9 @@ void CG_ParseServerinfo(void)
 
 	cg_gameType.integer = cgs.gametype = Q_atoi(Info_ValueForKey(info, "g_gametype"));
 	cg_antilag.integer  = cgs.antilag = Q_atoi(Info_ValueForKey(info, "g_antilag"));
+	// VanguardMod: dev mode flag rides serverinfo so cgame's railtrail
+	// filter can read it without an extra server command. Default 0.
+	cgs.vanguardDev = Q_atoi(Info_ValueForKey(info, "vanguard_dev"));
 	if (!cgs.localServer)
 	{
 		trap_Cvar_Set("g_gametype", va("%i", cgs.gametype));
