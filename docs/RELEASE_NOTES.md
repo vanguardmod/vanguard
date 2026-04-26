@@ -3,6 +3,26 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.2.1 — 2026-04-26
+
+  - **VanguardMod branding in the main menu.** The welcome screen
+    now shows the VanguardMod logo (eagle + shield + V + bayonet
+    + banner, military black/grey/red) where ETLegacy's logo used
+    to sit. Single asset swap in `etmain/ui/main.menu`; the upstream
+    `etl_logo_huge.tga` is kept on disk as a fallback for future
+    theming needs and not removed.
+  - **Asset architecture introduced.** Master file lives at
+    `assets-source/branding/logo_master.png` (2048×2048 PNG, source
+    of truth, committed to the repo). Generated TGA variants in
+    `etmain/ui/assets/vanguardmod/` (1024 / 256 / 64 px, 32-bit
+    RGBA) are auto-packed into the pk3 by the existing
+    `etmain/`-recursive glob in `cmake/ETLBuildMod.cmake`. The two
+    smaller variants are not yet referenced anywhere — staged for
+    future loading-screen and HUD branding.
+  - **No game logic changes.** Patch bump rather than minor: pure
+    UI/asset substitution. Hitboxes, dev mode, omnibot, all
+    unchanged from v0.2.0.
+
 ## v0.2.0 — 2026-04-26
 
   - **Tighter player hitboxes for competitive play.** The standard
