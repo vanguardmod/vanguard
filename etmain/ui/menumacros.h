@@ -33,6 +33,40 @@
 
 #include "ui/version_generated.h"
 
+/* VANGUARD: brand colour palette swap.
+ *
+ * The default macro definitions below (BUTTON, BUTTONEXT, NAMEDBUTTON,
+ * NAMEDBUTTONEXT, YESNO, EDITFIELD, CHECKBOX et al, plus SUBWINDOW /
+ * SUBWINDOWBLACK / WINDOW_FUI / WINDOW_INGAME title bars) have had
+ * their colour literals retuned from upstream's neutral grey + ETLegacy
+ * green-grey title accent to VanguardMod's black + dark-red palette.
+ * Inline backcolor / forecolor / bordercolor in individual .menu files
+ * are NOT touched in this pass to keep the diff bounded — visible
+ * inconsistencies are tracked for the Phase 5.7 polish pass.
+ *
+ * Original -> new palette (whitespace-flexible match used in all macros):
+ *
+ *   BUTTON rest       backcolor   .3 .3 .3 .4    -> .05 .05 .05 .4
+ *   BUTTON hover      backcolor   .5 .5 .5 .4    -> .4 .08 .08 .5
+ *   BUTTON border     bordercolor .1 .1 .1 .5    -> .2 .05 .05 .6
+ *   BUTTON text rest  forecolor   .6 .6 .6 1     -> .7 .7 .7 1
+ *   BUTTON text hover forecolor   .9 .9 .9 1     -> 1 1 1 1
+ *
+ *   Title bar bg      backcolor   .16 .2 .17 .8  -> .15 .03 .03 .8
+ *   Title bar text    forecolor   .6 .6 .6 1     -> .85 .85 .85 1
+ *                     (lines 90, 139, 176, 205 — handled with explicit
+ *                      line-targeted replacements before the global
+ *                      forecolor swap so the brighter title text is
+ *                      preserved separately from the button text)
+ *
+ * Untouched on purpose: subwindow background backcolor 0 0 0 .2/.8/.85/.9
+ * (generic dark transparent overlays), title bar bordercolor .1 .1 .1 .2
+ * (different alpha than button border, kept), and any .5 .5 .5 .* values
+ * (used for various neutral borders and shadow-band fills).
+ *
+ * To revert the palette: re-apply the table above in reverse. See
+ * docs/RELEASE_NOTES.md v0.3.0 for the integration rationale. */
+
 #ifndef INCLUDE_MENUMACROS_H
 #define INCLUDE_MENUMACROS_H
 
@@ -63,7 +97,7 @@
 			group GROUP_NAME                                                                                   \
 			rect        2 2 $evalint(GRADIENT_START_OFFSET) 24                                                 \
 			style WINDOW_STYLE_FILLED                                                                          \
-			backcolor   .16 .2 .17 .8                                                                          \
+			backcolor   .15 .03 .03 .8                                                                          \
 			visible     1                                                                                      \
 			decoration                                                                                         \
 		}                                                                                                      \
@@ -73,7 +107,7 @@
 			group GROUP_NAME                                                                                   \
 			rect $evalint(GRADIENT_START_OFFSET + 2) 2 $evalint(WINDOW_WIDTH - (GRADIENT_START_OFFSET + 4)) 24 \
 			style WINDOW_STYLE_GRADIENT                                                                        \
-			backcolor   .16 .2 .17 .8                                                                          \
+			backcolor   .15 .03 .03 .8                                                                          \
 			visible     1                                                                                      \
 			decoration                                                                                         \
 		}                                                                                                      \
@@ -87,7 +121,7 @@
 			textscale   .4                                                                                     \
 			textalignx  3                                                                                      \
 			textaligny  20                                                                                     \
-			forecolor   .6 .6 .6 1                                                                             \
+			forecolor   .85 .85 .85 1                                                                             \
 			border WINDOW_BORDER_FULL                                                                          \
 			bordercolor .1 .1 .1 .2                                                                            \
 			visible     1                                                                                      \
@@ -112,7 +146,7 @@
 			group GROUP_NAME                                                                                   \
 			rect        2 2 GRADIENT_START_OFFSET 24                                                           \
 			style WINDOW_STYLE_FILLED                                                                          \
-			backcolor   .16 .2 .17 .8                                                                          \
+			backcolor   .15 .03 .03 .8                                                                          \
 			visible     1                                                                                      \
 			decoration                                                                                         \
 		}                                                                                                      \
@@ -122,7 +156,7 @@
 			group GROUP_NAME                                                                                   \
 			rect $evalint(GRADIENT_START_OFFSET + 2) 2 $evalint(WINDOW_WIDTH - (GRADIENT_START_OFFSET + 4)) 24 \
 			style WINDOW_STYLE_GRADIENT                                                                        \
-			backcolor   .16 .2 .17 .8                                                                          \
+			backcolor   .15 .03 .03 .8                                                                          \
 			visible     1                                                                                      \
 			decoration                                                                                         \
 		}                                                                                                      \
@@ -136,7 +170,7 @@
 			textscale   .4                                                                                     \
 			textalignx  3                                                                                      \
 			textaligny  20                                                                                     \
-			forecolor   .6 .6 .6 1                                                                             \
+			forecolor   .85 .85 .85 1                                                                             \
 			border WINDOW_BORDER_FULL                                                                          \
 			bordercolor .1 .1 .1 .2                                                                            \
 			visible     1                                                                                      \
@@ -172,8 +206,8 @@
 			textalignx  3                                                                                        \
 			textaligny  10                                                                                       \
 			style WINDOW_STYLE_FILLED                                                                            \
-			backcolor   .16 .2 .17 .8                                                                            \
-			forecolor   .6 .6 .6 1                                                                               \
+			backcolor   .15 .03 .03 .8                                                                            \
+			forecolor   .85 .85 .85 1                                                                               \
 			visible     1                                                                                        \
 			decoration                                                                                           \
 		}
@@ -201,8 +235,8 @@
 			textalignx  3                                                                                                            \
 			textaligny  10                                                                                                           \
 			style WINDOW_STYLE_FILLED                                                                                                \
-			backcolor   .16 .2 .17 .8                                                                                                \
-			forecolor   .6 .6 .6 1                                                                                                   \
+			backcolor   .15 .03 .03 .8                                                                                                \
+			forecolor   .85 .85 .85 1                                                                                                   \
 			visible     1                                                                                                            \
 			decoration                                                                                                               \
 		}
@@ -220,25 +254,25 @@
 			textalignx $evalfloat(0.5 * (BUTTON_W))                                                                        \
 			textaligny BUTTON_TEXT_ALIGN_Y                                                                                 \
 			style WINDOW_STYLE_FILLED                                                                                      \
-			backcolor   .3 .3 .3 .4                                                                                        \
-			forecolor   .6 .6 .6 1                                                                                         \
+			backcolor   .05 .05 .05 .4                                                                                        \
+			forecolor   .7 .7 .7 1                                                                                         \
 			border WINDOW_BORDER_FULL                                                                                      \
-			bordercolor .1 .1 .1 .5                                                                                        \
+			bordercolor .2 .05 .05 .6                                                                                        \
 			visible     1                                                                                                  \
                                                                                                                            \
 			mouseEnter {                                                                                                   \
-				setitemcolor "bttn" ## BUTTON_TEXT forecolor .9 .9 .9 1 ;                                                  \
-				setitemcolor "bttn" ## BUTTON_TEXT backcolor .5 .5 .5 .4                                                   \
+				setitemcolor "bttn" ## BUTTON_TEXT forecolor 1 1 1 1 ;                                                  \
+				setitemcolor "bttn" ## BUTTON_TEXT backcolor .4 .08 .08 .5                                                   \
 			}                                                                                                              \
                                                                                                                            \
 			mouseExit {                                                                                                    \
-				setitemcolor "bttn" ## BUTTON_TEXT forecolor .6 .6 .6 1 ;                                                  \
-				setitemcolor "bttn" ## BUTTON_TEXT backcolor .3 .3 .3 .4                                                   \
+				setitemcolor "bttn" ## BUTTON_TEXT forecolor .7 .7 .7 1 ;                                                  \
+				setitemcolor "bttn" ## BUTTON_TEXT backcolor .05 .05 .05 .4                                                   \
 			}                                                                                                              \
                                                                                                                            \
 			action {                                                                                                       \
-				setitemcolor "bttn" ## BUTTON_TEXT forecolor .6 .6 .6 1 ;                                                  \
-				setitemcolor "bttn" ## BUTTON_TEXT backcolor .3 .3 .3 .4 ;                                                 \
+				setitemcolor "bttn" ## BUTTON_TEXT forecolor .7 .7 .7 1 ;                                                  \
+				setitemcolor "bttn" ## BUTTON_TEXT backcolor .05 .05 .05 .4 ;                                                 \
 				play "sound/menu/select.wav" ;                                                                             \
 				BUTTON_ACTION                                                                                              \
 			}                                                                                                              \
@@ -257,25 +291,25 @@
 			textalignx $evalfloat(0.5 * (BUTTONEXT_W))                                                           \
 			textaligny BUTTONEXT_TEXT_ALIGN_Y                                                                    \
 			style WINDOW_STYLE_FILLED                                                                            \
-			backcolor   .3 .3 .3 .4                                                                              \
-			forecolor   .6 .6 .6 1                                                                               \
+			backcolor   .05 .05 .05 .4                                                                              \
+			forecolor   .7 .7 .7 1                                                                               \
 			border WINDOW_BORDER_FULL                                                                            \
-			bordercolor .1 .1 .1 .5                                                                              \
+			bordercolor .2 .05 .05 .6                                                                              \
 			visible     1                                                                                        \
                                                                                                                  \
 			mouseEnter {                                                                                         \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor .9 .9 .9 1 ;                                  \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .5 .5 .5 .4                                   \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor 1 1 1 1 ;                                  \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .4 .08 .08 .5                                   \
 			}                                                                                                    \
                                                                                                                  \
 			mouseExit {                                                                                          \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor .6 .6 .6 1 ;                                  \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .3 .3 .3 .4                                   \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor .7 .7 .7 1 ;                                  \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .05 .05 .05 .4                                   \
 			}                                                                                                    \
                                                                                                                  \
 			action {                                                                                             \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor .6 .6 .6 1 ;                                  \
-				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .3 .3 .3 .4 ;                                 \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT forecolor .7 .7 .7 1 ;                                  \
+				setitemcolor "bttnext" ## BUTTONEXT_TEXT backcolor .05 .05 .05 .4 ;                                 \
 				play "sound/menu/select.wav" ;                                                                   \
 				BUTTONEXT_ACTION                                                                                 \
 			}                                                                                                    \
@@ -296,25 +330,25 @@
 			textalignx $evalfloat(0.5 * (NAMEDBUTTON_W))                                                                 \
 			textaligny NAMEDBUTTON_TEXT_ALIGN_Y                                                                          \
 			style WINDOW_STYLE_FILLED                                                                                    \
-			backcolor   .3 .3 .3 .4                                                                                      \
-			forecolor   .6 .6 .6 1                                                                                       \
+			backcolor   .05 .05 .05 .4                                                                                      \
+			forecolor   .7 .7 .7 1                                                                                       \
 			border WINDOW_BORDER_FULL                                                                                    \
-			bordercolor .1 .1 .1 .5                                                                                      \
+			bordercolor .2 .05 .05 .6                                                                                      \
 			visible     1                                                                                                \
                                                                                                                          \
 			mouseEnter {                                                                                                 \
-				setitemcolor NAMEDBUTTON_NAME forecolor .9 .9 .9 1 ;                                                     \
-				setitemcolor NAMEDBUTTON_NAME backcolor .5 .5 .5 .4                                                      \
+				setitemcolor NAMEDBUTTON_NAME forecolor 1 1 1 1 ;                                                     \
+				setitemcolor NAMEDBUTTON_NAME backcolor .4 .08 .08 .5                                                      \
 			}                                                                                                            \
                                                                                                                          \
 			mouseExit {                                                                                                  \
-				setitemcolor NAMEDBUTTON_NAME forecolor .6 .6 .6 1 ;                                                     \
-				setitemcolor NAMEDBUTTON_NAME backcolor .3 .3 .3 .4                                                      \
+				setitemcolor NAMEDBUTTON_NAME forecolor .7 .7 .7 1 ;                                                     \
+				setitemcolor NAMEDBUTTON_NAME backcolor .05 .05 .05 .4                                                      \
 			}                                                                                                            \
                                                                                                                          \
 			action {                                                                                                     \
-				setitemcolor NAMEDBUTTON_NAME forecolor .6 .6 .6 1 ;                                                     \
-				setitemcolor NAMEDBUTTON_NAME backcolor .3 .3 .3 .4 ;                                                    \
+				setitemcolor NAMEDBUTTON_NAME forecolor .7 .7 .7 1 ;                                                     \
+				setitemcolor NAMEDBUTTON_NAME backcolor .05 .05 .05 .4 ;                                                    \
 				play "sound/menu/select.wav" ;                                                                           \
 				NAMEDBUTTON_ACTION                                                                                       \
 			}                                                                                                            \
@@ -333,25 +367,25 @@
 			textalignx $evalfloat(0.5 * (NAMEDBUTTONEXT_W))                                                                          \
 			textaligny NAMEDBUTTONEXT_TEXT_ALIGN_Y                                                                                   \
 			style WINDOW_STYLE_FILLED                                                                                                \
-			backcolor   .3 .3 .3 .4                                                                                                  \
-			forecolor   .6 .6 .6 1                                                                                                   \
+			backcolor   .05 .05 .05 .4                                                                                                  \
+			forecolor   .7 .7 .7 1                                                                                                   \
 			border WINDOW_BORDER_FULL                                                                                                \
-			bordercolor .1 .1 .1 .5                                                                                                  \
+			bordercolor .2 .05 .05 .6                                                                                                  \
 			visible     1                                                                                                            \
                                                                                                                                      \
 			mouseEnter {                                                                                                             \
-				setitemcolor NAMEDBUTTONEXT_NAME forecolor .9 .9 .9 1 ;                                                              \
-				setitemcolor NAMEDBUTTONEXT_NAME backcolor .5 .5 .5 .4                                                               \
+				setitemcolor NAMEDBUTTONEXT_NAME forecolor 1 1 1 1 ;                                                              \
+				setitemcolor NAMEDBUTTONEXT_NAME backcolor .4 .08 .08 .5                                                               \
 			}                                                                                                                        \
                                                                                                                                      \
 			mouseExit {                                                                                                              \
-				setitemcolor NAMEDBUTTONEXT_NAME forecolor .6 .6 .6 1 ;                                                              \
-				setitemcolor NAMEDBUTTONEXT_NAME backcolor .3 .3 .3 .4                                                               \
+				setitemcolor NAMEDBUTTONEXT_NAME forecolor .7 .7 .7 1 ;                                                              \
+				setitemcolor NAMEDBUTTONEXT_NAME backcolor .05 .05 .05 .4                                                               \
 			}                                                                                                                        \
                                                                                                                                      \
 			action {                                                                                                                 \
-				setitemcolor NAMEDBUTTONEXT_NAME forecolor .6 .6 .6 1 ;                                                              \
-				setitemcolor NAMEDBUTTONEXT_NAME backcolor .3 .3 .3 .4 ;                                                             \
+				setitemcolor NAMEDBUTTONEXT_NAME forecolor .7 .7 .7 1 ;                                                              \
+				setitemcolor NAMEDBUTTONEXT_NAME backcolor .05 .05 .05 .4 ;                                                             \
 				play "sound/menu/select.wav" ;                                                                                       \
 				NAMEDBUTTONEXT_ACTION                                                                                                \
 			}                                                                                                                        \
@@ -382,7 +416,7 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                           \
 			textalignx $evalfloat(0.5 * (EDITFIELD_W))                                                                                           \
 			textaligny EDITFIELD_TEXT_ALIGN_Y                                                                                                    \
-			forecolor       .6 .6 .6 1                                                                                                           \
+			forecolor       .7 .7 .7 1                                                                                                           \
 			cvar EDITFIELD_CVAR                                                                                                                  \
 			maxChars EDITFIELD_MAXCHARS                                                                                                          \
 			maxPaintChars EDITFIELD_MAXPAINTCHARS                                                                                                \
@@ -390,11 +424,11 @@
 			tooltip EDITFIELD_TOOLTIP                                                                                                            \
                                                                                                                                                  \
 			mouseEnter {                                                                                                                         \
-				setitemcolor "ef" ## EDITFIELD_TEXT forecolor .9 .9 .9 1 ;                                                                       \
+				setitemcolor "ef" ## EDITFIELD_TEXT forecolor 1 1 1 1 ;                                                                       \
 			}                                                                                                                                    \
                                                                                                                                                  \
 			mouseExit {                                                                                                                          \
-				setitemcolor "ef" ## EDITFIELD_TEXT forecolor .6 .6 .6 1 ;                                                                       \
+				setitemcolor "ef" ## EDITFIELD_TEXT forecolor .7 .7 .7 1 ;                                                                       \
 			}                                                                                                                                    \
 		}
 
@@ -409,7 +443,7 @@
 			textstyle ITEM_TEXTSTYLE_SHADOWED                                                                                    \
 			textscale EDITFIELDLEFT_TEXT_SCALE                                                                                   \
 			textaligny EDITFIELDLEFT_TEXT_ALIGN_Y                                                                                \
-			forecolor       .6 .6 .6 1                                                                                           \
+			forecolor       .7 .7 .7 1                                                                                           \
 			cvar EDITFIELDLEFT_CVAR                                                                                              \
 			maxChars EDITFIELDLEFT_MAXCHARS                                                                                      \
 			maxPaintChars EDITFIELDLEFT_MAXPAINTCHARS                                                                            \
@@ -417,11 +451,11 @@
 			tooltip EDITFIELDLEFT_TOOLTIP                                                                                        \
                                                                                                                                  \
 			mouseEnter {                                                                                                         \
-				setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor .9 .9 .9 1 ;                                               \
+				setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor 1 1 1 1 ;                                               \
 			}                                                                                                                    \
                                                                                                                                  \
 			mouseExit {                                                                                                          \
-				setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor .6 .6 .6 1 ;                                               \
+				setitemcolor "efleft" ## EDITFIELDLEFT_TEXT forecolor .7 .7 .7 1 ;                                               \
 			}                                                                                                                    \
 		}
 
@@ -436,7 +470,7 @@
 			textstyle ITEM_TEXTSTYLE_SHADOWED                                                                                                            \
 			textscale EDITFIELDLEFTACTION_TEXT_SCALE                                                                                                     \
 			textaligny EDITFIELDLEFTACTION_TEXT_ALIGN_Y                                                                                                  \
-			forecolor       .6 .6 .6 1                                                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                                                   \
 			cvar EDITFIELDLEFTACTION_CVAR                                                                                                                \
 			maxChars EDITFIELDLEFTACTION_MAXCHARS                                                                                                        \
 			maxPaintChars EDITFIELDLEFTACTION_MAXPAINTCHARS                                                                                              \
@@ -447,11 +481,11 @@
 			}                                                                                                                                            \
                                                                                                                                                          \
 			mouseEnter {                                                                                                                                 \
-				setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor .9 .9 .9 1 ;                                                           \
+				setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor 1 1 1 1 ;                                                           \
 			}                                                                                                                                            \
                                                                                                                                                          \
 			mouseExit {                                                                                                                                  \
-				setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor .6 .6 .6 1 ;                                                           \
+				setitemcolor "efleftaction" ## EDITFIELDLEFTACTION_TEXT forecolor .7 .7 .7 1 ;                                                           \
 			}                                                                                                                                            \
 		}
 
@@ -477,7 +511,7 @@
 			textscale EDITFIELDSIMPLE_TEXT_SCALE                                                                                         \
 			textalign ITEM_ALIGN_LEFT                                                                                                    \
 			textaligny EDITFIELDSIMPLE_TEXT_ALIGN_Y                                                                                      \
-			forecolor       .6 .6 .6 1                                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                                   \
 			cvar EDITFIELDSIMPLE_CVAR                                                                                                    \
 			maxChars EDITFIELDSIMPLE_MAXCHARS                                                                                            \
 			maxPaintChars EDITFIELDSIMPLE_MAXPAINTCHARS                                                                                  \
@@ -488,11 +522,11 @@
 			}                                                                                                                            \
                                                                                                                                          \
 			mouseEnter {                                                                                                                 \
-				setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor .9 .9 .9 1 ;                                                   \
+				setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor 1 1 1 1 ;                                                   \
 			}                                                                                                                            \
                                                                                                                                          \
 			mouseExit {                                                                                                                  \
-				setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor .6 .6 .6 1 ;                                                   \
+				setitemcolor "efsimple" ## EDITFIELDSIMPLE_TEXT forecolor .7 .7 .7 1 ;                                                   \
 			}                                                                                                                            \
 		}
 
@@ -519,18 +553,18 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                                          \
 			textalignx $evalfloat(0.5 * (NUMERICFIELD_W))                                                                                                       \
 			textaligny NUMERICFIELD_TEXT_ALIGN_Y                                                                                                                \
-			forecolor       .6 .6 .6 1                                                                                                                          \
+			forecolor       .7 .7 .7 1                                                                                                                          \
 			cvar NUMERICFIELD_CVAR                                                                                                                              \
 			maxChars NUMERICFIELD_MAXCHARS                                                                                                                      \
 			visible         1                                                                                                                                   \
 			tooltip NUMERICFIELD_TOOLTIP                                                                                                                        \
                                                                                                                                                                 \
 			mouseEnter {                                                                                                                                        \
-				setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor .9 .9 .9 1 ;                                                                                   \
+				setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor 1 1 1 1 ;                                                                                   \
 			}                                                                                                                                                   \
                                                                                                                                                                 \
 			mouseExit {                                                                                                                                         \
-				setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor .6 .6 .6 1 ;                                                                                   \
+				setitemcolor "nf" ## NUMERICFIELD_TEXT forecolor .7 .7 .7 1 ;                                                                                   \
 			}                                                                                                                                                   \
 		}
 
@@ -545,18 +579,18 @@
 			textstyle ITEM_TEXTSTYLE_SHADOWED                                                                                                            \
 			textscale NUMERICFIELDLEFTEXT_TEXT_SCALE                                                                                                     \
 			textaligny NUMERICFIELDLEFTEXT_TEXT_ALIGN_Y                                                                                                  \
-			forecolor       .6 .6 .6 1                                                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                                                   \
 			cvar NUMERICFIELDLEFTEXT_CVAR                                                                                                                \
 			maxChars NUMERICFIELDLEFTEXT_MAXCHARS                                                                                                        \
 			visible         1                                                                                                                            \
 			tooltip NUMERICFIELDLEFTEXT_TOOLTIP                                                                                                          \
                                                                                                                                                          \
 			mouseEnter {                                                                                                                                 \
-				setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor .9 .9 .9 1 ;                                                              \
+				setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor 1 1 1 1 ;                                                              \
 			}                                                                                                                                            \
                                                                                                                                                          \
 			mouseExit {                                                                                                                                  \
-				setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor .6 .6 .6 1 ;                                                              \
+				setitemcolor "nfleftext" ## NUMERICFIELDLEFTEXT_TEXT forecolor .7 .7 .7 1 ;                                                              \
 			}                                                                                                                                            \
                                                                                                                                                          \
 			NUMERICFIELDLEFTEXT_EXT                                                                                                                      \
@@ -575,17 +609,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                         \
 			textalignx $evalfloat(0.5 * (YESNO_W))                                                                             \
 			textaligny YESNO_TEXT_ALIGN_Y                                                                                      \
-			forecolor       .6 .6 .6 1                                                                                         \
+			forecolor       .7 .7 .7 1                                                                                         \
 			cvar YESNO_CVAR                                                                                                    \
 			visible         1                                                                                                  \
 			tooltip YESNO_TOOLTIP                                                                                              \
                                                                                                                                \
 			mouseEnter {                                                                                                       \
-				setitemcolor "yn" ## YESNO_TEXT forecolor .9 .9 .9 1 ;                                                         \
+				setitemcolor "yn" ## YESNO_TEXT forecolor 1 1 1 1 ;                                                         \
 			}                                                                                                                  \
                                                                                                                                \
 			mouseExit {                                                                                                        \
-				setitemcolor "yn" ## YESNO_TEXT forecolor .6 .6 .6 1 ;                                                         \
+				setitemcolor "yn" ## YESNO_TEXT forecolor .7 .7 .7 1 ;                                                         \
 			}                                                                                                                  \
                                                                                                                                \
 			action {                                                                                                           \
@@ -606,17 +640,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                   \
 			textalignx $evalfloat(0.5 * (YESNOALIGNX_W) + YESNOALIGNX_TEXT_ALIGN_X)                                      \
 			textaligny YESNOALIGNX_TEXT_ALIGN_Y                                                                          \
-			forecolor       .6 .6 .6 1                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                   \
 			cvar YESNOALIGNX_CVAR                                                                                        \
 			visible         1                                                                                            \
 			tooltip YESNOALIGNX_TOOLTIP                                                                                  \
                                                                                                                          \
 			mouseEnter {                                                                                                 \
-				setitemcolor "ynalx" ## YESNOALIGNX_TEXT forecolor .9 .9 .9 1 ;                                          \
+				setitemcolor "ynalx" ## YESNOALIGNX_TEXT forecolor 1 1 1 1 ;                                          \
 			}                                                                                                            \
                                                                                                                          \
 			mouseExit {                                                                                                  \
-				setitemcolor "ynalx" ## YESNOALIGNX_TEXT forecolor .6 .6 .6 1 ;                                          \
+				setitemcolor "ynalx" ## YESNOALIGNX_TEXT forecolor .7 .7 .7 1 ;                                          \
 			}                                                                                                            \
                                                                                                                          \
 			action {                                                                                                     \
@@ -637,17 +671,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                   \
 			textalignx $evalfloat(0.5 * (YESNOACTION_W))                                                                 \
 			textaligny YESNOACTION_TEXT_ALIGN_Y                                                                          \
-			forecolor       .6 .6 .6 1                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                   \
 			cvar YESNOACTION_CVAR                                                                                        \
 			visible         1                                                                                            \
 			tooltip YESNOACTION_TOOLTIP                                                                                  \
                                                                                                                          \
 			mouseEnter {                                                                                                 \
-				setitemcolor "ynaction" ## YESNOACTION_TEXT forecolor .9 .9 .9 1 ;                                       \
+				setitemcolor "ynaction" ## YESNOACTION_TEXT forecolor 1 1 1 1 ;                                       \
 			}                                                                                                            \
                                                                                                                          \
 			mouseExit {                                                                                                  \
-				setitemcolor "ynaction" ## YESNOACTION_TEXT forecolor .6 .6 .6 1 ;                                       \
+				setitemcolor "ynaction" ## YESNOACTION_TEXT forecolor .7 .7 .7 1 ;                                       \
 			}                                                                                                            \
                                                                                                                          \
 			action {                                                                                                     \
@@ -669,17 +703,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                       \
 			textalignx $evalfloat(0.5 * (CHECKBOX_W))                                                        \
 			textaligny CHECKBOX_TEXT_ALIGN_Y                                                                 \
-			forecolor       .6 .6 .6 1                                                                       \
+			forecolor       .7 .7 .7 1                                                                       \
 			cvar CHECKBOX_CVAR                                                                               \
 			visible         1                                                                                \
 			tooltip CHECKBOX_TOOLTIP                                                                         \
                                                                                                              \
 			mouseEnter {                                                                                     \
-				setitemcolor "check" ## CHECKBOX_TEXT forecolor .9 .9 .9 1 ;                                 \
+				setitemcolor "check" ## CHECKBOX_TEXT forecolor 1 1 1 1 ;                                 \
 			}                                                                                                \
                                                                                                              \
 			mouseExit {                                                                                      \
-				setitemcolor "check" ## CHECKBOX_TEXT forecolor .6 .6 .6 1 ;                                 \
+				setitemcolor "check" ## CHECKBOX_TEXT forecolor .7 .7 .7 1 ;                                 \
 			}                                                                                                \
                                                                                                              \
 			action {                                                                                         \
@@ -700,17 +734,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                               \
 			textalignx $evalfloat(0.5 * (CHECKBOXALIGNX_W) + CHECKBOXALIGNX_TEXT_ALIGN_X)                                            \
 			textaligny CHECKBOXALIGNX_TEXT_ALIGN_Y                                                                                   \
-			forecolor       .6 .6 .6 1                                                                                               \
+			forecolor       .7 .7 .7 1                                                                                               \
 			cvar CHECKBOXALIGNX_CVAR                                                                                                 \
 			visible         1                                                                                                        \
 			tooltip CHECKBOXALIGNX_TOOLTIP                                                                                           \
                                                                                                                                      \
 			mouseEnter {                                                                                                             \
-				setitemcolor "checkalx" ## CHECKBOXALIGNX_TEXT forecolor .9 .9 .9 1 ;                                                \
+				setitemcolor "checkalx" ## CHECKBOXALIGNX_TEXT forecolor 1 1 1 1 ;                                                \
 			}                                                                                                                        \
                                                                                                                                      \
 			mouseExit {                                                                                                              \
-				setitemcolor "checkalx" ## CHECKBOXALIGNX_TEXT forecolor .6 .6 .6 1 ;                                                \
+				setitemcolor "checkalx" ## CHECKBOXALIGNX_TEXT forecolor .7 .7 .7 1 ;                                                \
 			}                                                                                                                        \
                                                                                                                                      \
 			action {                                                                                                                 \
@@ -724,17 +758,17 @@
 			group GROUP_NAME                                                                                                         \
 			rect $evalfloat(CHECKBOXNOTEXT_X) $evalfloat(CHECKBOXNOTEXT_Y) $evalfloat(CHECKBOXNOTEXT_W) $evalfloat(CHECKBOXNOTEXT_H) \
 			type ITEM_TYPE_CHECKBOX                                                                                                  \
-			forecolor       .6 .6 .6 1                                                                                               \
+			forecolor       .7 .7 .7 1                                                                                               \
 			cvar CHECKBOXNOTEXT_CVAR                                                                                                 \
 			visible         1                                                                                                        \
 			tooltip CHECKBOXNOTEXT_TOOLTIP                                                                                           \
                                                                                                                                      \
 			mouseEnter {                                                                                                             \
-				setitemcolor CHECKBOXNOTEXT_NAME forecolor .9 .9 .9 1 ;                                                              \
+				setitemcolor CHECKBOXNOTEXT_NAME forecolor 1 1 1 1 ;                                                              \
 			}                                                                                                                        \
                                                                                                                                      \
 			mouseExit {                                                                                                              \
-				setitemcolor CHECKBOXNOTEXT_NAME forecolor .6 .6 .6 1 ;                                                              \
+				setitemcolor CHECKBOXNOTEXT_NAME forecolor .7 .7 .7 1 ;                                                              \
 			}                                                                                                                        \
                                                                                                                                      \
 			action {                                                                                                                 \
@@ -748,17 +782,17 @@
 			group GROUP_NAME                                                                                                                                 \
 			rect $evalfloat(CHECKBOXNOTEXTACTION_X) $evalfloat(CHECKBOXNOTEXTACTION_Y) $evalfloat(CHECKBOXNOTEXTACTION_W) $evalfloat(CHECKBOXNOTEXTACTION_H) \
 			type ITEM_TYPE_CHECKBOX                                                                                                                          \
-			forecolor       .6 .6 .6 1                                                                                                                       \
+			forecolor       .7 .7 .7 1                                                                                                                       \
 			cvar CHECKBOXNOTEXTACTION_CVAR                                                                                                                   \
 			visible         1                                                                                                                                \
 			tooltip CHECKBOXNOTEXTACTION_TOOLTIP                                                                                                             \
                                                                                                                                                              \
 			mouseEnter {                                                                                                                                     \
-				setitemcolor CHECKBOXNOTEXTACTION_NAME forecolor .9 .9 .9 1 ;                                                                                \
+				setitemcolor CHECKBOXNOTEXTACTION_NAME forecolor 1 1 1 1 ;                                                                                \
 			}                                                                                                                                                \
                                                                                                                                                              \
 			mouseExit {                                                                                                                                      \
-				setitemcolor CHECKBOXNOTEXTACTION_NAME forecolor .6 .6 .6 1 ;                                                                                \
+				setitemcolor CHECKBOXNOTEXTACTION_NAME forecolor .7 .7 .7 1 ;                                                                                \
 			}                                                                                                                                                \
                                                                                                                                                              \
 			action {                                                                                                                                         \
@@ -780,17 +814,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                               \
 			textalignx $evalfloat(0.5 * (CHECKBOXACTION_W))                                                                          \
 			textaligny CHECKBOXACTION_TEXT_ALIGN_Y                                                                                   \
-			forecolor       .6 .6 .6 1                                                                                               \
+			forecolor       .7 .7 .7 1                                                                                               \
 			cvar CHECKBOXACTION_CVAR                                                                                                 \
 			visible         1                                                                                                        \
 			tooltip CHECKBOXACTION_TOOLTIP                                                                                           \
                                                                                                                                      \
 			mouseEnter {                                                                                                             \
-				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .9 .9 .9 1 ;                                             \
+				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor 1 1 1 1 ;                                             \
 			}                                                                                                                        \
                                                                                                                                      \
 			mouseExit {                                                                                                              \
-				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .6 .6 .6 1 ;                                             \
+				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .7 .7 .7 1 ;                                             \
 			}                                                                                                                        \
                                                                                                                                      \
 			action {                                                                                                                 \
@@ -812,17 +846,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                                       \
 			textalignx $evalfloat(0.5 * (CHECKBOXALIGNXACTION_W) + CHECKBOXALIGNXACTION_TEXT_ALIGN_X)                                                        \
 			textaligny CHECKBOXALIGNXACTION_TEXT_ALIGN_Y                                                                                                     \
-			forecolor       .6 .6 .6 1                                                                                                                       \
+			forecolor       .7 .7 .7 1                                                                                                                       \
 			cvar CHECKBOXALIGNXACTION_CVAR                                                                                                                   \
 			visible         1                                                                                                                                \
 			tooltip CHECKBOXALIGNXACTION_TOOLTIP                                                                                                             \
                                                                                                                                                              \
 			mouseEnter {                                                                                                                                     \
-				setitemcolor "checkactionalx" ## CHECKBOXALIGNXACTION_TEXT forecolor .9 .9 .9 1 ;                                                            \
+				setitemcolor "checkactionalx" ## CHECKBOXALIGNXACTION_TEXT forecolor 1 1 1 1 ;                                                            \
 			}                                                                                                                                                \
                                                                                                                                                              \
 			mouseExit {                                                                                                                                      \
-				setitemcolor "checkactionalx" ## CHECKBOXALIGNXACTION_TEXT forecolor .6 .6 .6 1 ;                                                            \
+				setitemcolor "checkactionalx" ## CHECKBOXALIGNXACTION_TEXT forecolor .7 .7 .7 1 ;                                                            \
 			}                                                                                                                                                \
                                                                                                                                                              \
 			action {                                                                                                                                         \
@@ -844,18 +878,18 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                                        \
 			textalignx $evalfloat(0.5 * (CHECKBOXACTION_W) + (CHECKBOXACTION_TEXT_ALIGN_X))                                                                   \
 			textaligny CHECKBOXACTION_TEXT_ALIGN_Y                                                                                                            \
-			forecolor       .6 .6 .6 1                                                                                                                        \
+			forecolor       .7 .7 .7 1                                                                                                                        \
 			cvar CHECKBOXACTION_CVAR                                                                                                                          \
 			visible         1                                                                                                                                 \
 			tooltip CHECKBOXACTION_TOOLTIP                                                                                                                    \
 			bitflag BITFLAG                                                                                                                                   \
                                                                                                                                                               \
 			mouseEnter {                                                                                                                                      \
-				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .9 .9 .9 1 ;                                                                      \
+				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor 1 1 1 1 ;                                                                      \
 			}                                                                                                                                                 \
                                                                                                                                                               \
 			mouseExit {                                                                                                                                       \
-				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .6 .6 .6 1 ;                                                                      \
+				setitemcolor "checkaction" ## CHECKBOXACTION_TEXT forecolor .7 .7 .7 1 ;                                                                      \
 			}                                                                                                                                                 \
                                                                                                                                                               \
 			action {                                                                                                                                          \
@@ -878,17 +912,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                           \
 			textalignx $evalfloat(0.5 * (TRICHECKBOXACTION_W))                                                                                   \
 			textaligny TRICHECKBOXACTION_TEXT_ALIGN_Y                                                                                            \
-			forecolor       .6 .6 .6 1                                                                                                           \
+			forecolor       .7 .7 .7 1                                                                                                           \
 			cvar TRICHECKBOXACTION_CVAR                                                                                                          \
 			visible         1                                                                                                                    \
 			tooltip TRICHECKBOXACTION_TOOLTIP                                                                                                    \
                                                                                                                                                  \
 			mouseEnter {                                                                                                                         \
-				setitemcolor "tricheckaction" ## TRICHECKBOXACTION_TEXT forecolor .9 .9 .9 1 ;                                                   \
+				setitemcolor "tricheckaction" ## TRICHECKBOXACTION_TEXT forecolor 1 1 1 1 ;                                                   \
 			}                                                                                                                                    \
                                                                                                                                                  \
 			mouseExit {                                                                                                                          \
-				setitemcolor "tricheckaction" ## TRICHECKBOXACTION_TEXT forecolor .6 .6 .6 1 ;                                                   \
+				setitemcolor "tricheckaction" ## TRICHECKBOXACTION_TEXT forecolor .7 .7 .7 1 ;                                                   \
 			}                                                                                                                                    \
                                                                                                                                                  \
 			action {                                                                                                                             \
@@ -909,18 +943,18 @@
 			textalign ITEM_ALIGN_RIGHT                                                                   \
 			textalignx $evalfloat(0.5 * (TRICHECKBOXACTIONMULTI_W))                                      \
 			textaligny TRICHECKBOXACTIONMULTI_TEXT_ALIGN_Y                                               \
-			forecolor       .6 .6 .6 1                                                                   \
+			forecolor       .7 .7 .7 1                                                                   \
 			cvar TRICHECKBOXACTIONMULTI_CVAR                                                             \
 			TRICHECKBOXACTIONMULTI_CVARLIST                                                              \
 			visible         1                                                                            \
 			tooltip TTRICHECKBOXACTIONMULTI_TOOLTIP                                                      \
                                                                                                          \
 			mouseEnter {                                                                                 \
-				setitemcolor "tricheckactionmulti" ## TRICHECKBOXACTIONMULTI_CVAR forecolor .9 .9 .9 1 ; \
+				setitemcolor "tricheckactionmulti" ## TRICHECKBOXACTIONMULTI_CVAR forecolor 1 1 1 1 ; \
 			}                                                                                            \
                                                                                                          \
 			mouseExit {                                                                                  \
-				setitemcolor "tricheckactionmulti" ## TRICHECKBOXACTIONMULTI_CVAR forecolor .6 .6 .6 1 ; \
+				setitemcolor "tricheckactionmulti" ## TRICHECKBOXACTIONMULTI_CVAR forecolor .7 .7 .7 1 ; \
 			}                                                                                            \
                                                                                                          \
 			action {                                                                                     \
@@ -942,18 +976,18 @@
 			textalign ITEM_ALIGN_RIGHT                                                           \
 			textalignx $evalfloat(0.5 * (MULTI_W))                                               \
 			textaligny MULTI_TEXT_ALIGN_Y                                                        \
-			forecolor       .6 .6 .6 1                                                           \
+			forecolor       .7 .7 .7 1                                                           \
 			cvar MULTI_CVAR                                                                      \
 			MULTI_CVARLIST                                                                       \
 			visible         1                                                                    \
 			tooltip MULTI_TOOLTIP                                                                \
                                                                                                  \
 			mouseEnter {                                                                         \
-				setitemcolor "multi" ## MULTI_TEXT forecolor .9 .9 .9 1 ;                        \
+				setitemcolor "multi" ## MULTI_TEXT forecolor 1 1 1 1 ;                        \
 			}                                                                                    \
                                                                                                  \
 			mouseExit {                                                                          \
-				setitemcolor "multi" ## MULTI_TEXT forecolor .6 .6 .6 1 ;                        \
+				setitemcolor "multi" ## MULTI_TEXT forecolor .7 .7 .7 1 ;                        \
 			}                                                                                    \
                                                                                                  \
 			action {                                                                             \
@@ -972,18 +1006,18 @@
 			textstyle ITEM_TEXTSTYLE_SHADOWED                                                                    \
 			textscale MULTILEFT_TEXT_SCALE                                                                       \
 			textaligny MULTILEFT_TEXT_ALIGN_Y                                                                    \
-			forecolor       .6 .6 .6 1                                                                           \
+			forecolor       .7 .7 .7 1                                                                           \
 			cvar MULTILEFT_CVAR                                                                                  \
 			MULTILEFT_CVARLIST                                                                                   \
 			visible         1                                                                                    \
 			tooltip MULTILEFT_TOOLTIP                                                                            \
                                                                                                                  \
 			mouseEnter {                                                                                         \
-				setitemcolor "multileft" ## MULTILEFT_TEXT forecolor .9 .9 .9 1 ;                                \
+				setitemcolor "multileft" ## MULTILEFT_TEXT forecolor 1 1 1 1 ;                                \
 			}                                                                                                    \
                                                                                                                  \
 			mouseExit {                                                                                          \
-				setitemcolor "multileft" ## MULTILEFT_TEXT forecolor .6 .6 .6 1 ;                                \
+				setitemcolor "multileft" ## MULTILEFT_TEXT forecolor .7 .7 .7 1 ;                                \
 			}                                                                                                    \
                                                                                                                  \
 			action {                                                                                             \
@@ -1004,18 +1038,18 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                   \
 			textalignx $evalfloat(0.5 * (MULTIACTION_W))                                                                 \
 			textaligny MULTIACTION_TEXT_ALIGN_Y                                                                          \
-			forecolor       .6 .6 .6 1                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                   \
 			cvar MULTIACTION_CVAR                                                                                        \
 			MULTIACTION_CVARLIST                                                                                         \
 			visible         1                                                                                            \
 			tooltip MULTIACTION_TOOLTIP                                                                                  \
                                                                                                                          \
 			mouseEnter {                                                                                                 \
-				setitemcolor "multiaction" ## MULTIACTION_TEXT forecolor .9 .9 .9 1 ;                                    \
+				setitemcolor "multiaction" ## MULTIACTION_TEXT forecolor 1 1 1 1 ;                                    \
 			}                                                                                                            \
                                                                                                                          \
 			mouseExit {                                                                                                  \
-				setitemcolor "multiaction" ## MULTIACTION_TEXT forecolor .6 .6 .6 1 ;                                    \
+				setitemcolor "multiaction" ## MULTIACTION_TEXT forecolor .7 .7 .7 1 ;                                    \
 			}                                                                                                            \
                                                                                                                          \
 			action {                                                                                                     \
@@ -1035,18 +1069,18 @@
 			textstyle ITEM_TEXTSTYLE_SHADOWED                                                                                            \
 			textscale MULTIACTIONLEFT_TEXT_SCALE                                                                                         \
 			textaligny MULTIACTIONLEFT_TEXT_ALIGN_Y                                                                                      \
-			forecolor       .6 .6 .6 1                                                                                                   \
+			forecolor       .7 .7 .7 1                                                                                                   \
 			cvar MULTIACTIONLEFT_CVAR                                                                                                    \
 			MULTIACTIONLEFT_CVARLIST                                                                                                     \
 			visible         1                                                                                                            \
 			tooltip MULTIACTIONLEFT_TOOLTIP                                                                                              \
                                                                                                                                          \
 			mouseEnter {                                                                                                                 \
-				setitemcolor "multiactionleft" ## MULTIACTIONLEFT_TEXT forecolor .9 .9 .9 1 ;                                            \
+				setitemcolor "multiactionleft" ## MULTIACTIONLEFT_TEXT forecolor 1 1 1 1 ;                                            \
 			}                                                                                                                            \
                                                                                                                                          \
 			mouseExit {                                                                                                                  \
-				setitemcolor "multiactionleft" ## MULTIACTIONLEFT_TEXT forecolor .6 .6 .6 1 ;                                            \
+				setitemcolor "multiactionleft" ## MULTIACTIONLEFT_TEXT forecolor .7 .7 .7 1 ;                                            \
 			}                                                                                                                            \
                                                                                                                                          \
 			action {                                                                                                                     \
@@ -1068,17 +1102,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                                                        \
 			textalignx $evalfloat(0.5 * (SLIDER_W))                                                                                           \
 			textaligny SLIDER_TEXT_ALIGN_Y                                                                                                    \
-			forecolor       .6 .6 .6 1                                                                                                        \
+			forecolor       .7 .7 .7 1                                                                                                        \
 			cvarFloat SLIDER_CVARFLOAT                                                                                                        \
 			visible         1                                                                                                                 \
 			tooltip SLIDER_TOOLTIP                                                                                                            \
                                                                                                                                               \
 			mouseEnter {                                                                                                                      \
-				setitemcolor "slider" ## SLIDER_TEXT forecolor .9 .9 .9 1 ;                                                                   \
+				setitemcolor "slider" ## SLIDER_TEXT forecolor 1 1 1 1 ;                                                                   \
 			}                                                                                                                                 \
                                                                                                                                               \
 			mouseExit {                                                                                                                       \
-				setitemcolor "slider" ## SLIDER_TEXT forecolor .6 .6 .6 1 ;                                                                   \
+				setitemcolor "slider" ## SLIDER_TEXT forecolor .7 .7 .7 1 ;                                                                   \
 			}                                                                                                                                 \
 		}
 
@@ -1095,17 +1129,17 @@
 			textalign ITEM_ALIGN_RIGHT                                                                               \
 			textalignx $evalfloat(0.5 * (BIND_W))                                                                    \
 			textaligny BIND_TEXT_ALIGN_Y                                                                             \
-			forecolor       .6 .6 .6 1                                                                               \
+			forecolor       .7 .7 .7 1                                                                               \
 			cvar BIND_CVAR                                                                                           \
 			visible         1                                                                                        \
 			tooltip BIND_TOOLTIP                                                                                     \
                                                                                                                      \
 			mouseEnter {                                                                                             \
-				setitemcolor "bind" ## BIND_TEXT forecolor .9 .9 .9 1 ;                                              \
+				setitemcolor "bind" ## BIND_TEXT forecolor 1 1 1 1 ;                                              \
 			}                                                                                                        \
                                                                                                                      \
 			mouseExit {                                                                                              \
-				setitemcolor "bind" ## BIND_TEXT forecolor .6 .6 .6 1 ;                                              \
+				setitemcolor "bind" ## BIND_TEXT forecolor .7 .7 .7 1 ;                                              \
 			}                                                                                                        \
                                                                                                                      \
 			action {                                                                                                 \
@@ -1126,7 +1160,7 @@
 			textalign LABEL_TEXT_ALIGN                                                                                                    \
 			textalignx $evalfloat(LABEL_TEXT_ALIGN_X)                                                                                     \
 			textaligny $evalfloat(LABEL_TEXT_ALIGN_Y)                                                                                     \
-			forecolor       .6 .6 .6 1                                                                                                    \
+			forecolor       .7 .7 .7 1                                                                                                    \
 			visible         1                                                                                                             \
 			decoration                                                                                                                    \
 			autowrapped                                                                                                                   \
@@ -1163,7 +1197,7 @@
 			textalign CVARLABEL_TEXT_ALIGN                                                                       \
 			textalignx $evalfloat(CVARLABEL_TEXT_ALIGN_X)                                                        \
 			textaligny $evalfloat(CVARLABEL_TEXT_ALIGN_Y)                                                        \
-			forecolor       .6 .6 .6 1                                                                           \
+			forecolor       .7 .7 .7 1                                                                           \
 			cvar CVARLABEL_CVAR                                                                                  \
 			visible         1                                                                                    \
 			decoration                                                                                           \
@@ -1182,7 +1216,7 @@
 			textalign CVARFLOATLABEL_TEXT_ALIGN                                                                                      \
 			textalignx CVARFLOATLABEL_TEXT_ALIGN_X                                                                                   \
 			textaligny CVARFLOATLABEL_TEXT_ALIGN_Y                                                                                   \
-			forecolor       .6 .6 .6 1                                                                                               \
+			forecolor       .7 .7 .7 1                                                                                               \
 			cvar CVARFLOATLABEL_CVAR                                                                                                 \
 			visible         1                                                                                                        \
 			decoration                                                                                                               \
@@ -1202,7 +1236,7 @@
 			textalign ITEM_ALIGN_RIGHT                                                           \
 			textalignx $evalfloat(0.5 * (COMBO_W))                                               \
 			textaligny COMBO_TEXT_ALIGN_Y                                                        \
-			forecolor       .6 .6 .6 1                                                           \
+			forecolor       .7 .7 .7 1                                                           \
 			cvar COMBO_CVAR                                                                      \
 			COMBO_CVARLIST                                                                       \
 			visible         1                                                                    \
@@ -1210,12 +1244,12 @@
 			tooltip COMBO_TOOLTIP                                                                \
                                                                                                  \
 			mouseEnter {                                                                         \
-				setitemcolor "combo" ## COMBO_TEXT forecolor .9 .9 .9 1 ;                        \
+				setitemcolor "combo" ## COMBO_TEXT forecolor 1 1 1 1 ;                        \
 				setitemcolor "combo" ## COMBO_TEXT backcolor 0 0 0 .8 ;                          \
 			}                                                                                    \
                                                                                                  \
 			mouseExit {                                                                          \
-				setitemcolor "combo" ## COMBO_TEXT forecolor .6 .6 .6 1 ;                        \
+				setitemcolor "combo" ## COMBO_TEXT forecolor .7 .7 .7 1 ;                        \
 				setitemcolor "combo" ## COMBO_TEXT backcolor 0 0 0 0 ;                           \
 			}                                                                                    \
                                                                                                  \
@@ -1241,7 +1275,7 @@
 			textscale COMBOLEFT_TEXT_SCALE                                                                       \
 			textalign ITEM_ALIGN_RIGHT                                                                           \
 			textaligny COMBOLEFT_TEXT_ALIGN_Y                                                                    \
-			forecolor       .6 .6 .6 1                                                                           \
+			forecolor       .7 .7 .7 1                                                                           \
 			cvar COMBOLEFT_CVAR                                                                                  \
 			COMBOLEFT_CVARLIST                                                                                   \
 			visible         1                                                                                    \
@@ -1249,12 +1283,12 @@
 			tooltip COMBOLEFT_TOOLTIP                                                                            \
                                                                                                                  \
 			mouseEnter {                                                                                         \
-				setitemcolor "combo" ## COMBOLEFT_TEXT forecolor .9 .9 .9 1 ;                                    \
+				setitemcolor "combo" ## COMBOLEFT_TEXT forecolor 1 1 1 1 ;                                    \
 				setitemcolor "combo" ## COMBOLEFT_TEXT backcolor 0 0 0 0.8 ;                                     \
 			}                                                                                                    \
                                                                                                                  \
 			mouseExit {                                                                                          \
-				setitemcolor "combo" ## COMBOLEFT_TEXT forecolor .6 .6 .6 1 ;                                    \
+				setitemcolor "combo" ## COMBOLEFT_TEXT forecolor .7 .7 .7 1 ;                                    \
 				setitemcolor "combo" ## COMBOLEFT_TEXT backcolor 0 0 0 0 ;                                       \
 			}                                                                                                    \
                                                                                                                  \
