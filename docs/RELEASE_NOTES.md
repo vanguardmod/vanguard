@@ -3,6 +3,33 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.2.0 — 2026-04-26
+
+  - **Tighter player hitboxes for competitive play.** The standard
+    upstream player bounding box was 36×36×72 units (XY ±18,
+    Z -24/+48). The XY footprint was visibly more generous than
+    any player model in the game and produced "phantom hit"
+    feedback — shots landing visibly off-target still registering
+    as a body hit. VanguardMod tightens the XY to ±16 (32×32, ~11%
+    smaller) while keeping Z untouched so crouch-jump physics and
+    view-height relationships are preserved. All stance-derived
+    boxes (crouch, prone, dead) inherit the narrower XY since they
+    only override the top-Z. Antilag inherits automatically through
+    the spawn-time copy of `playerMins/Maxs` into `client->r.mins/maxs`.
+  - **Head hitbox unchanged.** It already uses MDX bone-tracking
+    (`mdx_head_position`, gated on `FEATURE_SERVERMDX=ON` plus the
+    `g_realHead & REALHEAD_HEAD` default), which follows the helmet
+    through every animation frame. Some users reported the dev-mode
+    head box looking off-helmet — that is a renderer-side
+    approximation gap (cg_vanguard_dev.c uses the no-MDX fallback
+    math because cgame can't trivially query bones for other
+    players); the server's actual damage trace lands on the helmet.
+    `docs/DEV_MODE.md` now spells this out under "Known limitations".
+  - **Minor bump rationale.** First version that meaningfully
+    changes gameplay feel rather than tooling/infra. Player aim
+    that was tuned for the wider boxes will have to re-calibrate;
+    expected and intended.
+
 ## v0.1.2 — 2026-04-26
 
   - **Disable upstream "UPGRADE NOW" banner.** ETLegacy's UI shows a

@@ -158,6 +158,33 @@ exactly; a crawling one will show legs slightly above or below the
 true collision box. The local player always uses the exact pmext
 offset.
 
+### Head box is an approximation, not the damage trace
+
+The dev-mode renderer draws the head box from `G_BuildHead`'s
+**no-MDX fallback** math (player origin + viewheight + a forward /
+up offset table). The server's actual headshot trace, however,
+runs through `mdx_head_position` whenever `FEATURE_SERVERMDX=ON`
+(our build) and `g_realHead & REALHEAD_HEAD` (default `1`) — that
+path bone-tracks the head through the MDX skeleton so the
+collision box follows the helmet across every animation frame.
+
+Consequence: in dev mode you may see the red head box sit a few
+units away from the visible helmet, especially during run / lean
+/ death animations. **That's a visualisation gap, not a hitreg
+bug** — sniper headshots land on the helmet because the server
+trace queries the bone position, not the box you're seeing. To
+visualise the *real* damage box you would need to query MDX bones
+client-side, which would require giving cgame access to the
+player refent's bone state for non-local clients (a sizeable
+refactor, scoped out of the current dev-mode tier).
+
+If precise head-box visualisation matters more than the cgame-side
+isolation, the upstream `cg_debugPlayerHitboxes` cvar (separate
+from VanguardMod's `cg_vanguardDevHitboxes`) renders boxes from
+the live `head.axis` bone tag in `cg_players.c` and matches the
+server. Server-broadcast though, so it has the snapshot-saturation
+problem we explicitly walked away from in v0.1.1.
+
 ## Before / after screenshots
 
 Capturing a clean before/after pair for a hitbox change is the main

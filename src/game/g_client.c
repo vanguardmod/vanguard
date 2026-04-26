@@ -51,9 +51,19 @@
 
 #include "wolfguard.h"
 
-// new bounding box
-vec3_t playerMins = { -18, -18, -24 };
-vec3_t playerMaxs = { 18, 18, 48 };
+/* VANGUARD: tighter XY footprint for competitive play.
+ * Reduces phantom hits from overly generous bounding boxes.
+ * Original ETLegacy values were +-18 (36x36 unit footprint),
+ * reduced to +-16 (32x32, ~11% smaller). Z-axis unchanged
+ * (-24/+48) to preserve crouch-jump physics and view-height
+ * relationships. Antilag inherits automatically because these
+ * values are copied into client->r.mins/maxs at spawn
+ * (g_client.c:3261-3262) and the historical-trace system reads
+ * those at lookup time. The crouch / prone / dead top-Z values
+ * also inherit the narrower XY since they only override [2].
+ * See docs/RELEASE_NOTES.md v0.2.0 for the tuning rationale. */
+vec3_t playerMins = { -16, -16, -24 };
+vec3_t playerMaxs = { 16, 16, 48 };
 
 /**
  * @brief Store the exact view direction at the moment the player gets downed.
