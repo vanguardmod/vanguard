@@ -100,3 +100,74 @@ symlink resolves.
 `build-server/` and `scripts/testserver/server.log` are listed in
 `.gitignore` and must stay there. `~/.etlegacy-vanguard-test/` lives
 outside the repo and needs no entry.
+
+## Bots (Omni-Bot)
+
+The test server runs Omni-Bot so we can populate it with AI players for
+hitbox visualisation and gameplay-feature shakeouts. The qagame mod is
+built with `FEATURE_OMNIBOT=ON` (Linux only — Windows cross builds stay
+off) and dlopen()s `omnibot_et.x86_64.so` from `vanguard/omni-bot/` at
+map load.
+
+### Where the runtime comes from
+
+The Omni-Bot runtime (~26MB tarball) is not in any apt repo. The
+bootstrap fetches it from `https://mirror.etlegacy.com/omnibot/` on
+first run and caches it under `vendor/omnibot-runtime/`. The cache
+survives `rm -rf build`, so subsequent bootstraps skip the download.
+
+After the Linux mod build, `bootstrap.sh` copies the cached tree into
+`build/vanguard/omni-bot/`, which is what the engine searches via
+`omnibot_path "omni-bot"` (relative to `fs_game/`).
+
+If `mirror.etlegacy.com` is unreachable, place the tarball manually at
+`vendor/omnibot-runtime/omnibot-linux-latest.tar.gz` and re-run
+`scripts/bootstrap.sh` — it will pick up the file from the cache
+without trying to fetch.
+
+### Server cvars
+
+Already set in `scripts/testserver/server.cfg`:
+
+  - `bot_enable 1`     — engine-side master switch (CVAR_LATCH; must
+                         be set before `+map`)
+  - `omnibot_enable 1` — qagame-side switch
+  - `omnibot_path "omni-bot"` — search path under `fs_game/`
+
+If any of these is missing or set late, qagame logs `Omni-bot library
+not loaded` and `bot addbot` will fail silently.
+
+### What "working" looks like
+
+In the server log shortly after `Game Initialization completed`:
+
+    Omni-bot Loaded: <version>
+    Loaded mapscript: <map>.gm
+
+If you instead see `Failed to load Omni-bot` or `omnibot_et.so: cannot
+open shared object file`, check that `build/vanguard/omni-bot/omnibot_et.x86_64.so`
+exists and that `omnibot_path` matches the directory name.
+
+### Bot commands (rcon / server console)
+
+  - `bot addbot <team> <skill> [name] [classnum]`
+    - team: `axis` or `allies`
+    - skill: `1` (easy) … `5` (very hard)
+    - example: `bot addbot allies 3 BotJim`
+  - `bot kickbot <name|number>` — remove one
+  - `bot kickbots` — clear all
+  - `bot maxbots <n>` — cap auto-spawned bots (some mapscripts auto-fill teams)
+  - `bot debug 1` — verbose Omni-Bot logging
+  - `bot goals` / `bot waypoints` — debug overlays (need cheats and a
+    spectating client; useful with `vanguard_dev 1`)
+
+For hitbox screenshots: spawn 1-2 bots, free-cam to them with `noclip`
++ `cg_thirdperson 1` (both unlocked by `sv_cheats 1` which dev mode
+sets automatically), and snap with `screenshotJPEG`.
+
+### Updating the runtime
+
+Delete the cache and re-bootstrap to pull a newer Omni-Bot:
+
+    rm -rf vendor/omnibot-runtime/
+    ./scripts/bootstrap.sh
