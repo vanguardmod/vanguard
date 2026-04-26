@@ -66,7 +66,7 @@ by upstream's `mod_pk3` target (with Vanguard-specific patches in
 `cmake/ETLBuildMod.cmake`).
 
 `bootstrap.sh` builds the three platforms in the right order and emits
-`build/vanguard/vanguard_v0.1.1.pk3` as part of the Linux build's `ALL`
+`build/vanguard/vanguard_v0.1.2.pk3` as part of the Linux build's `ALL`
 target. To repack ad-hoc after touching a single platform's binaries:
 
     cmake --build build --target mod_pk3
