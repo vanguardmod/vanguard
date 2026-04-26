@@ -38,11 +38,15 @@ menuDef {
 	}
 
 // Logo //
+	/* VANGUARD: replace upstream ETLegacy logo on the quit-credits
+	 * screen. Asset swapped to vanguardmod/logo_small (square);
+	 * the rect is also squared (200x100 -> 100x100) to preserve
+	 * aspect — the upstream layout assumed a 2:1 wordmark. */
 	itemDef {
 		name		"logo"
-		rect		$evalfloat(.5*(WINDOW_WIDTH-200)) $evalfloat(36) 200 100
+		rect		$evalfloat(.5*(WINDOW_WIDTH-100)) $evalfloat(36) 100 100
 		style		WINDOW_STYLE_SHADER
-		background	"ui/assets/etl_logo"
+		background	"ui/assets/vanguardmod/logo_small"
 		forecolor	1 1 1 1
 		visible		1
 		decoration
