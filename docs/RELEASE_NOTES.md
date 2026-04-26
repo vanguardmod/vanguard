@@ -3,6 +3,21 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.1.2 — 2026-04-26
+
+  - **Disable upstream "UPGRADE NOW" banner.** ETLegacy's UI shows a
+    red "SECURITY INFORMATION / You are running old software /
+    UPGRADE NOW" block on the main menu (and four spots in the
+    in-game menu) whenever its compiled-in version doesn't match
+    the engine's. With VanguardMod's own version scheme (v0.1.x)
+    this misfires unconditionally — the comparison is between our
+    mod version and the ETLegacy engine, which is always a
+    mismatch. Both `OLD_CLIENT` defines in `src/ui/ui_main.c` are
+    suppressed (with VANGUARD markers explaining why) so the
+    banner no longer appears. When VanguardMod ships a real update
+    endpoint, replace with a `VANGUARD_UPDATE_AVAILABLE` define
+    against vanguardmod.com.
+
 ## v0.1.1 — 2026-04-26
 
   - **Dev mode** (`vanguard_dev` cvar). Server-authorised hitbox
