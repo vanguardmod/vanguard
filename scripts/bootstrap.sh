@@ -181,14 +181,74 @@ EOF
 # Common CMake flags shared between Linux and Windows cross builds.
 # BUILD_MOD_PK3 is intentionally NOT set here — each build picks it on/off
 # explicitly (only the Linux build emits the redistributable .pk3).
+# FEATURE_OMNIBOT is also picked per-build: ON for the Linux mod (test
+# server), OFF for the Windows cross builds (we don't bot-test on
+# Windows).
 COMMON_CMAKE_FLAGS=(
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF
     -DBUILD_MOD=ON
     -DBUNDLED_LIBS=OFF
-    -DFEATURE_LUA=OFF -DFEATURE_OMNIBOT=OFF
+    -DFEATURE_LUA=OFF
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF
     -DINSTALL_EXTRA=OFF
 )
+
+# -----------------------------------------------------------------------------
+# Omni-Bot runtime cache (Linux only)
+# -----------------------------------------------------------------------------
+#
+# qagame, when built with FEATURE_OMNIBOT=ON, dlopen()s an omnibot_et.so
+# from <fs_game>/omni-bot/ at map load. That runtime is a ~20MB tarball
+# distributed by the ETLegacy team — not in any apt repo, not in vendor/
+# (only the headers are). We cache it under vendor/omnibot-runtime/ so
+# `rm -rf build` doesn't trigger a re-download, and copy a fresh tree
+# into build/vanguard/omni-bot/ after the Linux mod build finishes.
+
+OMNIBOT_CACHE_DIR="${REPO_ROOT}/vendor/omnibot-runtime"
+OMNIBOT_TARBALL_URL="https://mirror.etlegacy.com/omnibot/omnibot-linux-latest.tar.gz"
+OMNIBOT_TARBALL_PATH="${OMNIBOT_CACHE_DIR}/omnibot-linux-latest.tar.gz"
+OMNIBOT_EXTRACT_DIR="${OMNIBOT_CACHE_DIR}/extracted"
+
+fetch_omnibot_runtime() {
+    mkdir -p "${OMNIBOT_CACHE_DIR}"
+
+    if [ -d "${OMNIBOT_EXTRACT_DIR}/omni-bot" ]; then
+        log "Omni-Bot runtime cache hit (${OMNIBOT_EXTRACT_DIR}/omni-bot)"
+        return 0
+    fi
+
+    if [ ! -f "${OMNIBOT_TARBALL_PATH}" ]; then
+        log "Downloading Omni-Bot runtime from ${OMNIBOT_TARBALL_URL}"
+        if ! curl --fail --location --output "${OMNIBOT_TARBALL_PATH}" "${OMNIBOT_TARBALL_URL}"; then
+            rm -f "${OMNIBOT_TARBALL_PATH}"
+            err "Omni-Bot download failed (mirror unreachable?). Manual fallback:
+    1. Obtain omnibot-linux-latest.tar.gz from any ETLegacy Linux mirror
+    2. Place it at: ${OMNIBOT_TARBALL_PATH}
+    3. Re-run scripts/bootstrap.sh"
+        fi
+    else
+        log "Using cached Omni-Bot tarball at ${OMNIBOT_TARBALL_PATH}"
+    fi
+
+    log "Extracting Omni-Bot runtime to ${OMNIBOT_EXTRACT_DIR}"
+    rm -rf "${OMNIBOT_EXTRACT_DIR}"
+    mkdir -p "${OMNIBOT_EXTRACT_DIR}"
+    tar -xzf "${OMNIBOT_TARBALL_PATH}" -C "${OMNIBOT_EXTRACT_DIR}"
+
+    if [ ! -d "${OMNIBOT_EXTRACT_DIR}/omni-bot" ]; then
+        err "Omni-Bot tarball did not contain expected 'omni-bot/' top-level directory"
+    fi
+}
+
+deploy_omnibot_runtime() {
+    local target="${REPO_ROOT}/build/vanguard/omni-bot"
+    if [ ! -d "${OMNIBOT_EXTRACT_DIR}/omni-bot" ]; then
+        err "Omni-Bot runtime not staged in cache; fetch_omnibot_runtime must run first"
+    fi
+    log "Deploying Omni-Bot runtime into ${target}"
+    rm -rf "${target}"
+    cp -r "${OMNIBOT_EXTRACT_DIR}/omni-bot" "${target}"
+}
 
 if [ "$SKIP_BUILD" -ne 0 ]; then
     log "Skipping configure/build (--skip-build)"
@@ -200,23 +260,29 @@ To build later:
     # so the multi-arch pk3 picks up the cross-built DLLs at configure time.
     cmake -B build-windows \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \\
-        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows -j
 
     # Windows x86 (delivered to 32-bit clients)
     cmake -B build-windows-32 \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \\
-        -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
 
     # Linux x86_64 + the multi-arch vanguard_v0.1.0.pk3 the server hands out.
+    # FEATURE_OMNIBOT=ON requires the runtime tarball to be present in
+    # vendor/omnibot-runtime/extracted/omni-bot/ — the bootstrap fetches it.
     CI_ETL_TAG=v0.1.0 CI_ETL_DESCRIBE=v0.1.0 cmake -B build \\
-        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build -j
 
 HINT
     exit 0
 fi
+
+# Pre-fetch the Omni-Bot runtime now so a network failure aborts before
+# we burn ~minutes on Windows + Linux compiles.
+fetch_omnibot_runtime
 
 # Vanguard release version. Injected into upstream's git-describe-driven
 # ETLVersion.cmake so the resulting pk3 is named vanguard_v0.1.0.pk3 instead
@@ -229,6 +295,8 @@ export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
 # bundle them into a single multi-arch .pk3 (see cmake/ETLBuildMod.cmake).
 
 # -- Windows x86_64 (cross) ---------------------------------------------------
+# FEATURE_OMNIBOT=OFF on Windows: we don't bot-test on Windows clients,
+# and the runtime tarball we fetch is Linux-only.
 if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
     log "Configuring Windows x86_64 cross build"
     rm -rf build-windows
@@ -236,6 +304,7 @@ if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
         -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-x64-linux.cmake" \
         -DCROSS_COMPILE32=OFF \
         -DBUILD_MOD_PK3=OFF \
+        -DFEATURE_OMNIBOT=OFF \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86_64"
     cmake --build build-windows -j
@@ -251,6 +320,7 @@ if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
         -DCMAKE_TOOLCHAIN_FILE="${REPO_ROOT}/cmake/Toolchain-cross-mingw-linux.cmake" \
         -DCROSS_COMPILE32=ON \
         -DBUILD_MOD_PK3=OFF \
+        -DFEATURE_OMNIBOT=OFF \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86"
     cmake --build build-windows-32 -j
@@ -263,14 +333,19 @@ fi
 # which we patched to also bundle qagame/tvgame and the Windows DLLs found in
 # build-windows{,-32}/${MODNAME}/. Configure must happen *after* the Windows
 # builds because the .dll list is captured by file(GLOB) at configure time.
-log "Configuring Linux x86_64 (mod + multi-arch pk3)"
+# FEATURE_OMNIBOT=ON enables the qagame <-> Omni-Bot interface; the actual
+# omnibot_et.so is dropped in by deploy_omnibot_runtime below, not by CMake.
+log "Configuring Linux x86_64 (mod + multi-arch pk3 + Omni-Bot)"
 rm -rf build
 cmake -B build \
     -DCROSS_COMPILE32=OFF \
     -DBUILD_MOD_PK3=ON \
+    -DFEATURE_OMNIBOT=ON \
     "${COMMON_CMAKE_FLAGS[@]}"
 log "Building Linux x86_64 + mod_pk3"
 cmake --build build -j
+
+deploy_omnibot_runtime
 
 SERVER_MOD_DIR="${REPO_ROOT}/build/vanguard"
 

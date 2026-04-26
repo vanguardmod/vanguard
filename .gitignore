@@ -72,3 +72,9 @@ etmain/mp_bin.pk3
 
 # Closed-source WolfGuard implementation (only on trusted core devs' machines)
 wolfguard/private/
+
+# Omni-Bot runtime cache (tarball + extracted tree). Downloaded by
+# scripts/bootstrap.sh from mirror.etlegacy.com on first build with
+# FEATURE_OMNIBOT=ON. Survives `rm -rf build` so we don't re-download
+# every bootstrap. Not source — never committed.
+vendor/omnibot-runtime/
