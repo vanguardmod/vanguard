@@ -1,0 +1,172 @@
+/* VANGUARD: VanguardMod credits screen. New file (no upstream
+ * counterpart). Layout patterned after credits_etlegacy.menu so it
+ * sits naturally in the existing menu hierarchy. The Credits button
+ * in main.menu is patched to open this menu first; from here the
+ * "UPSTREAM CREDITS" button leads into the unmodified
+ * credits_etlegacy.menu, which in turn keeps its full set of
+ * Splash Damage / id Software / Activision / contributor links.
+ * See docs/RELEASE_NOTES.md v0.3.0 for the integration. */
+
+#include "ui/menudef.h"
+#include "ui/menumacros.h"
+
+// Defines //
+#define WINDOW_X		16
+#define WINDOW_Y		16
+#define WINDOW_WIDTH	608
+#define WINDOW_HEIGHT	448
+#define GROUP_NAME		"grpCreditsVanguardmod"
+
+// System Menu //
+menuDef {
+	name		"credits_vanguardmod"
+	visible		0
+	fullscreen	0
+	rect		WINDOW_X WINDOW_Y WINDOW_WIDTH WINDOW_HEIGHT
+	style		WINDOW_STYLE_FILLED
+
+	onESC {
+		close credits_vanguardmod ;
+#ifdef FUI
+		open main
+#else
+		open ingame_main
+#endif
+	}
+
+// Window //
+	itemDef {
+		name		"window"
+		group		GROUP_NAME
+		rect		0 0 WINDOW_WIDTH WINDOW_HEIGHT
+		style		WINDOW_STYLE_FILLED
+		backcolor	0 0 0 .8
+		border		WINDOW_BORDER_FULL
+		bordercolor	.5 .5 .5 .5
+		visible		1
+		decoration
+	}
+
+// Logo (large, square — no wordmark stretch) //
+	itemDef {
+		name		"logo"
+		rect		$evalfloat(.5*(WINDOW_WIDTH-100)) 12 100 100
+		style		WINDOW_STYLE_SHADER
+		background	"ui/assets/vanguardmod/logo_main"
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+// Title //
+	itemDef {
+		name		"title"
+		group		GROUP_NAME
+		rect		6 118 $evalfloat(WINDOW_WIDTH-12) 18
+		text		"VANGUARDMOD"
+		textfont	UI_FONT_ARIBLK_16
+		textstyle	ITEM_TEXTSTYLE_SHADOWED
+		textscale	.35
+		textalign	ITEM_ALIGN_CENTER
+		textalignx	$evalfloat(.5*(WINDOW_WIDTH-12))
+		textaligny	14
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+	LABELWHITE( 6, 142, WINDOW_WIDTH-12, 10, "Competitive Wolfenstein: Enemy Territory mod for ETLegacy", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// LEAD DEVELOPER //
+	itemDef {
+		name		"headerLead"
+		group		GROUP_NAME
+		rect		6 174 $evalfloat(WINDOW_WIDTH-12) 12
+		text		"^1LEAD DEVELOPER"
+		textfont	UI_FONT_ARIBLK_16
+		textstyle	ITEM_TEXTSTYLE_SHADOWED
+		textscale	.19
+		textalign	ITEM_ALIGN_CENTER
+		textalignx	$evalfloat(.5*(WINDOW_WIDTH-12))
+		textaligny	10
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+	LABELWHITE( 6, 188, WINDOW_WIDTH-12, 10, "wahke", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// COMMUNITY //
+	itemDef {
+		name		"headerCommunity"
+		group		GROUP_NAME
+		rect		6 212 $evalfloat(WINDOW_WIDTH-12) 12
+		text		"^1COMMUNITY"
+		textfont	UI_FONT_ARIBLK_16
+		textstyle	ITEM_TEXTSTYLE_SHADOWED
+		textscale	.19
+		textalign	ITEM_ALIGN_CENTER
+		textalignx	$evalfloat(.5*(WINDOW_WIDTH-12))
+		textaligny	10
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+	LABELWHITE( 6, 226, WINDOW_WIDTH-12, 10, "wolffiles.eu", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// PROJECT //
+	itemDef {
+		name		"headerProject"
+		group		GROUP_NAME
+		rect		6 250 $evalfloat(WINDOW_WIDTH-12) 12
+		text		"^1PROJECT"
+		textfont	UI_FONT_ARIBLK_16
+		textstyle	ITEM_TEXTSTYLE_SHADOWED
+		textscale	.19
+		textalign	ITEM_ALIGN_CENTER
+		textalignx	$evalfloat(.5*(WINDOW_WIDTH-12))
+		textaligny	10
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+	LABELWHITE( 6, 264, WINDOW_WIDTH-12, 10, "vanguardmod.com (coming soon)", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 274, WINDOW_WIDTH-12, 10, "github.com/vanguardmod/vanguard", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 284, WINDOW_WIDTH-12, 10, "Discord: discord.gg/umnM8wVrth", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// BUILT ON //
+	itemDef {
+		name		"headerBuiltOn"
+		group		GROUP_NAME
+		rect		6 308 $evalfloat(WINDOW_WIDTH-12) 12
+		text		"^1BUILT ON"
+		textfont	UI_FONT_ARIBLK_16
+		textstyle	ITEM_TEXTSTYLE_SHADOWED
+		textscale	.19
+		textalign	ITEM_ALIGN_CENTER
+		textalignx	$evalfloat(.5*(WINDOW_WIDTH-12))
+		textaligny	10
+		forecolor	1 1 1 1
+		visible		1
+		decoration
+	}
+
+	LABELWHITE( 6, 322, WINDOW_WIDTH-12, 10, "ETLegacy (etlegacy.com)", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 332, WINDOW_WIDTH-12, 10, "Wolfenstein: Enemy Territory", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 342, WINDOW_WIDTH-12, 10, "id Tech 3 Engine", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// Upstream credits hint //
+	LABELWHITE( 6, 372, WINDOW_WIDTH-12, 10, "For ETLegacy, Splash Damage, id Software, and Activision credits", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 384, WINDOW_WIDTH-12, 10, "see ^3UPSTREAM CREDITS^7 below.", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+
+// Buttons //
+#ifdef FUI
+	BUTTON( 6, WINDOW_HEIGHT - 24, .33 * (WINDOW_WIDTH - 24), 18, _("MSGID_MENU_BACK"), .3, 14, close credits_vanguardmod ; open main )
+#else
+	BUTTON( 6, WINDOW_HEIGHT - 24, .33 * (WINDOW_WIDTH - 24), 18, _("MSGID_MENU_BACK"), .3, 14, close credits_vanguardmod ; open ingame_main )
+#endif
+	BUTTON( 6 + .33 * (WINDOW_WIDTH - 24) + 6, WINDOW_HEIGHT - 24, .34 * (WINDOW_WIDTH - 24), 18, "UPSTREAM CREDITS", .3, 14, close credits_vanguardmod ; open credits_etlegacy )
+	BUTTON( 6 + .33 * (WINDOW_WIDTH - 24) + 6 + .34 * (WINDOW_WIDTH - 24) + 6, WINDOW_HEIGHT - 24, .33 * (WINDOW_WIDTH - 24), 18, "GITHUB", .3, 14, clearFocus ; uiScript validate_openURL "https://github.com/vanguardmod/vanguard" )
+}

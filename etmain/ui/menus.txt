@@ -33,6 +33,11 @@
 	loadMenu { "ui/options_system.menu" }
 	loadMenu { "ui/options_system_extended.menu" }
 	loadMenu { "ui/options_system_gamma.menu" }
+	// VANGUARD: load credits_vanguardmod.menu so the engine can
+	// open it from main.menu's CREDITS button (the upstream
+	// credits_etlegacy.menu remains loaded right after, reachable
+	// via the UPSTREAM CREDITS button on the VanguardMod screen).
+	loadMenu { "ui/credits_vanguardmod.menu" }
 	loadMenu { "ui/credits_attributions.menu" }
 	loadMenu { "ui/credits_etlegacy.menu" }
 	loadMenu { "ui/credits_splashdamage.menu" }
