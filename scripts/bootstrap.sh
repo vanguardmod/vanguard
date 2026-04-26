@@ -269,10 +269,10 @@ To build later:
         -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
 
-    # Linux x86_64 + the multi-arch vanguard_v0.2.1.pk3 the server hands out.
+    # Linux x86_64 + the multi-arch vanguard_v0.3.1.pk3 the server hands out.
     # FEATURE_OMNIBOT=ON requires the runtime tarball to be present in
     # vendor/omnibot-runtime/extracted/omni-bot/ — the bootstrap fetches it.
-    CI_ETL_TAG=v0.2.1 CI_ETL_DESCRIBE=v0.2.1 cmake -B build \\
+    CI_ETL_TAG=v0.3.1 CI_ETL_DESCRIBE=v0.3.1 cmake -B build \\
         -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build -j
 
@@ -285,10 +285,10 @@ fi
 fetch_omnibot_runtime
 
 # Vanguard release version. Injected into upstream's git-describe-driven
-# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.2.1.pk3 instead
+# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.3.1.pk3 instead
 # of falling back to the imported ETLEGACY_VERSION (2.83.x).
 # See docs/RELEASE_PROCESS.md for the full bump checklist.
-export CI_ETL_TAG="${VANGUARD_VERSION:-v0.2.1}"
+export CI_ETL_TAG="${VANGUARD_VERSION:-v0.3.1}"
 export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
 
 # Order matters: Windows cross builds run *before* the Linux configure so the
