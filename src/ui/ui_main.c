@@ -1482,12 +1482,23 @@ void UI_LoadMenus(const char *menuFile, qboolean reset)
 		// if the client is older than the mod, then it makes sense that there has been a new release which the user has not installed
 		if (LEGACY_PATCH_CLAMP(uiInfo.etLegacyClient) < LEGACY_PATCH_CLAMP(ETLEGACY_VERSION_INT))
 		{
-			trap_PC_AddGlobalDefine("OLD_CLIENT");
+			/* VANGUARD: OLD_CLIENT define disabled — VanguardMod uses
+			 * its own version scheme (v0.1.x) which doesn't fit the
+			 * upstream ETLegacy update-check schema. The compare here
+			 * would also misfire since ETLEGACY_VERSION_INT is now
+			 * the mod's version, not the engine's. Re-enable as a
+			 * VANGUARD_UPDATE_AVAILABLE define against a vanguardmod.com
+			 * endpoint when that ships. See docs/RELEASE_NOTES.md v0.1.2. */
+			/* trap_PC_AddGlobalDefine("OLD_CLIENT"); */
 		}
 	}
 	else
 	{
-		trap_PC_AddGlobalDefine("OLD_CLIENT");
+		/* VANGUARD: see comment above — same OLD_CLIENT suppression
+		 * for the non-ETLegacy-engine branch. A vanilla ET client
+		 * connecting to a VanguardMod server is fine; we don't tell
+		 * them to upgrade based on someone else's update notion. */
+		/* trap_PC_AddGlobalDefine("OLD_CLIENT"); */
 	}
 
 #ifdef __ANDROID__
