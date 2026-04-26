@@ -107,6 +107,27 @@ When `vanguard_dev` flips `1 -> 0`:
     accident shape.
   - **Streamed scrims** if you don't want hitboxes in the VOD.
 
+## Known limitations
+
+### `sv_cheats` is read-only on Pterodactyl-managed servers
+
+Pterodactyl (the panel many ETLegacy hosts use) marks `sv_cheats` as
+read-only at the engine layer. When dev mode tries to flip it on,
+the engine logs `sv_cheats is read only` and the cvar stays at `0`.
+
+Consequence: hitbox visualisation **still works** (it depends only on
+`g_debugPlayerHitboxes` / `g_debugBullets`, which dev mode also
+forces), but every CVAR_CHEAT-protected client tool — `noclip`,
+`cg_thirdperson`, `give`, `notarget`, `freeze` — refuses to run with
+"cheats not enabled". For inspecting bot models from arbitrary
+angles you then need a self-hosted dev server (the test-server
+harness in `scripts/testserver/` is not Pterodactyl-managed and
+allows the toggle).
+
+The dev-mode disable path runs `sv_cheats` restore unconditionally,
+so a host that locks the cvar is not corrupted by dev mode being
+toggled — the restore is just a no-op the engine ignores.
+
 ## Before / after screenshots
 
 Capturing a clean before/after pair for a hitbox change is the main
