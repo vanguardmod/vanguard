@@ -258,6 +258,12 @@ extern vmCvar_t cg_optimizePrediction;
 extern vmCvar_t cg_debugPlayerHitboxes;
 extern vmCvar_t cg_debugBullets;
 
+// VanguardMod dev mode — render-side filters for the hitbox / bullet
+// railtrails the server emits when vanguard_dev=1. Client cvars are
+// passive: they can only down-filter what the server already broadcasts.
+extern vmCvar_t cg_vanguardDevHitboxes;  ///< 0 off, 1 boxes only, 2 boxes + bullet lines
+extern vmCvar_t cg_vanguardDevAlpha;     ///< 0.0..1.0 alpha for railtrail rendering
+
 // scoreboard
 extern vmCvar_t cg_scoreboard;
 

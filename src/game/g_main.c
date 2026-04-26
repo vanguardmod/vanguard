@@ -50,6 +50,7 @@
 #include "../qcommon/q_oss.h"
 
 #include "wolfguard.h"
+#include "g_vanguard.h"
 
 #include "json.h"
 
@@ -1885,6 +1886,11 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	/* VanguardMod: bring up the WolfGuard layer for this map. */
 	WG_Init(level.rawmapname, NULL);
 	G_Printf("VanguardMod: WolfGuard %s provider active\n", WG_GetInfo()->provider_name);
+
+	/* VanguardMod: dev mode subsystem (vanguard_dev cvar + debug
+	 * visualisation gating). Must run after WG_Init so the dev banner
+	 * appears below the WolfGuard line in chronological log order. */
+	vg_DevMode_Init();
 }
 
 /**
@@ -1969,6 +1975,9 @@ void G_ShutdownGame(int restart)
 
 	/* VanguardMod: tear down the WolfGuard layer. Idempotent. */
 	WG_Shutdown();
+
+	/* VanguardMod: tear down dev mode (restores debug cvars if active). */
+	vg_DevMode_Shutdown();
 }
 
 //===================================================================
@@ -4599,6 +4608,10 @@ void G_RunFrame(int levelTime)
 
 	/* VanguardMod: per-frame WolfGuard tick. */
 	WG_OnFrame(level.time);
+
+	/* VanguardMod: per-frame dev mode tick (cvar transitions, periodic
+	 * admin reminder). Cheap; runs every server frame. */
+	vg_DevMode_OnFrame(level.time);
 
 	level.axisAirstrikeCounter   -= level.frameTime;
 	level.alliedAirstrikeCounter -= level.frameTime;

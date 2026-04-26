@@ -260,6 +260,12 @@ vmCvar_t cg_optimizePrediction;
 vmCvar_t cg_debugPlayerHitboxes;
 vmCvar_t cg_debugBullets;
 
+// VanguardMod dev mode — see cg_cvars.h. Not CHEAT: these are pure
+// render-side filters that can only suppress what the server already
+// chose to broadcast via vanguard_dev=1.
+vmCvar_t cg_vanguardDevHitboxes;
+vmCvar_t cg_vanguardDevAlpha;
+
 #if defined(FEATURE_RATING) || defined(FEATURE_PRESTIGE)
 // ratings scoreboard
 vmCvar_t cg_scoreboard;
@@ -410,6 +416,9 @@ static cvarTable_t cvarTable[] =
 	{ &cg_debugEvents,                        "cg_debugevents",                        "0",           CVAR_CHEAT,                   0 },
 	{ &cg_debugPlayerHitboxes,                "cg_debugPlayerHitboxes",                "0",           CVAR_CHEAT,                   0 },
 	{ &cg_debugBullets,                       "cg_debugBullets",                       "0",           CVAR_CHEAT,                   0 },
+	// VanguardMod dev mode render filters (see cg_cvars.h)
+	{ &cg_vanguardDevHitboxes,                "cg_vanguardDevHitboxes",                "1",           CVAR_ARCHIVE,                 0 },
+	{ &cg_vanguardDevAlpha,                   "cg_vanguardDevAlpha",                   "0.4",         CVAR_ARCHIVE,                 0 },
 	{ &cg_errorDecay,                         "cg_errordecay",                         "100",         CVAR_CHEAT,                   0 },
 	{ &cg_nopredict,                          "cg_nopredict",                          "0",           CVAR_CHEAT,                   0 },
 	{ &cg_noPlayerAnims,                      "cg_noplayeranims",                      "0",           CVAR_CHEAT,                   0 },
