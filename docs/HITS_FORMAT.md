@@ -122,8 +122,18 @@ Standard-Q3-Token-Parser. Heißt:
 - **Whitespace-getrennt** (Tabs, Leerzeichen, Newlines äquivalent)
 - **Kommentare:** `//` bis Zeilenende, `/* ... */` block-comments (Q3-Standard)
 - **Strings in Quotes** für Pfade mit Leerzeichen, sonst Bare-Tokens
-  (Bone-Namen sind typischerweise bare wie `tag_head`)
-- **Case-insensitive** Keyword-Matching durchgängig (`Q_stricmp` everywhere)
+- **Bone-Namen mit Leerzeichen MÜSSEN gequoted werden.** Das
+  Standard-3DS-Max-Biped-Skeleton verwendet `Bip01`-Namen mit
+  Leerzeichen (z.B. `Bip01 L Calf`, `Bip01 Head`). Der COM_Parse-
+  Tokenizer (q_shared.c:877-907) behandelt double-quoted strings
+  als atomares Token und entfernt die Quotes vor der Auslieferung
+  ans Caller-Code. Ohne Quotes würde der Parser `Bip01` und `L`
+  und `Calf` als drei separate Tokens sehen → "Unexpected token"
+  Parse-Error. Verifiziert anhand des body.mdx-Bone-Dumps
+  (Phase 6.0 Tag 1.5, 53 bones, alle mit Spaces).
+- **Case-insensitive** Keyword-Matching durchgängig (`Q_stricmp`
+  everywhere) — aber **case-sensitive Bone-Lookup** (siehe
+  Sektion 5.1).
 
 **Top-Level (g_mdx.c:1203-1230)**: zwei Block-Keywords akzeptiert:
 
@@ -273,7 +283,15 @@ Tag-Namen-Resolution in zwei Stufen (g_mdx.c:1139-1149 bzw. 756-761):
    "internal tag" registrieren. Resolved später wenn ein `TAG`-Block
    diesen Namen definiert.
 
-→ **Bone-Namen sind quelle der Wahrheit für die Player-Skeleton-Anchors.**
+→ **Bone-Namen sind Quelle der Wahrheit für die Player-Skeleton-Anchors.**
+
+**Lookup ist case-sensitive `strcmp`** (g_mdx.c:493:
+`!strcmp(mdxModel->bones[i].name, name)`), nicht `Q_stricmp`. Heißt
+`"bip01 head"` ≠ `"Bip01 Head"` ≠ `"BIP01 HEAD"` — exakte Schreibweise
+ist Pflicht. Aus dem Bone-Dump (siehe `docs/notes/bone_dump_<date>.txt`
+bzw. der temporäre VG_BONEDUMP-Mechanismus aus
+`PHASE_6_PLAN.md` Task 1.5) sind die echten Namen alle in der Form
+`"Bip01 X Y"` mit grossem B in Bip01 und Single-Spaces als Trenner.
 
 ### 5.2 Verfügbare Bones im Standard-Player-Skeleton
 
