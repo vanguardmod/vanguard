@@ -212,3 +212,97 @@ void vg_DevMode_OnFrame(int leveltime)
 		vg_DevMode_PrintBanner(vg_DevMode_LooksLikePublicServer());
 	}
 }
+
+/* ================================================================== */
+/* Multi-box hitbox                                                   */
+/* ================================================================== */
+
+/* Cvar storage. vmCvar_t is the engine-side handle the trap layer
+ * keeps in sync with the underlying string cvar. Stored statically:
+ * one instance per cvar, alive for the module lifetime. */
+typedef struct
+{
+	vmCvar_t mode;          /* vanguard_hitbox_mode (0=off, 1=on) */
+
+	/* 9 per-region damage multipliers; mapped 1:1 to the .hit-file
+	 * impactpoints (head/chest/gut/groin, shoulder L+R, knee L+R,
+	 * legs). IMPACTPOINT_LEGS has no L/R split. */
+	vmCvar_t dmg_head;
+	vmCvar_t dmg_chest;
+	vmCvar_t dmg_gut;
+	vmCvar_t dmg_groin;
+	vmCvar_t dmg_shoulder_l;
+	vmCvar_t dmg_shoulder_r;
+	vmCvar_t dmg_knee_l;
+	vmCvar_t dmg_knee_r;
+	vmCvar_t dmg_legs;
+
+	/* Fallback multiplier for IMPACTPOINT_UNUSED / out-of-range hits
+	 * (e.g. trace landed on a hit-area that was registered without an
+	 * impactpoint or on a region the .hit file doesn't cover yet). */
+	vmCvar_t dmg_default;
+} vg_hitbox_state_t;
+
+static vg_hitbox_state_t s_hitbox;
+
+void vg_Hitbox_Init(void)
+{
+	memset(&s_hitbox, 0, sizeof(s_hitbox));
+
+	/* mode is CVAR_LATCH so a server can't drift between competitive
+	 * and casual mid-match; CVAR_ARCHIVE so admin choice persists in
+	 * etconfig_server.cfg; CVAR_SERVERINFO so cgame eventually learns
+	 * the active mode for HUD/disclaimer purposes (Phase 6.2). */
+	trap_Cvar_Register(&s_hitbox.mode, "vanguard_hitbox_mode", "1",
+	                   CVAR_SERVERINFO | CVAR_LATCH | CVAR_ARCHIVE);
+
+	/* Per-region multipliers. CVAR_ARCHIVE only — admins routinely
+	 * tune these mid-match while balancing on a shared scrim server,
+	 * a LATCH would be hostile UX here. Defaults are conservative
+	 * starting points; final balancing happens in Phase 6.2. */
+	trap_Cvar_Register(&s_hitbox.dmg_head,       "vanguard_dmg_head",       "2.0", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_chest,      "vanguard_dmg_chest",      "1.3", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_gut,        "vanguard_dmg_gut",        "1.1", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_groin,      "vanguard_dmg_groin",      "1.2", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_shoulder_l, "vanguard_dmg_shoulder_l", "0.8", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_shoulder_r, "vanguard_dmg_shoulder_r", "0.8", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_knee_l,     "vanguard_dmg_knee_l",     "0.6", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_knee_r,     "vanguard_dmg_knee_r",     "0.6", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_legs,       "vanguard_dmg_legs",       "0.7", CVAR_ARCHIVE);
+	trap_Cvar_Register(&s_hitbox.dmg_default,    "vanguard_dmg_default",    "1.0", CVAR_ARCHIVE);
+
+	G_Printf("VG_Hitbox: initialized (mode=%d)\n", s_hitbox.mode.integer);
+}
+
+void vg_Hitbox_Shutdown(void)
+{
+	/* No-op currently — vmCvars are static, lifetime is module
+	 * lifetime. Function exists for symmetry with Init and as a
+	 * future hook for any teardown (e.g. memory pools, hit_count
+	 * tracking, stats flush). */
+	memset(&s_hitbox, 0, sizeof(s_hitbox));
+}
+
+float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
+{
+	/* TODO Phase 6.1.2 — switch on impactpoint, return matching
+	 * cvar.value, fall back to s_hitbox.dmg_default.value. */
+	(void)impactpoint;
+	return 1.0f;
+}
+
+int vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint)
+{
+	/* TODO Phase 6.1.2 — bucket impactpoints into a coarser
+	 * HR_HEAD/HR_BODY/HR_LIMB/HR_NONE for stats aggregation. */
+	(void)impactpoint;
+	return 0;
+}
+
+const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint)
+{
+	/* TODO Phase 6.1.2 — return "head"/"chest"/.../"legs" for
+	 * stats output and admin log lines. */
+	(void)impactpoint;
+	return "unknown";
+}

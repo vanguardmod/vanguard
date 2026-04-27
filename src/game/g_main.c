@@ -1891,6 +1891,10 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	 * visualisation gating). Must run after WG_Init so the dev banner
 	 * appears below the WolfGuard line in chronological log order. */
 	vg_DevMode_Init();
+
+	/* VanguardMod: Phase 6.1 multi-box hitbox subsystem (registers
+	 * vanguard_hitbox_mode + 9 per-region + 1 default damage cvar). */
+	vg_Hitbox_Init();
 }
 
 /**
@@ -1978,6 +1982,9 @@ void G_ShutdownGame(int restart)
 
 	/* VanguardMod: tear down dev mode (restores debug cvars if active). */
 	vg_DevMode_Shutdown();
+
+	/* VanguardMod: Phase 6.1 multi-box hitbox subsystem teardown. */
+	vg_Hitbox_Shutdown();
 }
 
 //===================================================================

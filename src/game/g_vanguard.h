@@ -21,6 +21,9 @@
 #ifndef VANGUARD_G_VANGUARD_H
 #define VANGUARD_G_VANGUARD_H
 
+#include "../qcommon/q_shared.h"
+#include "bg_public.h"   /* animScriptImpactPoint_t for vg_Hitbox_*. */
+
 /* ------------------------------------------------------------------ */
 /* Dev mode — hitbox / bullet visualisation gated by vanguard_dev.    */
 /* ------------------------------------------------------------------ */
@@ -45,5 +48,57 @@ void vg_DevMode_Shutdown(void);
  * @param[in] leveltime  level.time at the point of the call
  */
 void vg_DevMode_OnFrame(int leveltime);
+
+/* ------------------------------------------------------------------ */
+/* Multi-box hitbox — bridge between the BONE_HITTESTS pipeline       */
+/* (activated in Phase 6.0) and VanguardMod's per-region damage       */
+/* multiplier configuration.                                          */
+/*                                                                    */
+/* Phase 6.1.1: lifecycle + cvar registration (this commit).          */
+/* Phase 6.1.2: API implementation (DamageMultiplierFor / RegionFor / */
+/*              RegionName flesh out — currently no-op stubs).        */
+/* Phase 6.1.3: G_Damage integration (apply multiplier on hit).       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Register the 11 vanguard_hitbox_* / vanguard_dmg_* cvars
+ *        and reset internal state. Call once per map from G_InitGame.
+ */
+void vg_Hitbox_Init(void);
+
+/**
+ * @brief Tear down. No-op currently — vmCvars have module lifetime.
+ *        Call once per map from G_ShutdownGame for symmetry / hook
+ *        point for any future teardown.
+ */
+void vg_Hitbox_Shutdown(void);
+
+/**
+ * @brief Damage multiplier for a hit-area's impactpoint. Returns the
+ *        registered cvar value for the region, falling back to
+ *        vanguard_dmg_default for IMPACTPOINT_UNUSED / out-of-range.
+ *
+ * @param[in] impactpoint  resolved impactpoint from mdx_hit_test
+ * @return    multiplier in [0, infinity); 1.0 == no scaling
+ *
+ * @note Phase 6.1.1 stub returns 1.0f unconditionally.
+ */
+float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint);
+
+/**
+ * @brief Coarse hit-region category (HEAD / BODY / LIMB / NONE).
+ *        Used for stats aggregation and pain-animation hints.
+ *
+ * @note Phase 6.1.1 stub returns 0.
+ */
+int vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint);
+
+/**
+ * @brief Display name for an impactpoint, suitable for log lines and
+ *        future stats output. Returned string is statically allocated.
+ *
+ * @note Phase 6.1.1 stub returns "unknown".
+ */
+const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint);
 
 #endif /* VANGUARD_G_VANGUARD_H */
