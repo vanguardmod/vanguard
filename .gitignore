@@ -78,3 +78,10 @@ wolfguard/private/
 # FEATURE_OMNIBOT=ON. Survives `rm -rf build` so we don't re-download
 # every bootstrap. Not source — never committed.
 vendor/omnibot-runtime/
+
+# NTFS Alternate Data Streams — Windows / WSL2 attaches a
+# `:Zone.Identifier` metadata file to anything downloaded via a web
+# browser, marking origin URL + security zone. They surface as
+# untracked siblings of the actual file in `git status` and have no
+# business in version control.
+*:Zone.Identifier
