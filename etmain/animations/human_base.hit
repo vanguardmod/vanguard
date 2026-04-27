@@ -15,82 +15,82 @@
 // dump from etmain/animations/human/base/body.mdx (53 bones,
 // 2026-04-27).
 //
+// Format constraints (verified parser behaviour, see
+// docs/HITS_FORMAT.md §3.0 and §3.2):
+//   1. TAG and HIT blocks must be SINGLE-LINE — the parser
+//      uses COM_ParseExt with allowLineBreaks=qfalse, so it
+//      stops at newlines inside a block.
+//   2. HIT blocks resolve names via cachetag_cache /
+//      mdm_tag_lookup, NOT mdx_bone_lookup. Bone names from
+//      the .mdx skeleton must be bridged through TAG blocks
+//      first; only TAG block second-tokens hit the bone-name
+//      lookup path.
+//
 // Scale/radius values are conservative starting points;
 // per-region tuning happens during Phase 6.1/6.2 with live
-// playtests, by adjusting the scale lines below.
+// playtests, by adjusting the scale tokens in the HIT lines.
 //
 // Spec: docs/HITS_FORMAT.md
 // Plan: docs/PHASE_6_PLAN.md (Phase 6.0 Task 2)
 
-// ---- Head ----
-// Sphere on the head bone. radius keyword sets all 3 axes
-// uniformly. With 1 tag and isbox=false → mdx_hit_test_sphere.
-HIT head "Bip01 Head"
-    radius 6
-    impactpoint head
+// ---- TAG bridges (internal-tag → bone) ----
+// Each TAG declares an internal tag that wraps a real
+// skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
+// so the bone-name spelling must match the .mdx exactly.
 
-// ---- Chest (upper torso) ----
-// Box between two upper-spine bones, spans the rib cage.
-// 2 tags + box → mdx_hit_test_box2 (rotated along bone axis).
-HIT body "Bip01 Spine2" "Bip01 Spine3"
-    scale 8 6 4
-    scale 8 6 4
-    impactpoint chest
-    box
+TAG _vg_head      "Bip01 Head"
+TAG _vg_spine_lo  "Bip01 Spine"
+TAG _vg_spine_mid "Bip01 Spine1"
+TAG _vg_spine_up  "Bip01 Spine2"
+TAG _vg_spine_top "Bip01 Spine3"
+TAG _vg_pelvis    "Bip01 Pelvis"
+TAG _vg_clav_l    "Bip01 L Clavicle"
+TAG _vg_uarm_l    "Bip01 L UpperArm"
+TAG _vg_clav_r    "Bip01 R Clavicle"
+TAG _vg_uarm_r    "Bip01 R UpperArm"
+TAG _vg_thigh_l   "Bip01 L Thigh"
+TAG _vg_calf_l    "Bip01 L Calf"
+TAG _vg_foot_l    "Bip01 L Foot"
+TAG _vg_thigh_r   "Bip01 R Thigh"
+TAG _vg_calf_r    "Bip01 R Calf"
+TAG _vg_foot_r    "Bip01 R Foot"
 
-// ---- Gut (lower torso) ----
-// Box along the lower spine, abdomen region.
-HIT body "Bip01 Spine" "Bip01 Spine1"
-    scale 8 6 4
-    scale 8 6 4
-    impactpoint gut
-    box
+// ---- HIT areas (10 blocks, 9 distinct impact-points) ----
+// Each line is one HIT block. tokens are: hit_type, then
+// 1-2 internal-tag references, then per-tag and per-hit
+// modifiers, all on the same line. impactpoint is the
+// per-region damage classification used by the multiplier
+// table; hit_type is the coarser pain-animation category.
 
-// ---- Groin / pelvis ----
-// Sphere at the pelvis bone (skeleton root).
-HIT body "Bip01 Pelvis"
-    radius 5
-    impactpoint groin
+// Head — sphere on the head bone (1 tag, no box → sphere).
+HIT head _vg_head radius 6 impactpoint head
 
-// ---- Right Shoulder ----
-// Cylinder from clavicle to upper arm. Tighter at the
-// clavicle end, slightly wider at the upper-arm end.
-HIT arm_R "Bip01 R Clavicle" "Bip01 R UpperArm"
-    radius 3
-    radius 4
-    impactpoint shoulder_right
+// Chest — box between upper-spine bones, rotated along the
+// torso axis (2 tags + box → mdx_hit_test_box2).
+HIT body _vg_spine_up _vg_spine_top scale 8 6 4 scale 8 6 4 impactpoint chest box
 
-// ---- Left Shoulder ----
-HIT arm_L "Bip01 L Clavicle" "Bip01 L UpperArm"
-    radius 3
-    radius 4
-    impactpoint shoulder_left
+// Gut — box along lower spine, abdomen region.
+HIT body _vg_spine_lo _vg_spine_mid scale 8 6 4 scale 8 6 4 impactpoint gut box
 
-// ---- Right Knee ----
-// Cylinder spanning thigh→calf; mid-region = the knee joint.
-// Thigh-side and calf-side same radius.
-HIT leg_R "Bip01 R Thigh" "Bip01 R Calf"
-    radius 3
-    radius 3
-    impactpoint knee_right
+// Groin — sphere at the pelvis bone.
+HIT body _vg_pelvis radius 5 impactpoint groin
 
-// ---- Left Knee ----
-HIT leg_L "Bip01 L Thigh" "Bip01 L Calf"
-    radius 3
-    radius 3
-    impactpoint knee_left
+// Left Shoulder — cylinder Clavicle → UpperArm, slightly
+// wider at the upper-arm end.
+HIT arm_L _vg_clav_l _vg_uarm_l radius 3 radius 4 impactpoint shoulder_left
 
-// ---- Legs — left calf/shin ----
-// Cylinder from calf to foot. Calf-end slightly thicker
-// than foot-end. Both legs use impactpoint=legs (the enum
-// has no L/R split for IMPACTPOINT_LEGS).
-HIT leg_L "Bip01 L Calf" "Bip01 L Foot"
-    radius 3
-    radius 2
-    impactpoint legs
+// Right Shoulder — mirror of left.
+HIT arm_R _vg_clav_r _vg_uarm_r radius 3 radius 4 impactpoint shoulder_right
 
-// ---- Legs — right calf/shin ----
-HIT leg_R "Bip01 R Calf" "Bip01 R Foot"
-    radius 3
-    radius 2
-    impactpoint legs
+// Left Knee — cylinder Thigh → Calf; mid-region = knee joint.
+HIT leg_L _vg_thigh_l _vg_calf_l radius 3 radius 3 impactpoint knee_left
+
+// Right Knee — mirror of left.
+HIT leg_R _vg_thigh_r _vg_calf_r radius 3 radius 3 impactpoint knee_right
+
+// Left Leg (calf/shin) — cylinder Calf → Foot. Both legs
+// share IMPACTPOINT_LEGS — the enum has no L/R split.
+HIT leg_L _vg_calf_l _vg_foot_l radius 3 radius 2 impactpoint legs
+
+// Right Leg (calf/shin).
+HIT leg_R _vg_calf_r _vg_foot_r radius 3 radius 2 impactpoint legs
