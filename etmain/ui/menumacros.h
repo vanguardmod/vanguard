@@ -33,7 +33,17 @@
 
 #include "ui/version_generated.h"
 
-/* VANGUARD: brand colour palette swap.
+/* VANGUARD: title-bar alignment centred (Phase 5.8).
+ *
+ * The four title itemDefs in WINDOW_FUI, WINDOW_INGAME, SUBWINDOW and
+ * SUBWINDOWBLACK had `textalignx 3` and no explicit `textalign` —
+ * defaulting to ITEM_ALIGN_LEFT, which left every menu's heading
+ * stuck against the left edge of its title bar. They are now
+ * centred via `textalign ITEM_ALIGN_CENTER` plus
+ * `textalignx $evalfloat(.5*(WIDTH-4))` per macro's width parameter.
+ * Original alignment was LEFT.
+ *
+ * VANGUARD: brand colour palette swap (Phase 5.6 Schicht 3).
  *
  * The default macro definitions below (BUTTON, BUTTONEXT, NAMEDBUTTON,
  * NAMEDBUTTONEXT, YESNO, EDITFIELD, CHECKBOX et al, plus SUBWINDOW /
@@ -119,7 +129,8 @@
 			text WINDOW_TEXT                                                                                   \
 			textfont UI_FONT_ARIBLK_27                                                                         \
 			textscale   .4                                                                                     \
-			textalignx  3                                                                                      \
+			textalign   ITEM_ALIGN_CENTER                                                                                      \
+			textalignx  $evalfloat(.5*((WINDOW_WIDTH)-4))                                                                                      \
 			textaligny  20                                                                                     \
 			forecolor   .85 .85 .85 1                                                                             \
 			border WINDOW_BORDER_FULL                                                                          \
@@ -168,7 +179,8 @@
 			text WINDOW_TEXT                                                                                   \
 			textfont UI_FONT_ARIBLK_27                                                                         \
 			textscale   .4                                                                                     \
-			textalignx  3                                                                                      \
+			textalign   ITEM_ALIGN_CENTER                                                                                      \
+			textalignx  $evalfloat(.5*((WINDOW_WIDTH)-4))                                                                                      \
 			textaligny  20                                                                                     \
 			forecolor   .85 .85 .85 1                                                                             \
 			border WINDOW_BORDER_FULL                                                                          \
@@ -203,7 +215,8 @@
 			text SUBWINDOW_TEXT                                                                                  \
 			textfont UI_FONT_ARIBLK_16                                                                           \
 			textscale   .19                                                                                      \
-			textalignx  3                                                                                        \
+			textalign   ITEM_ALIGN_CENTER                                                                                        \
+			textalignx  $evalfloat(.5*((SUBWINDOW_W)-4))                                                                                        \
 			textaligny  10                                                                                       \
 			style WINDOW_STYLE_FILLED                                                                            \
 			backcolor   .15 .03 .03 .8                                                                            \
@@ -232,7 +245,8 @@
 			text SUBWINDOWBLACK_TEXT                                                                                                 \
 			textfont UI_FONT_ARIBLK_16                                                                                               \
 			textscale   .19                                                                                                          \
-			textalignx  3                                                                                                            \
+			textalign   ITEM_ALIGN_CENTER                                                                                                            \
+			textalignx  $evalfloat(.5*((SUBWINDOWBLACK_W)-4))                                                                                                            \
 			textaligny  10                                                                                                           \
 			style WINDOW_STYLE_FILLED                                                                                                \
 			backcolor   .15 .03 .03 .8                                                                                                \
