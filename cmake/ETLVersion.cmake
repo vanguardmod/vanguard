@@ -97,8 +97,24 @@ macro(GENERATENUMBER VAR VAL)
 endmacro(GENERATENUMBER)
 
 
-if(DEFINED ENV{CI_ETL_DESCRIBE})
-	set(GIT_DESCRIBE $ENV{CI_ETL_DESCRIBE})
+# VANGUARD: accept CI_ETL_DESCRIBE / CI_ETL_TAG as a cmake cache
+# variable in addition to the upstream environment-variable form.
+# Background: scripts/bootstrap.sh exports both as env before its
+# three cmake calls, which works for an end-to-end bootstrap. But
+# manually rebuilding one platform (e.g. `cmake -B build-windows
+# -DCMAKE_TOOLCHAIN_FILE=...`) in a fresh shell produced a build
+# whose binaries embedded "2.83-dirty" instead of the bumped
+# version, because the env var wasn't set on that invocation and
+# `git describe` falls through (we don't tag the repo). Reading
+# the cache variable too lets `-DCI_ETL_TAG=v0.3.X` work as a
+# first-class form, which docs/RELEASE_PROCESS.md now documents
+# as the canonical pattern. Env-var form is retained for
+# bootstrap.sh symmetry and CI scripts.
+if(NOT CI_ETL_DESCRIBE AND DEFINED ENV{CI_ETL_DESCRIBE})
+	set(CI_ETL_DESCRIBE "$ENV{CI_ETL_DESCRIBE}")
+endif()
+if(CI_ETL_DESCRIBE)
+	set(GIT_DESCRIBE "${CI_ETL_DESCRIBE}")
 else()
 	execute_process(COMMAND git describe --abbrev=7
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -106,8 +122,11 @@ else()
 		OUTPUT_VARIABLE GIT_DESCRIBE)
 endif()
 
-if(DEFINED ENV{CI_ETL_TAG})
-	set(GIT_DESCRIBE_TAG $ENV{CI_ETL_TAG})
+if(NOT CI_ETL_TAG AND DEFINED ENV{CI_ETL_TAG})
+	set(CI_ETL_TAG "$ENV{CI_ETL_TAG}")
+endif()
+if(CI_ETL_TAG)
+	set(GIT_DESCRIBE_TAG "${CI_ETL_TAG}")
 else()
 	execute_process(COMMAND git describe --abbrev=0
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
