@@ -82,7 +82,12 @@ static vec3_t *mdx_bones    = NULL;
 #define QHANDLETOINDEX(qh)      ((qh >= 1) ? ((int)(qh) - 1) : 0)
 #define QHANDLETOINDEX_SAFE(qh, old) ((qh >= 1) ? (int)(qh) - 1 : QHANDLETOINDEX(old))
 
-#ifdef ETLEGACY_DEBUG
+/* VANGUARDMOD: upstream gating bug - definition was gated on
+ * ETLEGACY_DEBUG but call site at g_mdx.c (in mdx_hit_warp,
+ * inside BONE_HITTESTS block) is not gated. Removing the
+ * gate around the empty stub: cheapest fix, preserves
+ * behavior (no-op in all builds).
+ */
 /**
  * @brief Draw debug lines
  * @param origin - unused
@@ -93,7 +98,6 @@ void legacy_AddDebugLine(const vec3_t origin, const vec3_t target, const int off
 {
 
 }
-#endif
 
 /**************************************************************/
 
@@ -1334,11 +1338,16 @@ void mdx_LoadHitsFile(char *animationGroup, animModelInfo_t *animModelInfo)
 	Q_strncpyz(hitsfile, animationGroup, sizeof(hitsfile) - 4);
 	if ((sep = strrchr(hitsfile, '.'))) // FIXME: should abort on /'s
 	{
-		Q_strncpyz(sep, ".hit", sizeof(hitsfile) - (sep - sizeof(hitsfile)));
+		/* VANGUARDMOD: upstream typo - was `sep - sizeof(hitsfile)`,
+		 * which subtracts a size_t from a pointer, yielding garbage.
+		 * Intent is the remaining buffer space from `sep`. */
+		Q_strncpyz(sep, ".hit", sizeof(hitsfile) - (sep - hitsfile));
 	}
 	else
 	{
-		Q_strcat(hitsfile, ".hit", sizeof(hitsfile));
+		/* VANGUARDMOD: upstream arg-order bug - Q_strcat signature
+		 * is (dest, size, src), upstream passed (dest, src, size). */
+		Q_strcat(hitsfile, sizeof(hitsfile), ".hit");
 	}
 	mdx_RegisterHits(animModelInfo, hitsfile);
 #endif
