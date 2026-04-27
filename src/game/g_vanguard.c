@@ -285,24 +285,87 @@ void vg_Hitbox_Shutdown(void)
 
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
 {
-	/* TODO Phase 6.1.2 — switch on impactpoint, return matching
-	 * cvar.value, fall back to s_hitbox.dmg_default.value. */
-	(void)impactpoint;
-	return 1.0f;
+	switch (impactpoint)
+	{
+	case IMPACTPOINT_HEAD:           return s_hitbox.dmg_head.value;
+	case IMPACTPOINT_CHEST:          return s_hitbox.dmg_chest.value;
+	case IMPACTPOINT_GUT:            return s_hitbox.dmg_gut.value;
+	case IMPACTPOINT_GROIN:          return s_hitbox.dmg_groin.value;
+	case IMPACTPOINT_SHOULDER_LEFT:  return s_hitbox.dmg_shoulder_l.value;
+	case IMPACTPOINT_SHOULDER_RIGHT: return s_hitbox.dmg_shoulder_r.value;
+	case IMPACTPOINT_KNEE_LEFT:      return s_hitbox.dmg_knee_l.value;
+	case IMPACTPOINT_KNEE_RIGHT:     return s_hitbox.dmg_knee_r.value;
+	case IMPACTPOINT_LEGS:           return s_hitbox.dmg_legs.value;
+	default:
+		/* IMPACTPOINT_UNUSED, NUM_ANIM_COND_IMPACTPOINT, or
+		 * any future enum value not covered above. */
+		return s_hitbox.dmg_default.value;
+	}
 }
 
-int vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint)
+hitRegion_t vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint)
 {
-	/* TODO Phase 6.1.2 — bucket impactpoints into a coarser
-	 * HR_HEAD/HR_BODY/HR_LIMB/HR_NONE for stats aggregation. */
-	(void)impactpoint;
-	return 0;
+	switch (impactpoint)
+	{
+	case IMPACTPOINT_HEAD:
+		return HR_HEAD;
+
+	case IMPACTPOINT_CHEST:
+	case IMPACTPOINT_GUT:
+	case IMPACTPOINT_GROIN:
+		return HR_BODY;
+
+	case IMPACTPOINT_SHOULDER_LEFT:
+	case IMPACTPOINT_SHOULDER_RIGHT:
+		return HR_ARMS;
+
+	case IMPACTPOINT_KNEE_LEFT:
+	case IMPACTPOINT_KNEE_RIGHT:
+	case IMPACTPOINT_LEGS:
+		return HR_LEGS;
+
+	default:
+		/* HR_NUM_HITREGIONS is the codebase convention for
+		 * "no/unknown region" — see g_combat.c:1432
+		 * (`hitRegion_t hr = HR_NUM_HITREGIONS;`). */
+		return HR_NUM_HITREGIONS;
+	}
 }
 
 const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint)
 {
-	/* TODO Phase 6.1.2 — return "head"/"chest"/.../"legs" for
-	 * stats output and admin log lines. */
-	(void)impactpoint;
-	return "unknown";
+	switch (impactpoint)
+	{
+	case IMPACTPOINT_HEAD:           return "head";
+	case IMPACTPOINT_CHEST:          return "chest";
+	case IMPACTPOINT_GUT:            return "gut";
+	case IMPACTPOINT_GROIN:          return "groin";
+	case IMPACTPOINT_SHOULDER_LEFT:  return "shoulder_l";
+	case IMPACTPOINT_SHOULDER_RIGHT: return "shoulder_r";
+	case IMPACTPOINT_KNEE_LEFT:      return "knee_l";
+	case IMPACTPOINT_KNEE_RIGHT:     return "knee_r";
+	case IMPACTPOINT_LEGS:           return "legs";
+	default:                         return "unknown";
+	}
 }
+
+/* TODO Phase 6.1.x — LOUD-warning when human_base.hit is missing.
+ *
+ * HITS_FORMAT.md §6.1 documents that mdx_LoadHitsFile silently
+ * fails in release builds when the .hit file is absent — the
+ * damage path then falls through to legacy single-region. We want
+ * an explicit operator-visible warning when this happens.
+ *
+ * Why this is deferred:
+ *   1. The g_mdx.c hit_t pool is `static hits = NULL` — no public
+ *      accessor exists in g_mdx.h, would need a small helper added
+ *      to mdx-side (`int mdx_HitCountFor(animModelInfo_t *)` or
+ *      similar). That's a g_mdx.c touch, kept out of 6.1.2 scope.
+ *   2. The check has to run AFTER character spawn (post-Init) since
+ *      mdx_LoadHitsFile is called during G_RegisterPlayerClasses,
+ *      not from G_InitGame. So the warning needs to live in
+ *      vg_Hitbox_OnFrame or a post-spawn hook, not vg_Hitbox_Init.
+ *
+ * For now Phase 6.0's manual verification (VG_HITDUMP, archived in
+ * docs/notes/hitdump_2026-04-27.txt) covers the deployment check.
+ */

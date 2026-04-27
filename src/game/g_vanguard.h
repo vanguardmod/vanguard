@@ -86,12 +86,18 @@ void vg_Hitbox_Shutdown(void);
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint);
 
 /**
- * @brief Coarse hit-region category (HEAD / BODY / LIMB / NONE).
- *        Used for stats aggregation and pain-animation hints.
+ * @brief Coarse hit-region category (HR_HEAD / HR_ARMS / HR_BODY /
+ *        HR_LEGS), suitable for direct use with the existing
+ *        hitRegions[] stats array. Returns HR_NUM_HITREGIONS as
+ *        the "no/unknown region" sentinel for IMPACTPOINT_UNUSED.
  *
- * @note Phase 6.1.1 stub returns 0.
+ * @note  Mapping (Phase 6.1.2):
+ *          HR_HEAD <- HEAD
+ *          HR_BODY <- CHEST, GUT, GROIN
+ *          HR_ARMS <- SHOULDER_L/R
+ *          HR_LEGS <- KNEE_L/R, LEGS
  */
-int vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint);
+hitRegion_t vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint);
 
 /**
  * @brief Display name for an impactpoint, suitable for log lines and
