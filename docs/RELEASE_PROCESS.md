@@ -103,6 +103,40 @@ fetch + deploy), but it refuses to run on a pre-imported tree.
 Use it for fresh clones; use the explicit cmake sequence above for
 re-builds on an established checkout.
 
+## Mod version vs engine version in C code
+
+Two version macros that look interchangeable but are not:
+
+  - `ETL_BUILD_VERSION` — a literal-string `#define` from
+    `cmake/version_generated.h.in`, configured by CMake at build
+    time from `CI_ETL_TAG`. **Compile-time, inlined at every call
+    site.** This is the right macro to display the mod's own
+    version on screens / overlays — it always reads "v0.3.X"
+    matching the cgame.so / qagame.so / ui.so we built, regardless
+    of what engine the player is running.
+  - `ETLEGACY_VERSION` — defined in `src/qcommon/version.h` as a
+    pointer to the global `etlegacy_version[]` (defined in
+    `src/qcommon/version.c`). Compiled into every binary that
+    consumes that file (engine + each VM). When a VM is dlopen'd
+    by the engine, ELF dynamic-symbol resolution unifies the
+    global and the **main executable's copy wins**. So evaluating
+    `ETLEGACY_VERSION` at runtime inside cgame returns the
+    engine's version, not the cgame's. This is the right macro
+    to display the engine version (diagnostic output: which
+    ETLegacy build is the host running).
+
+If you ever see a Vanguard screen rendering the engine's version
+when you expected the mod's version, that's the symptom. Switch
+the `printf`/`va` site from `ETLEGACY_VERSION` to
+`ETL_BUILD_VERSION`. See the v0.3.2 release notes for the canonical
+example fix in `cg_loadpanel.c:350`.
+
+The hardcoded "Built on ETLegacy 2.83" prose strings (currently
+just `cg_loadpanel.c`) need updating on each upstream resync if
+the ETLegacy `VERSION.txt` major.minor changes. There is no
+automatic propagation — ETLegacy's engine version is intentionally
+not tied to our mod's `ETL_BUILD_VERSION`.
+
 ## PK3 verification
 
 After the Linux build finishes:

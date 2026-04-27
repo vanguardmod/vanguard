@@ -33,6 +33,12 @@
  */
 
 #include "cg_local.h"
+/* VANGUARD: pull in the literal-string ETL_BUILD_VERSION #define so the
+ * connect-screen mod-version line can be inlined at compile time and is
+ * not subject to ELF symbol unification with the host engine. See the
+ * VANGUARD comment block at cg_loadpanel.c:342 and the v0.3.2 release
+ * notes for the rationale. */
+#include <version_generated.h>
 
 extern displayContextDef_t *DC;
 
@@ -339,15 +345,42 @@ void CG_DrawConnectScreen(qboolean interactive, qboolean forcerefresh)
 		int        i;
 		qboolean   enabled = qfalse;
 
+		/* VANGUARD: render mod brand + mod version separately from
+		 * engine version. Background — `ETLEGACY_VERSION` is defined in
+		 * src/qcommon/version.h as a pointer to a runtime global
+		 * (`etlegacy_version[]`, defined in src/qcommon/version.c).
+		 * That global is compiled into every binary that includes
+		 * version.c — engine (etlded/etl), cgame.so, qagame.so, etc. —
+		 * each with its OWN value. When cgame.so is dlopen()ed by the
+		 * engine, the ELF dynamic linker unifies the symbol and the
+		 * MAIN EXECUTABLE'S copy wins. So `ETLEGACY_VERSION` evaluated
+		 * inside cgame at runtime returns the engine's version string,
+		 * not ours — even though our cgame.so has "v0.3.X" baked into
+		 * its own .data section. On a Pterodactyl host the engine is
+		 * typically a non-tagged build, which renders e.g. "vanguard
+		 * 2.83-dirty" instead of our actual mod version.
+		 *
+		 * Fix: use `ETL_BUILD_VERSION` (a literal string `#define` from
+		 * version_generated.h) for our mod version — that gets inlined
+		 * into the call site at compile time, no symbol lookup, always
+		 * resolves to whatever CI_ETL_TAG was active when cgame was
+		 * built. Keep `ETLEGACY_VERSION` for the engine line — it's
+		 * accurate diagnostic info about the host the player is on.
+		 *
+		 * Brand line: hardcoded "VanguardMod" rather than `MODNAME`
+		 * (which is "vanguard" lowercase, set by cmake), since the
+		 * brand-prose differs from the on-disk mod folder name. */
 		if (ETLEGACY_VERSION_IS_DEVELOPMENT_BUILD)
 		{
-			y = 317;
-			CG_Text_Paint_Centred_Ext(x, y, 0.18f, 0.18f, clr3, va("^1%s ^8DEVELOPMENT BUILD", MODNAME), 0, 0, 0, &cgs.media.bg_loadscreenfont1);
-			CG_Text_Paint_Centred_Ext(x, y + 7, 0.16f, 0.16f, clr3, va("^0%s", ETLEGACY_VERSION), 0, 0, 0, &cgs.media.bg_loadscreenfont1);
+			y = 311;
+			CG_Text_Paint_Centred_Ext(x, y,      0.20f, 0.20f, clr3, va("^1VanguardMod ^0%s ^8DEV", ETL_BUILD_VERSION),       0, 0, 0, &cgs.media.bg_loadscreenfont1);
+			CG_Text_Paint_Centred_Ext(x, y + 11, 0.16f, 0.16f, clr3, va("^0Built on ETLegacy %s", ETLEGACY_VERSION),          0, 0, 0, &cgs.media.bg_loadscreenfont1);
 		}
 		else
 		{
-			CG_Text_Paint_Centred_Ext(x, y, 0.22f, 0.22f, clr3, va("^1%s ^0%s", MODNAME, ETLEGACY_VERSION), 0, 0, 0, &cgs.media.bg_loadscreenfont1);
+			CG_Text_Paint_Centred_Ext(x, y,      0.22f, 0.22f, clr3, va("^1VanguardMod ^0%s", ETL_BUILD_VERSION),             0, 0, 0, &cgs.media.bg_loadscreenfont1);
+			CG_Text_Paint_Centred_Ext(x, y + 12, 0.16f, 0.16f, clr3, va("^0Built on ETLegacy %s", ETLEGACY_VERSION),          0, 0, 0, &cgs.media.bg_loadscreenfont1);
+			y += 12;
 		}
 
 		y   = 340;
