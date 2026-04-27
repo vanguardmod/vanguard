@@ -256,24 +256,35 @@ if [ "$SKIP_BUILD" -ne 0 ]; then
 
 To build later:
 
+    # Pass the version on EVERY configure (-D form is canonical, env form
+    # also works — see cmake/ETLVersion.cmake CI_ETL_TAG handling). The
+    # env-prefix shorthand "CI_ETL_TAG=v0.3.1 cmake ..." used to be enough
+    # but failed silently when re-running one platform manually in a fresh
+    # shell — Windows DLLs ended up with "2.83-dirty" while Linux had the
+    # right version. The -D form is bullet-proof.
+    VFLAGS=(-DCI_ETL_TAG=v0.3.1 -DCI_ETL_DESCRIBE=v0.3.1)
+
     # Windows x86_64 (delivered to 64-bit clients) — must run before Linux
     # so the multi-arch pk3 picks up the cross-built DLLs at configure time.
     cmake -B build-windows \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \\
-        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \\
+        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows -j
 
     # Windows x86 (delivered to 32-bit clients)
     cmake -B build-windows-32 \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \\
-        -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF ${COMMON_CMAKE_FLAGS[*]}
+        -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \\
+        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
 
     # Linux x86_64 + the multi-arch vanguard_v0.3.1.pk3 the server hands out.
     # FEATURE_OMNIBOT=ON requires the runtime tarball to be present in
     # vendor/omnibot-runtime/extracted/omni-bot/ — the bootstrap fetches it.
-    CI_ETL_TAG=v0.3.1 CI_ETL_DESCRIBE=v0.3.1 cmake -B build \\
-        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON ${COMMON_CMAKE_FLAGS[*]}
+    cmake -B build \\
+        -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON \\
+        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build -j
 
 HINT
@@ -295,6 +306,19 @@ export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
 # Linux build's BUILD_MOD_PK3=ON target can pick up the cross-built DLLs and
 # bundle them into a single multi-arch .pk3 (see cmake/ETLBuildMod.cmake).
 
+# VANGUARD: pass CI_ETL_TAG / CI_ETL_DESCRIBE as cmake cache variables
+# (-D...) on every configure, in addition to the env-var form set above.
+# Belt-and-suspenders: if anyone manually re-runs one of the three cmake
+# configures in a fresh shell without the env (which is exactly what
+# happened during a v0.3.1 build and silently shipped Windows DLLs with
+# embedded "2.83-dirty" version strings), the -D form still pins the
+# build to the right release tag. Both forms work — see
+# cmake/ETLVersion.cmake's CI_ETL_TAG handling.
+VANGUARD_CMAKE_VERSION_FLAGS=(
+    -DCI_ETL_TAG="${CI_ETL_TAG}"
+    -DCI_ETL_DESCRIBE="${CI_ETL_DESCRIBE}"
+)
+
 # -- Windows x86_64 (cross) ---------------------------------------------------
 # FEATURE_OMNIBOT=OFF on Windows: we don't bot-test on Windows clients,
 # and the runtime tarball we fetch is Linux-only.
@@ -306,6 +330,7 @@ if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
         -DCROSS_COMPILE32=OFF \
         -DBUILD_MOD_PK3=OFF \
         -DFEATURE_OMNIBOT=OFF \
+        "${VANGUARD_CMAKE_VERSION_FLAGS[@]}" \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86_64"
     cmake --build build-windows -j
@@ -322,6 +347,7 @@ if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
         -DCROSS_COMPILE32=ON \
         -DBUILD_MOD_PK3=OFF \
         -DFEATURE_OMNIBOT=OFF \
+        "${VANGUARD_CMAKE_VERSION_FLAGS[@]}" \
         "${COMMON_CMAKE_FLAGS[@]}"
     log "Building Windows x86"
     cmake --build build-windows-32 -j
@@ -342,6 +368,7 @@ cmake -B build \
     -DCROSS_COMPILE32=OFF \
     -DBUILD_MOD_PK3=ON \
     -DFEATURE_OMNIBOT=ON \
+    "${VANGUARD_CMAKE_VERSION_FLAGS[@]}" \
     "${COMMON_CMAKE_FLAGS[@]}"
 log "Building Linux x86_64 + mod_pk3"
 cmake --build build -j

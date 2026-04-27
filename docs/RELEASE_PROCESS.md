@@ -62,14 +62,23 @@ documentation.
 ## Build sequence
 
 Three platforms, in this exact order (the Linux build's `mod_pk3`
-target globs the Windows DLLs at configure time):
+target globs the Windows DLLs at configure time). Pass the version
+on **every** configure via `-DCI_ETL_TAG=...` and
+`-DCI_ETL_DESCRIBE=...` — the env-prefix shorthand
+(`CI_ETL_TAG=v0.X.Y cmake ...`) also works but is easy to forget on
+a manual single-platform rebuild, which silently produces binaries
+with the upstream `MAJOR.MINOR-dirty` fallback baked in. The `-D`
+form is bullet-proof.
 
 ```bash
+VFLAGS=(-DCI_ETL_TAG=v0.1.X -DCI_ETL_DESCRIBE=v0.1.X)
+
 # 1. Windows x86_64
 rm -rf build-windows
 cmake -B build-windows \
     -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
     -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -81,27 +90,49 @@ rm -rf build-windows-32
 cmake -B build-windows-32 \
     -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \
     -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
     -DINSTALL_EXTRA=OFF
 cmake --build build-windows-32 -j
 
-# 3. Linux + multi-arch pk3 (CI_ETL_TAG must match the bumped version)
+# 3. Linux + multi-arch pk3
 rm -rf build
-CI_ETL_TAG=v0.1.X CI_ETL_DESCRIBE=v0.1.X cmake -B build \
+cmake -B build \
     -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON \
+    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
     -DINSTALL_EXTRA=OFF
-CI_ETL_TAG=v0.1.X CI_ETL_DESCRIBE=v0.1.X cmake --build build -j
+cmake --build build -j
 ```
 
 Note: `bootstrap.sh` runs this exact sequence (plus the Omni-Bot
 fetch + deploy), but it refuses to run on a pre-imported tree.
 Use it for fresh clones; use the explicit cmake sequence above for
 re-builds on an established checkout.
+
+### Why the `-D` form matters (v0.3.2 incident)
+
+`cmake/ETLVersion.cmake` reads the version from either the
+`CI_ETL_TAG` cmake cache variable or the same-named environment
+variable. If neither is set, it falls through to `git describe`,
+which fails on this repo (we don't tag) and ends up using the
+upstream fallback `${VERSION_MAJOR}.${VERSION_MINOR}-dirty` =
+`"2.83-dirty"` for whatever ETLegacy `VERSION.txt` currently
+holds. That value gets baked into the binaries' `etlegacy_version[]`
+global.
+
+The v0.3.2 build initially shipped with this exact mistake on the
+Windows DLLs — the developer ran the Linux configure with
+`CI_ETL_TAG=v0.3.2 cmake ...` (env-prefix), but the Windows
+configures in fresh shells didn't inherit the env. All eight
+Windows DLLs ended up with `2.83-dirty` baked in while Linux had
+`v0.3.2`. The fix landed in v0.3.2 itself: `bootstrap.sh` and this
+doc now use `-D` consistently, and `cmake/ETLVersion.cmake`
+accepts both forms.
 
 ## Mod version vs engine version in C code
 
