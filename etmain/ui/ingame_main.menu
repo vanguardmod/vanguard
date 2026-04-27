@@ -71,14 +71,17 @@ menuDef {
 
 
 /* VANGUARD: replace upstream ETLegacy pause-menu logo with our
- * brand. Asset swapped to ui/assets/vanguardmod/logo_small (256x256
- * source, 32-bit RGBA). The original 128x64 rect was a 2:1 landscape
- * fit for the ETLegacy wordmark; our logo is square, so the rect is
- * also adjusted to 64x64 to preserve aspect. Both #ifdef branches
- * (OLD_CLIENT and the else) are patched identically — the OLD_CLIENT
- * gate is currently always false because v0.1.2 disabled it
- * (src/ui/ui_main.c) but we keep the symmetry so a future
- * re-enable doesn't reintroduce the upstream logo. */
+ * brand. Asset is logo_pause.tga (256x256 32-bit RGBA), generated
+ * from assets-source/branding/logo_master.png by cropping the
+ * banner-text strip off the bottom (top 80%) and pad-centring back
+ * to a square so the eagle/shield/V/bayonet glyph is unstretched
+ * at the 64x64 display size. The original 128x64 rect was a 2:1
+ * landscape fit for the ETLegacy wordmark; we keep the square
+ * 64x64 rect that v0.3.x established. Both #ifdef branches
+ * (OLD_CLIENT and the else) are patched identically — the
+ * OLD_CLIENT gate is currently always false because v0.1.2
+ * disabled it (src/ui/ui_main.c), but we keep the symmetry so a
+ * future re-enable doesn't reintroduce the upstream logo. */
 /* VANGUARD: version label is repositioned to sit centered under
  * the logo. Upstream had the label at x=60 (text starting 60 px
  * from menu-left) while the logo sits at x=15..79 (centre 47),
@@ -95,7 +98,7 @@ menuDef {
 		name        "legacy_logo"
 		rect        15 WINDOW_HEIGHT 64 64
 		style       WINDOW_STYLE_SHADER
-		background  "ui/assets/vanguardmod/logo_small"
+		background  "ui/assets/vanguardmod/logo_pause"
 		forecolor   1 1 1 1
 		visible     1
 		decoration
@@ -107,7 +110,7 @@ menuDef {
 		name        "legacy_logo"
 		rect        15 WINDOW_HEIGHT 64 64
 		style       WINDOW_STYLE_SHADER
-		background  "ui/assets/vanguardmod/logo_small"
+		background  "ui/assets/vanguardmod/logo_pause"
 		forecolor   1 1 1 1
 		visible     1
 		decoration
