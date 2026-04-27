@@ -107,14 +107,70 @@ beim Spawn der ersten Klasse einmal geparst und für alle weiteren
 Klassen aus dem `hits[]`-Array wiederverwendet**.
 
 **Aktivierungs-Bedingungen:**
-- `BONE_HITTESTS` muss in g_mdx.h definiert sein (ist es, Zeile 37:
-  `#define BONE_HITTESTS 1`)
+- `BONE_HITTESTS` muss definiert sein. Upstream hat den Define **in
+  einem `/* */`-Block-Comment auskommentiert** (`g_mdx.h:34-39` mit
+  TODO "figured out how the fuck it works") — die ganze Pipeline ist
+  upstream compile-out. VanguardMod aktiviert ihn unconditionally
+  (Phase 6.0) via zwei Einträge:
+    - `g_mdx.h`: VANGUARDMOD-Block oberhalb des Upstream-Comments
+      mit `#ifndef BONE_HITTESTS / #define BONE_HITTESTS 1 / #endif`
+    - `cmake/ETLBuildMod.cmake`: `target_compile_definitions(qagame
+      PRIVATE BONE_HITTESTS=1)` — propagiert den Define zu allen
+      qagame-Compile-Units inkl. `q_math.c` (das `quat_from_axis`
+      enthält, ebenfalls auf BONE_HITTESTS gegated, aber `q_math.c`
+      inkludiert `g_mdx.h` nicht).
+- Vier Upstream-Compile-Bugs blockierten zusätzlich die Aktivierung;
+  alle vier sind in einem separaten Commit gefixt (g_mdx.c
+  pointer-arithmetik typo, Q_strcat arg-order, ETLEGACY_DEBUG-gating
+  von `legacy_AddDebugLine`, sowie der CMake-Define-Propagation für
+  q_math.c). Siehe `git log --grep BONE_HITTESTS`.
 - `FEATURE_SERVERMDX` muss enabled sein (ist es, default-on per
-  CMakeLists.txt:84)
+  CMakeLists.txt:84).
 
 ---
 
 ## Sektion 3 — Token-für-Token Syntax
+
+### 3.0 — Single-Line Constraint (parser-verified)
+
+**Alle** Argument-Token-Reads in `hit_parse_tag` (g_mdx.c:740-907)
+und `hit_parse_hit` (g_mdx.c:917-1165) verwenden
+`COM_ParseExt(ptr, qfalse)` — das `qfalse` ist
+`allowLineBreaks=false`, der Tokenizer **stoppt am Newline**. Der
+äußere Loader-Loop (`hit_load`, g_mdx.c:1207-1235) nutzt dagegen
+`COM_Parse(&ptr)` welches Newlines konsumiert.
+
+**Konsequenz:** TAG- und HIT-Blöcke müssen **jeweils auf einer einzigen
+Zeile** stehen. Sobald der innere Parser an ein Newline kommt, gibt er
+das leere Token zurück, der innere Loop bricht ab, und der äußere
+Loop liest das nächste Token als Top-Level — was bei einem
+Argument-Wort wie `radius` als "Unexpected token" Parse-Error endet.
+
+Comments zwischen Blöcken (`//` und `/* */`) sind OK — der Tokenizer
+überspringt sie als Whitespace.
+
+**Beispiel — FALSCH (multi-line):**
+
+```
+HIT head _vg_head
+    radius 6
+    impactpoint head
+```
+→ Output: `Unexpected token: radius`. Block bricht ab nach
+`_vg_head`, äußerer Loop sieht `radius` als unbekanntes Top-Level-Keyword.
+
+**Beispiel — KORREKT (single-line):**
+
+```
+HIT head _vg_head radius 6 impactpoint head
+```
+
+Diese Erkenntnis ist live verifiziert via VG_HITDUMP-Test
+(2026-04-27). Vor der Verifikation wurde im Doc fälschlich von
+multi-line-Blocks ausgegangen; siehe Sektion 8 Q7 für den
+Korrektur-Pfad.
+
+### 3.1 — Allgemeine Tokenizer-Regeln
 
 Der Parser nutzt `COM_Parse` / `COM_ParseExt` aus `q_shared.c` — der
 Standard-Q3-Token-Parser. Heißt:
@@ -145,7 +201,7 @@ HIT <hit_type> [<tag/bone>] [scale|radius|axis|impactpoint|box|headangles ...]
 Alles andere → `Unexpected token` Parse-Error, Datei wird abgebrochen,
 `hit_count = 0`. Kein partielles Laden.
 
-### 3.1 `TAG`-Block (g_mdx.c:736-904)
+### 3.2 `TAG`-Block (g_mdx.c:736-904)
 
 Definiert einen **internal tag** (zusätzlicher logischer Anchor-Punkt
 relativ zum Skeleton, nutzbar in `HIT`-Blöcken statt eines echten
@@ -179,31 +235,55 @@ Wenn ein zweiter Bone-Name auftaucht, wird intern ein zweites
 (g_mdx.c:890), der "merge"-tag wird dem ersten als `merged`-Reference
 gesetzt.
 
-### 3.2 `HIT`-Block (g_mdx.c:913-1161)
+### 3.3 `HIT`-Block (g_mdx.c:913-1161)
 
 Definiert eine collision-primitive area.
 
-**Syntax (informelle Form):**
+**RESOLUTION RULE — verifiziert (g_mdx.c:1143):**
+`hit_parse_hit` ruft pro Tag-/Bone-Name-Token nur `cachetag_cache(token)`
+— **kein** `mdx_bone_lookup`. Die echte Auflösung passiert später via
+`mdm_tag_lookup` (g_mdx.c:512), das in zwei Listen sucht:
+
+1. `model->tags[]` — die in der `.mdm`-Binär eingebetteten Built-in-Tags
+   (typisch `tag_head`, `tag_torso`, `tag_chest`, `tag_back`,
+   `tag_weapon`, `tag_weapon2`, `tag_footleft`, `tag_footright`).
+2. `interntags[]` — die mit `TAG`-Blöcken in `.hit`-Files definierten
+   internal-tags. Match via `Q_stricmp`.
+
+**Konsequenz:** Bone-Namen aus dem `.mdx`-Skeleton (z.B. `Bip01 Head`)
+können **NICHT direkt in HIT-Blöcken** referenziert werden — die
+würden unter `cachetag_cache` landen aber nie gegen ein Bone-Lookup
+laufen, und am Ende prints
+`MDX WARNING: Unable to find tag <bone-name> in model <body.mdm>`.
+Korrekt: Bone-Namen über einen `TAG`-Block bridgen, der internal-tag
+dann im HIT referenzieren:
 
 ```
-HIT <hit_type>
-    <tag-or-bone-name>
-        [scale <x> <y> <z>] | [radius <r>]
-        [headangles]
-    [<second-tag-or-bone-name>
-        [scale <x> <y> <z>] | [radius <r>]
-        [headangles]]
-    [axis <9 floats>]
-    [impactpoint <name-or-int>]
-    [box]
+TAG _vg_head "Bip01 Head"
+HIT head _vg_head radius 6 impactpoint head
 ```
+
+`mdx_bone_lookup` (case-sensitiv `strcmp`) wird **nur in `hit_parse_tag`**
+am 2. Token (`bone`) aufgerufen — das ist der einzige Pfad in dem ein
+.mdx-Skeleton-Bone direkt auflösbar ist.
+
+**Syntax (single-line, alle Tokens auf einer Zeile):**
+
+```
+HIT <hit_type> <tag1> [scale <x> <y> <z>] [radius <r>] [headangles] \
+    [<tag2> [scale <x> <y> <z>] [radius <r>] [headangles]] \
+    [axis <9 floats>] [impactpoint <name-or-int>] [box]
+```
+
+(Backslash zur Lesbarkeit; in der echten `.hit`-Datei muss alles auf
+einer physischen Zeile stehen — siehe Sektion 3.0.)
 
 **Pflicht-Felder:**
 
 | Field | g_mdx.c | Description |
 |---|---|---|
 | `<hit_type>` | 933-948 | One of `none/gun/head/body/arm_L/arm_R/leg_L/leg_R`. Maps to MDX_NONE/MDX_GUN/MDX_HEAD/MDX_TORSO/MDX_ARM_L/MDX_ARM_R/MDX_LEG_L/MDX_LEG_R. |
-| `<tag-or-bone-name>` | 1139-1149 | At least 1 bone or tag name. Max 2 (else `Too many tags for hit`). Order matters: scale/radius/headangles after a tag-name attach to that tag. |
+| `<tag1>` (Pflicht) | 1139-1149 | Mindestens ein internal-tag (oder built-in `.mdm`-Tag). Bone-Namen via `TAG`-Bridge erforderlich (siehe oben). Max 2 Tags pro HIT (sonst `Too many tags for hit`). |
 
 **Optional-Felder (per-tag oder per-hit, unterschiedlich):**
 
@@ -273,25 +353,63 @@ durch zwei separate Hit-Areas modelliert.
 
 ## Sektion 5 — Tag-Anforderungen
 
-### 5.1 Bone-Lookup
+### 5.1 Bone- und Tag-Lookup — die zwei Resolver-Pfade
 
-Tag-Namen-Resolution in zwei Stufen (g_mdx.c:1139-1149 bzw. 756-761):
+Es gibt zwei distinkte Auflösungs-Pfade mit unterschiedlicher
+Case-Sensitivity. Wer `.hit`-Files schreibt muss beide kennen:
 
-1. `mdx_bone_lookup(mdx, name)` — sucht in den Bones des
-   Player-Skeletons (`mdx->bones[i].name`). Bei Match: direkter Bone-Index.
-2. Bei Miss: `cachetag_cache(name) | INTERNTAG_TAG` — als
-   "internal tag" registrieren. Resolved später wenn ein `TAG`-Block
-   diesen Namen definiert.
+**Pfad A — Bone-Lookup im `TAG`-Block** (`mdx_bone_lookup`,
+g_mdx.c:491-503):
 
-→ **Bone-Namen sind Quelle der Wahrheit für die Player-Skeleton-Anchors.**
+```c
+for (i = 0; i < mdxModel->bone_count; i++) {
+    if (!strcmp(mdxModel->bones[i].name, name)) return i;
+}
+```
 
-**Lookup ist case-sensitive `strcmp`** (g_mdx.c:493:
-`!strcmp(mdxModel->bones[i].name, name)`), nicht `Q_stricmp`. Heißt
-`"bip01 head"` ≠ `"Bip01 Head"` ≠ `"BIP01 HEAD"` — exakte Schreibweise
-ist Pflicht. Aus dem Bone-Dump (siehe `docs/notes/bone_dump_<date>.txt`
-bzw. der temporäre VG_BONEDUMP-Mechanismus aus
-`PHASE_6_PLAN.md` Task 1.5) sind die echten Namen alle in der Form
-`"Bip01 X Y"` mit grossem B in Bip01 und Single-Spaces als Trenner.
+→ **`strcmp`, case-sensitiv.** Aufgerufen ausschließlich in
+`hit_parse_tag` (g_mdx.c:760, 883) für das 2. Argument eines
+`TAG`-Blocks. Bei Miss: `cachetag_cache(name) | INTERNTAG_TAG` als
+Fallback, was einen Forward-Reference auf einen späteren TAG/Built-in
+erzeugt.
+
+**Konsequenz:** Bone-Namen aus dem `.mdx`-Skeleton müssen exakt
+geschrieben werden — `"Bip01 Head"` ≠ `"bip01 head"` ≠ `"BIP01 HEAD"`.
+Aus dem Bone-Dump (`docs/notes/bone_dump_2026-04-27.txt`, Phase 6.0
+Task 1.5) sind die echten Namen alle in `"Bip01 X Y"`-Form mit großem
+B in `Bip01` und Single-Spaces als Trenner.
+
+**Pfad B — Tag-Lookup für Cachetags** (`mdm_tag_lookup`,
+g_mdx.c:512-533):
+
+```c
+for (i = 0; i < model->tag_count; i++)
+    if (!Q_stricmp(model->tags[i].name, tagName)) return i;
+#ifdef BONE_HITTESTS
+for (i = 0; i < interntag_count; i++)
+    if (!Q_stricmp(interntags[i].tag.name, tagName))
+        return (i | TAG_INTERNAL);
+#endif
+return -1;
+```
+
+→ **`Q_stricmp`, case-INsensitiv.** Aufgerufen indirekt aus
+`mdm_cachetag_resize` (g_mdx.c:421) für jeden Namen den
+`cachetag_cache` registriert hat. Sucht zuerst in den `.mdm`-Built-in-
+Tags (`tag_head`, `tag_torso`, ...), dann in den interntags
+(via `TAG`-Blöcke definiert). Bei Miss: `MDX WARNING: Unable to find
+tag X in model Y` Print + Fallback auf Tag-Index 0.
+
+**Konsequenz:** Internal-Tag-Namen wie `_vg_head` und HIT-Block-
+Referenzen sind **case-INsensitiv** — `_vg_head` und `_VG_HEAD`
+auflösen auf den gleichen interntag.
+
+**Zusammengefasst:**
+
+| Token-Position | Resolver | Case |
+|---|---|---|
+| `TAG <new-name> <bone-or-tag>` (2. Token) | mdx_bone_lookup → fallback cachetag | `strcmp`, sensitiv |
+| `HIT <type> <tag>` (Tag-Tokens) | cachetag_cache → später mdm_tag_lookup | `Q_stricmp`, insensitiv |
 
 ### 5.2 Verfügbare Bones im Standard-Player-Skeleton
 
@@ -411,90 +529,54 @@ Phase 6.1.
 
 ## Sektion 7 — Beispiel-Snippet
 
-Auf Basis aller obigen Findings, **rekonstruktes echtes Format**
-(syntaktisch konform zum Parser, mit hypothetischen Bone-Namen die in
-Phase 6.0 Tag 2 durch echte ersetzt werden müssen):
+Parser-verifiziertes Format (Phase 6.0, Live-Test 2026-04-27):
+TAG-Bridge-Pattern + single-line HIT-Blöcke. Identisch zum
+shipping `etmain/animations/human_base.hit`:
 
 ```
-// vanguard human_base.hit — VanguardMod multi-box hit-region
+// VanguardMod human_base.hit — multi-box hit-region
 // definitions for the standard human animation skeleton.
-// Path: etmain/animations/human_base.hit
-// Auto-loaded by mdx_LoadHitsFile from characterDef.animationgroup.
 
-// ---- Head ----
-// Sphere around the head bone. Single-tag, isbox=false → sphere.
-HIT head Bip01_Head
-    radius 6
-    impactpoint head
+// ---- TAG bridges (internal-tag → bone) ----
+// Each TAG declares an internal tag that wraps a real
+// skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
+// so the bone-name spelling must match the .mdx exactly.
 
-// ---- Chest ----
-// Box between two torso bones, rotated to match torso facing.
-// Two-tag + box → mdx_hit_test_box2 (axis-aligned along bone-axis).
-HIT body Bip01_Spine2 Bip01_Spine
-    scale 8 6 4
-    scale 8 6 4
-    impactpoint chest
-    box
+TAG _vg_head      "Bip01 Head"
+TAG _vg_spine_lo  "Bip01 Spine"
+TAG _vg_spine_mid "Bip01 Spine1"
+TAG _vg_spine_up  "Bip01 Spine2"
+TAG _vg_spine_top "Bip01 Spine3"
+TAG _vg_pelvis    "Bip01 Pelvis"
+TAG _vg_clav_l    "Bip01 L Clavicle"
+TAG _vg_uarm_l    "Bip01 L UpperArm"
+TAG _vg_clav_r    "Bip01 R Clavicle"
+TAG _vg_uarm_r    "Bip01 R UpperArm"
+TAG _vg_thigh_l   "Bip01 L Thigh"
+TAG _vg_calf_l    "Bip01 L Calf"
+TAG _vg_foot_l    "Bip01 L Foot"
+TAG _vg_thigh_r   "Bip01 R Thigh"
+TAG _vg_calf_r    "Bip01 R Calf"
+TAG _vg_foot_r    "Bip01 R Foot"
 
-// ---- Gut ----
-HIT body Bip01_Spine Bip01_Pelvis
-    scale 8 6 4
-    scale 8 6 4
-    impactpoint gut
-    box
+// ---- HIT areas (10 blocks, 9 distinct impact-points) ----
 
-// ---- Groin ----
-// Single sphere at the pelvis bone.
-HIT body Bip01_Pelvis
-    radius 5
-    impactpoint groin
-
-// ---- Right Shoulder ----
-// Cylinder along upper-arm bone.
-HIT arm_R Bip01_R_Clavicle Bip01_R_UpperArm
-    radius 3
-    radius 4
-    impactpoint shoulder_right
-
-// ---- Left Shoulder ----
-HIT arm_L Bip01_L_Clavicle Bip01_L_UpperArm
-    radius 3
-    radius 4
-    impactpoint shoulder_left
-
-// ---- Right Knee ----
-// Cylinder spanning the knee region (thigh→calf).
-HIT leg_R Bip01_R_Thigh Bip01_R_Calf
-    radius 3
-    radius 3
-    impactpoint knee_right
-
-// ---- Left Knee ----
-HIT leg_L Bip01_L_Thigh Bip01_L_Calf
-    radius 3
-    radius 3
-    impactpoint knee_left
-
-// ---- Legs (lower / feet) ----
-// Two cylinders sharing the same impactpoint = "legs". Each foot
-// gets its own area; both classify as IMPACTPOINT_LEGS.
-HIT leg_R Bip01_R_Calf Bip01_R_Foot
-    radius 3
-    radius 3
-    impactpoint legs
-
-HIT leg_L Bip01_L_Calf Bip01_L_Foot
-    radius 3
-    radius 3
-    impactpoint legs
+HIT head _vg_head radius 6 impactpoint head
+HIT body _vg_spine_up _vg_spine_top scale 8 6 4 scale 8 6 4 impactpoint chest box
+HIT body _vg_spine_lo _vg_spine_mid scale 8 6 4 scale 8 6 4 impactpoint gut box
+HIT body _vg_pelvis radius 5 impactpoint groin
+HIT arm_L _vg_clav_l _vg_uarm_l radius 3 radius 4 impactpoint shoulder_left
+HIT arm_R _vg_clav_r _vg_uarm_r radius 3 radius 4 impactpoint shoulder_right
+HIT leg_L _vg_thigh_l _vg_calf_l radius 3 radius 3 impactpoint knee_left
+HIT leg_R _vg_thigh_r _vg_calf_r radius 3 radius 3 impactpoint knee_right
+HIT leg_L _vg_calf_l _vg_foot_l radius 3 radius 2 impactpoint legs
+HIT leg_R _vg_calf_r _vg_foot_r radius 3 radius 2 impactpoint legs
 ```
 
 **Zähle:** 10 Hit-Area-Blocks, 9 distinct impact-points (head, chest,
 gut, groin, shoulder_right, shoulder_left, knee_right, knee_left, legs
-× 2 areas).
-
-**`Bip01_*`-Bone-Namen sind PLATZHALTER** — die echten Namen werden in
-Phase 6.0 Tag 2 via Bone-Dump festgestellt (siehe Sektion 5.2 Empfehlung).
+× 2 areas). Bone-Namen entstammen dem Live-Bone-Dump
+`docs/notes/bone_dump_2026-04-27.txt`.
 
 ---
 
@@ -613,9 +695,36 @@ Erweiterung. Für Phase 6.0/6.1 reicht Cylinder-Approx.
 multipliers active und cylinder-as-capsule approximation" — keine
 separate Primitive-Familie.
 
+### Q7 (NEU, Phase 6.0 Aktivierungs-Live-Test) — Format-Annahmen aus Code-Reading
+
+Beim ersten HITS_FORMAT.md-Schreiben (Phase 6.0 Tag 1) wurden zwei
+Annahmen aus dem Loader-Code-Reading abgeleitet, die sich beim
+Live-Test (nach Aktivierung von BONE_HITTESTS und Behebung der vier
+Compile-Bugs) als falsch erwiesen.
+
+**Q7a — Multi-Line vs. Single-Line:** Die initiale Spec (und das
+ursprüngliche Tag-2-`human_base.hit`) ging davon aus, dass innerhalb
+eines TAG/HIT-Blocks freie Newlines erlaubt sind. Real verwendet der
+Parser durchgängig `COM_ParseExt(ptr, qfalse)` mit
+`allowLineBreaks=false` — die Token-Reads stoppen am Newline. Multi-
+line-Blocks führen zu "Unexpected token" Parse-Errors. Korrigiert in
+Sektion 3.0.
+
+**Q7b — Bone-Direkt-Reference in HIT vs. TAG-Bridge:** Die initiale
+Spec listete `<tag-or-bone-name>` als gültiges 2. Token in HIT-Blöcken
+und implizierte Direct-Resolution gegen das `.mdx`-Skeleton. Real
+ruft `hit_parse_hit` ausschließlich `cachetag_cache(token)` — kein
+`mdx_bone_lookup`. Die spätere Auflösung via `mdm_tag_lookup`
+durchsucht nur `.mdm`-Built-in-Tags und `interntags` (TAG-Block-
+Definitionen). Bone-Namen aus dem Skeleton können daher nicht direkt
+in HIT verwendet werden — sie müssen über `TAG _bridge "Bone Name"`
+gebridget werden. Korrigiert in Sektion 3.3 Resolution-Rule.
+
+Beide Korrekturen verifiziert via VG_HITDUMP-Live-Test 2026-04-27.
+
 ---
 
-*Spec-Ende. Format ist ausreichend dokumentiert um `human_base.hit`
-hand zu schreiben. Einziger blockierender Punkt: Bone-Namen-Discovery
-(Q1) — das ist erste Action in Tag 2. Plus PHASE_6_PLAN.md Korrekturen
-(Q4) vor Tag-2-Start.*
+*Spec-Ende. Format ist parser-verifiziert via Phase-6.0-Aktivierung
+(BONE_HITTESTS=on, 4 upstream compile-bugs gefixt, .hit auto-loaded
+und 10 hit-areas registriert). Tag 2's initiale Annahmen
+(multi-line, bone-direkt) waren falsch und sind in Q7 dokumentiert.*
