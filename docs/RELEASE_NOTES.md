@@ -3,6 +3,79 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.2 — 2026-04-27
+
+Limbo / connect screen version-string fix, menu title centring,
+pause-menu logo polish, plus a multi-platform build-pipeline fix
+that was caught during the same release cycle.
+
+  - **Limbo screen showed engine version, not mod version — root
+    cause + fix.** `src/qcommon/version.h:49` defines
+    `ETLEGACY_VERSION` as `((char *)etlegacy_version)` — a pointer
+    to a global symbol whose definition lives in
+    `src/qcommon/version.c` and is compiled into every binary that
+    consumes the file (engine, cgame.so, qagame.so, ...). When
+    `cgame.so` is `dlopen()`ed by the engine, ELF dynamic symbol
+    resolution unifies `etlegacy_version` across the loaded image
+    and the **main executable's copy wins**. So our cgame.so —
+    even though it has `etlegacy_version[] = "v0.3.1"` baked into
+    its own `.data` section — would render whatever the engine
+    binary has at runtime. On hosts with a non-tagged engine
+    build (Pterodactyl, our own `build-server/etlded.x86_64`),
+    that engine version is `"2.83-dirty"`, producing the
+    confusing `vanguard 2.83-dirty` line on the loading screen.
+    
+    Fix in `src/cgame/cg_loadpanel.c:350`: split the rendering
+    into two lines and pin the mod-version line to
+    `ETL_BUILD_VERSION` — a literal-string `#define` from
+    `version_generated.h` that the preprocessor inlines at the
+    call site. No symbol lookup, no dynamic-linker interference,
+    always shows our compile-time mod version. The engine line
+    keeps `ETLEGACY_VERSION` and is honest diagnostic output —
+    you can see exactly which ETLegacy build the host is running.
+    Result on screen: `VanguardMod v0.3.2` over `Built on
+    ETLegacy 2.83-dirty` (or whatever the host engine reports).
+  - **Menu titles centred.** All four title-bar itemDefs in
+    `etmain/ui/menumacros.h` (WINDOW_FUI, WINDOW_INGAME,
+    SUBWINDOW, SUBWINDOWBLACK) defaulted to ITEM_ALIGN_LEFT,
+    leaving every menu's heading stuck against the left edge.
+    Now centred via `textalign ITEM_ALIGN_CENTER` plus
+    `textalignx $evalfloat(.5*(WIDTH-4))` per macro's width
+    parameter. Affects the main menu, pause menu, credits and
+    every options sub-menu — single-point change, ~30 menus
+    benefit.
+  - **Pause-menu logo without banner-text.** New asset
+    `etmain/ui/assets/vanguardmod/logo_pause.tga` — generated
+    from the master by cropping the bottom "VANGUARDMOD" banner
+    strip off (top 80%) and pad-centring back to a square so the
+    eagle/shield/V/bayonet glyph renders unstretched at 64×64.
+    `etmain/ui/assets/vanguardmod/logo_small.tga` is left in
+    place; future placements that want the wordmark can use that.
+  - **Build-pipeline fix: Windows DLLs now get the bumped
+    version too.** `cmake/ETLVersion.cmake` only read
+    `CI_ETL_TAG`/`CI_ETL_DESCRIBE` from environment variables,
+    so a manual single-platform rebuild in a fresh shell that
+    forgot to prefix `CI_ETL_TAG=v0.3.X` silently produced
+    binaries with the upstream fallback `MAJOR.MINOR-dirty` from
+    `VERSION.txt` baked in. This actually shipped during the
+    initial v0.3.2 build cycle: Linux had `v0.3.2`, all eight
+    Windows DLLs had `2.83-dirty`. Two-pronged fix —
+    `cmake/ETLVersion.cmake` accepts the values as cmake cache
+    variables in addition to env, and `scripts/bootstrap.sh`
+    passes them as `-DCI_ETL_TAG=...` to all three configures.
+    `docs/RELEASE_PROCESS.md` updates the build-sequence
+    documentation to use the `-D` form as canonical and adds an
+    incident write-up so the same trap doesn't catch the next
+    bumper.
+
+  - **Phase 5.6/5.7 v0.3.0/v0.3.1 strings deployment caveat.**
+    The previous "v0.3.0" pk3 deployed earlier this week did
+    actually contain the right v0.3.1 strings in cgame.so (the
+    bump landed inside the f360769 commit even though the commit
+    subject says 0.3.0). The user-visible "vanguard 2.83-dirty"
+    bug above made it look like nothing was reaching the screen.
+    It was reaching, just being shadowed by the engine global.
+
 ## v0.3.1 — 2026-04-26
 
 Polish pass on the v0.3.0 main-menu theme.
