@@ -31,6 +31,23 @@
 
 #include "../qcommon/q_shared.h"
 
+/* VANGUARDMOD: unconditionally enable bone-based hit-tests
+ * for the multi-box hitbox pipeline (Phase 6.0). Upstream
+ * has this gated behind a block-comment with a TODO from
+ * the ETLegacy maintainers ("figured out how the fuck it
+ * works") - we activate it for all builds because the
+ * pipeline IS the Phase 6 feature, not a dev-only debug
+ * aid. The four compile bugs that blocked the path under
+ * BONE_HITTESTS are fixed in commit dd14be1 (three in
+ * g_mdx.c, one CMake-level in cmake/ETLBuildMod.cmake for
+ * q_math.c quat_from_axis propagation). See
+ * docs/PHASE_6_PLAN.md and docs/HITS_FORMAT.md.
+ */
+#ifndef BONE_HITTESTS
+#define BONE_HITTESTS 1
+#endif
+/* END VANGUARDMOD */
+
 //TODO: enable this later on when fixed (&& figured out how the fuck it works)
 /*
 #ifdef ETLEGACY_DEBUG

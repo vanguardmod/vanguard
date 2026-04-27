@@ -93,6 +93,15 @@ if(BUILD_SERVER_MOD)
 		target_compile_definitions(qagame PRIVATE FEATURE_SERVERMDX)
 	endif()
 
+	# VANGUARDMOD: propagate BONE_HITTESTS to all qagame compile units
+	# (Phase 6.0). The header-level #define in src/game/g_mdx.h is only
+	# visible to files that include that header; shared sources like
+	# src/qcommon/q_math.c (which contains the BONE_HITTESTS-gated
+	# quat_from_axis helper) need the define at the target level.
+	# See docs/PHASE_6_PLAN.md and docs/HITS_FORMAT.md.
+	target_compile_definitions(qagame PRIVATE BONE_HITTESTS=1)
+	# END VANGUARDMOD
+
 	set_target_properties(qagame
 		PROPERTIES
 		PREFIX ""

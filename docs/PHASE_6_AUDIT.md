@@ -187,15 +187,40 @@ Plus die internen MDX-bones (siehe `mdx_calculate_bones`) — typischerweise 30-
 
 ### 2.6 Sektion-2-Konklusion
 
-**Wir wissen jetzt:**
-- MDX-Skeleton-System ist auf dem Server **voll funktional**, jede Frame frisch
-- `mdx_hit_test` ist eine vollständige 10-Region-Multi-Primitive-Collision-Engine, **dormant** weil kein .hits-File geladen ist und kein Aufruf aus G_Damage existiert
-- Tag-Infrastruktur reicht für Anchor-Punkte aller Multi-Box-Regionen
+> **🔄 Korrektur 2026-04-27 (Phase 6.0 Aktivierungs-Live-Test):** Die
+> ursprüngliche Audit-Annahme hier — "dormant weil kein .hits-File
+> geladen" und "Multi-Box-Aktivierung = .hits-File schreiben +
+> G_Damage-Aufruf" — war **unvollständig**. Tatsächlich war die
+> komplette `BONE_HITTESTS`-Pipeline upstream **compile-out**: der
+> Define ist in `g_mdx.h:34-39` in einem `/* */` Block-Comment mit
+> dem TODO "figured out how the fuck it works". Plus drei
+> Pointer-/Argument-Order-Typos in `g_mdx.c` und ein
+> CMake-Define-Sichtbarkeits-Problem für `q_math.c` blockierten den
+> Build sobald BONE_HITTESTS aktiviert wurde. Aktivierung erforderte
+> daher (alle in Phase 6.0):
+>
+> 1. Vier Upstream-Compile-Bugs fixen (commit dd14be1)
+> 2. .hit-File mit korrektem Format schreiben (TAG-Bridge +
+>    single-line, NICHT multi-line + bone-direkt wie ursprünglich
+>    angenommen — siehe `docs/HITS_FORMAT.md` Q7)
+> 3. `BONE_HITTESTS` via VanguardMod-Marker in `g_mdx.h` und
+>    `target_compile_definitions(qagame ...)` in
+>    `cmake/ETLBuildMod.cmake` aktivieren
+>
+> Wiring in `G_Damage` ist Phase 6.1 (separater Aufwand). Live-Verify:
+> 10 hit-areas erfolgreich registriert (siehe
+> `docs/notes/hitdump_2026-04-27.txt`).
 
-**Architektur-Implikation:**
-- Multi-Box-Aktivierung = .hits-File schreiben + Aufruf aus G_Damage
+**Wir wissen jetzt (aktualisiert):**
+- MDX-Skeleton-System ist auf dem Server **voll funktional**, jede Frame frisch
+- `mdx_hit_test` ist eine vollständige 10-Region-Multi-Primitive-Collision-Engine, **jetzt aktiv** (war upstream compile-out, Phase 6.0 hat aktiviert) — Aufruf aus G_Damage steht noch aus (Phase 6.1)
+- Tag-Infrastruktur reicht für Anchor-Punkte aller Multi-Box-Regionen
+- `.hit`-Format ist parser-verifiziert (TAG-Bridge + single-line)
+
+**Architektur-Implikation (aktualisiert):**
+- Multi-Box-Aktivierung erforderte: 4 Bug-Fixes + Format-Korrektur + Aktivierungs-Define + (noch ausstehend) Aufruf aus G_Damage
 - Kein neues Render/Network-Pfad nötig — alles serverseitig im bestehenden Damage-Tick
-- "Eigene" Hit-Region-Definition (z.B. neuer kleinerer Helm-Box, schmalerer Body) braucht **nur eine .hits-Datei**, keinen C-Code
+- "Eigene" Hit-Region-Definition (z.B. neuer kleinerer Helm-Box, schmalerer Body) braucht jetzt **nur eine .hit-Datei** (mit TAG-Bridge + single-line Format), keinen C-Code
 
 ---
 
