@@ -20,17 +20,17 @@ Engine-Pieces sind battle-tested aus RtCW-Lineage)
 VanguardMod wird der **erste ETLegacy-Mod der die multi-region
 Bone-Collision-Engine voll aktiviert und ins Damage-Modell
 integriert.** Die Code-Stücke (mdx_hit_test, animScriptImpactPoint_t
-mit 10 Regionen, .hits-File-Loader, Antilag-mit-Animation-State)
+mit 9 brauchbaren Regionen, .hit-File-Loader, Antilag-mit-Animation-State)
 sind seit der RtCW/ETPro-Lineage in der Codebase, aber wurden
 nie in den eigentlichen Combat-Pfad verdrahtet. Audit Sektion 2.1
 zeigt: `mdx_hit_test` hat null Aufrufer im Damage-Code; die
-`*.hits`-Files liegen nicht im etmain-Tree.
+`*.hit`-Files liegen nicht im etmain-Tree.
 
 Phase 6 macht aus dieser dormant Infrastruktur ein **kompetitives
 Feature**:
 
-  - 10 Hit-Regionen statt 4 (HEAD/CHEST/GUT/GROIN/SHOULDER_L/R/
-    KNEE_L/R/LEGS_L/R) — physiologisch sinnvoll, keine groben
+  - 9 Hit-Regionen statt 4 (HEAD/CHEST/GUT/GROIN/SHOULDER_L/R/
+    KNEE_L/R/LEGS) — physiologisch sinnvoll, keine groben
     "ARMS"/"BODY"-Bucket
   - Bone-tracked Collision: die Box folgt der Animation, nicht
     der statischen Spieler-Origin
@@ -74,7 +74,7 @@ Bezug zu den 6 Live-Test-Befunden vom 27.04.:
 
 - Per-Klasse Hit-Region-Tuning (Heavy-Class breitere Capsules etc.)
   → Phase 7
-- Pro-Pose .hits-Files (jump.hits, prone.hits zusätzlich zu base.hits)
+- Pro-Pose .hit-Files (jump.hit, prone.hit zusätzlich zu base.hit)
   → Phase 8
 - Cgame-Renderer mit echten bone-Positions (statt Approximate-Mode)
   → Phase 6.1 Polish (eigene Mini-Phase nach 6.0)
@@ -89,13 +89,13 @@ Bezug zu den 6 Live-Test-Befunden vom 27.04.:
 
 | Datei | Status | Zweck |
 |---|---|---|
-| `src/game/g_vanguard_hitbox.c` | NEU | vg_Hitbox_* subsystem — cvar lifecycle, .hits-load, damage-region-mapping, debug-print |
+| `src/game/g_vanguard_hitbox.c` | NEU | vg_Hitbox_* subsystem — cvar lifecycle, .hit-load, damage-region-mapping, debug-print |
 | `src/game/g_vanguard_hitbox.h` | NEU | public API: `vg_Hitbox_Init`, `vg_Hitbox_Shutdown`, `vg_Hitbox_TraceShot`, `vg_Hitbox_DamageMultiplierFor` |
 | `src/game/g_vanguard.c` | EDIT | `vg_Hitbox_Init/Shutdown` aus G_InitGame / G_ShutdownGame triggern |
 | `src/game/g_vanguard.h` | EDIT | `#include "g_vanguard_hitbox.h"` für die public-API-Forwards |
 | `src/game/g_combat.c` | EDIT | G_Damage: gateway auf `vanguard_hitbox_mode`, ruft entweder legacy IsHeadShot/IsLegShot/IsArmShot ODER `vg_Hitbox_TraceShot` |
 | `src/cgame/cg_vanguard_dev.c` | EDIT | Disclaimer-Banner ergänzen "hitboxes shown approximate, server uses bone-tracked collision" |
-| `etmain/animations/vanguard.hits` | NEU asset | 10 Hit-Region-Definitions |
+| `etmain/animations/human_base.hit` | NEU asset | 9-Region Hit-Definition-File. **Filename ist auto-discovery-bedingt:** `mdx_LoadHitsFile` (g_mdx.c:1331-1343) konstruiert den Pfad aus `characterDef.animationgroup` ("animations/human_base.anim"), ersetzt Extension durch ".hit". Alle 10 ETLegacy-Vanilla-Klassen teilen diesen animationGroup → ein File deckt alles. **Additive Asset** — Vanilla-ETLegacy hat keine `.hit`-Files, kein Override-Konflikt. |
 | `docs/HITS_FORMAT.md` | NEU | Format-Spec aus mdx_LoadHitsFile rekonstruiert |
 | `docs/HITBOX_SYSTEM.md` | NEU | User-facing Doku für Cup-Admins (Cvar-Tabelle, Tuning-Hints) |
 
@@ -113,14 +113,25 @@ vanguard_hitbox_mode  default 1  CVAR_SERVERINFO | CVAR_LATCH
 | Wert | Verhalten |
 |---|---|
 | 0 | Legacy: IsHeadShot/IsLegShot/IsArmShot Pfad (vanilla ETLegacy) |
-| 1 | Multi-Box: 10-Region mdx_hit_test, alle Primitives wie .hits-File definiert |
-| 2 | Multi-Box + Capsule-Override (zukünftig — alle Body-Parts als Capsule statt Box) |
+| 1 | Multi-Box: 9-Region mdx_hit_test gegen `human_base.hit` |
 
 CVAR_LATCH weil per-map-konsistent — mid-match Switch wäre verwirrend
 für Spieler. CVAR_SERVERINFO damit cgame im Disclaimer-Banner den
 Mode kommunizieren kann.
 
+> **Note zu Mode 2 (entfernt):** ursprünglich als Capsule-Override
+> geplant, aber das `.hit`-Format unterstützt KEIN dediziertes Capsule-
+> Primitive (nur Sphere/Box/Cylinder/Box2 — siehe
+> `docs/HITS_FORMAT.md` Sektion 4). Cylinder mit angemessen großen
+> Endpunkten approximiert eine Capsule ausreichend für alle
+> Phase-6-Ziele. Falls echte Capsule-Halbkugel-Endkappen später gewollt
+> sind: eigene Phase 6.x mit `mdx_hit_test_capsule()`-C-Code-Erweiterung.
+
 **Per-Region Damage-Multiplier:**
+
+`animScriptImpactPoint_t` (`bg_public.h:2494-2508`) hat 9 brauchbare
+Regionen — kein L/R-Split für Beine, nur ein einzelnes
+`IMPACTPOINT_LEGS`. Ergibt **9 Damage-Cvars**:
 
 | Cvar | Default | Bezug |
 |---|---|---|
@@ -132,12 +143,15 @@ Mode kommunizieren kann.
 | `vanguard_dmg_shoulder_r` | 0.8 | rechte Schulter — Limb |
 | `vanguard_dmg_knee_l` | 0.6 | linkes Knie — Limb extrem |
 | `vanguard_dmg_knee_r` | 0.6 | rechtes Knie — Limb extrem |
-| `vanguard_dmg_legs_l` | 0.7 | linker Oberschenkel |
-| `vanguard_dmg_legs_r` | 0.7 | rechter Oberschenkel |
+| `vanguard_dmg_legs` | 0.7 | Beine (single, kein L/R-Split im Enum) |
 
-Defaults sind **konservativ**: Sum-of-Body-Multipliers ≈ 8.6 ÷ 8 Regionen
-= 1.07 average, also ähnliche Gesamt-TTK wie Vanilla. Cup-Admins können
-fine-tunen für Pro-League-Spielgefühl.
+Optional: `vanguard_dmg_default` (1.0) als Fallback für Hits auf
+Hit-Areas mit `IMPACTPOINT_UNUSED` oder ohne explizit gesetzten
+impactpoint.
+
+Defaults sind **konservativ**: Sum-of-Body-Multipliers ≈ 7.7 ÷ 8 Regionen
+≈ 0.96 average — knapp unter Vanilla-Niveau, ähnliche Gesamt-TTK.
+Cup-Admins können fine-tunen für Pro-League-Spielgefühl.
 
 CVAR_ARCHIVE damit Server-Operator sie persistent speichern können,
 NICHT CVAR_LATCH (mid-match Damage-Tuning soll möglich bleiben für
@@ -156,7 +170,7 @@ void G_Damage(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 
     /* VANGUARD: multi-box hit-detection branch. Mode 0 falls back to
      * the upstream IsHeadShot / IsLegShot / IsArmShot pipeline; modes
-     * 1+ route through mdx_hit_test against vanguard.hits and apply
+     * 1+ route through mdx_hit_test against human_base.hit and apply
      * per-region damage multipliers. */
     if (vanguard_hitbox_mode.integer >= 1 && targ->client && IsValidPlayer(targ))
     {
@@ -211,10 +225,15 @@ befindet sich also schon in der historisch-rewindeten Pose, und
 Animation-Frames, `mdx_calculate_bones` rekonstruiert die korrekten
 bone-Positions zur Schuss-Zeit.
 
-### 2.4 .hits-File-Spec (Vorab-Sketch)
+### 2.4 .hit-File-Spec (Vorab-Sketch)
 
-Die exakte Spec wird in **Phase 6.0 aus `mdx_LoadHitsFile()` Code
-rekonstruiert**. Bekannte Struktur aus `g_mdx.h:222`:
+> **Status:** vollständige Spec in `docs/HITS_FORMAT.md` (Phase 6.0
+> Tag 1 ✅). Was hier folgt war der Vorab-Sketch — die echten Details
+> stehen in der Spec-Doku.
+
+Die exakte Spec wurde in **Phase 6.0 Tag 1 aus `mdx_LoadHitsFile()` Code
+rekonstruiert** (siehe `docs/HITS_FORMAT.md`). Bekannte Struktur aus
+`g_mdx.h:222`:
 
 ```c
 struct hit_area {
@@ -225,19 +244,21 @@ struct hit_area {
     float   scale[2][3];     // x/y/z scale per tag (radius o.ä.)
     qboolean isbox;          // false = cylinder, true = box
     qboolean ishead[2];      // tag is the head-bone variant
-    animScriptImpactPoint_t impactpoint;  // welche der 10 Regionen
+    animScriptImpactPoint_t impactpoint;  // welche der 9 brauchbaren Regionen
 };
 ```
 
 **Beispiel-Snippet** (illustrativ, exakte Syntax kommt aus 6.0):
 
 ```
-// vanguard.hits — VanguardMod hit-region definitions
+// human_base.hit — VanguardMod hit-region definitions
+// Path: etmain/animations/human_base.hit (auto-discovered via
+// characterDef.animationgroup → see docs/HITS_FORMAT.md Sektion 2)
 //
-// One block per hit-area. The 10 animScriptImpactPoint_t regions
-// must each have at least one block. Multiple blocks per region
-// allowed (e.g. left arm = upper arm capsule + lower arm capsule
-// both mapped to IMPACTPOINT_SHOULDER_LEFT).
+// One block per hit-area. The 9 useful animScriptImpactPoint_t
+// regions can each have one or more blocks. Multiple blocks per
+// region allowed (e.g. legs = left calf cylinder + right calf
+// cylinder both mapped to IMPACTPOINT_LEGS).
 
 hit {
     name        "head"
@@ -277,7 +298,7 @@ Beispiel ist nur Illustration; Phase 6.0 produziert die echte Spec.
 **Architektur-Schwerpunkte:**
 - Komplette Logik in **eigenem File** `g_vanguard_hitbox.{c,h}` →
   saubere Resync-Diff-Trennung, eine Stelle für Cvar-Lifecycle +
-  Region-Mapping + .hits-Asset-Loading
+  Region-Mapping + .hit-Asset-Loading
 - G_Damage-Touch ist **klein** (eine if-else-Branch, ~30 Zeilen) und
   **opt-in** (mode=0 fällt zurück) → Risk-controlled
 - Antilag bleibt **unverändert** — alle History-Daten sind schon da
@@ -286,9 +307,9 @@ Beispiel ist nur Illustration; Phase 6.0 produziert die echte Spec.
 
 ## Sektion 3 — Implementation-Phasen
 
-### Phase 6.0 — Foundation (3-4 Tage)
+### Phase 6.0 — Foundation (4-5 Tage)
 
-**Ziel:** .hits-Format verstanden, vanguard.hits geladen, Cvars
+**Ziel:** .hit-Format verstanden, `human_base.hit` geladen, Cvars
 registriert. Noch kein Damage-Path-Touch.
 
 **Tasks:**
@@ -298,16 +319,50 @@ registriert. Noch kein Damage-Path-Touch.
    - Token-für-Token Format-Spec
    - Welche Tags sind erlaubt
    - Welche Primitives (box/box2/cylinder/sphere) und ihre Scale-Semantik
-   - Wo .hits-Files gesucht werden (filesystem path)
+   - Wo .hit-Files gesucht werden (filesystem path)
    - Welche Animation-Groups die Lookup nutzen
 
-2. **vanguard.hits hand-schreiben** mit den 10 Regionen.
-   Bone-Tag-Choice basiert auf `tag_*` refs in Vanilla-Player-Models
-   (head/torso/chest/back/weapon, Standard-Q3-Skeleton). Falls
-   benötigte Tags nicht existieren (z.B. tag_knee_*), entweder:
-   - Fallback auf näheste verfügbaren Tags (tag_torso etc.) mit
-     manuell-tunbarem Offset
-   - Bone-Position-Lookup direkt im g_mdx-Skeleton-Index (advanced)
+   **Status:** ✅ erledigt am 2026-04-27 — `docs/HITS_FORMAT.md` (598
+   Zeilen, 8 Sektionen) deckt alle Aspekte ab. Code-Reading hat
+   drei Plan-Korrekturen produziert (Filename, Cvar-Count, Mode-2),
+   die in einem separaten Commit nachgepflegt wurden.
+
+1.5. **Bone-Namen-Discovery** — Pre-Requirement für Task 2.
+
+   Code-Reading allein liefert nur die `tag_*`-Namen aus den
+   cgame-Render-Aufrufen (tag_head, tag_torso, tag_chest, tag_back,
+   tag_footleft, tag_footright). Die echten **Bone-Namen** im
+   .mdx-Skeleton sind Binary-Format-Inhalt und nicht aus Source-
+   Reading bestimmbar (siehe `docs/HITS_FORMAT.md` Sektion 5.2).
+
+   - Temporärer Debug-Print in `mdx_load()` (g_mdx.c:1298 Pfad)
+     der `mdx->bones[i].name` für alle bones loggt nach dem
+     Parse — ggf. mit `i`, parent-index und `parent_dist` für
+     Skeleton-Topologie-Verständnis
+   - Test-Server einmal starten (lokales etlded reicht), Bone-Liste
+     aus stdout/server-log capturen
+   - Liste in einer Notiz-Datei (z.B. `/tmp/vg.bones.txt`) speichern
+     für Task 2
+   - **Debug-Patch DANACH ENTFERNEN — NICHT committen.** Der
+     Bone-Dump ist ein Werkzeug, kein Feature.
+
+   **Definition of Done für 1.5:**
+   - [ ] Bone-Liste vorhanden (typisch 30-50 bones bei ETLegacy-
+     human-skeleton)
+   - [ ] Hierarchie sichtbar (parent-bone-Relationen)
+   - [ ] Knee-/Shoulder-Bone-Kandidaten identifiziert (siehe
+     HITS_FORMAT.md Sektion 5.3 Empfehlung)
+   - [ ] Debug-Patch revertiert, working tree clean außer der
+     externen Notiz
+
+2. **`human_base.hit` hand-schreiben** mit den 9 Regionen
+   (HEAD, CHEST, GUT, GROIN, SHOULDER_L/R, KNEE_L/R, LEGS).
+   Bone-Tag-Choice basiert auf der Bone-Liste aus Task 1.5. Falls
+   benötigte Tags nicht existieren (z.B. dedicated knee-bone):
+   - Fallback auf nächst-passende Bones (Calf/Thigh-Mittelpunkt
+     für Knee) mit manuell-tunbarem `scale`/`offset`
+   - Bone-Position-Lookup direkt im g_mdx-Skeleton-Index (advanced
+     wenn Calf/Thigh-Approach nicht reicht)
 
 3. **g_vanguard_hitbox.{c,h} Skeleton:**
    ```c
@@ -324,35 +379,46 @@ registriert. Noch kein Damage-Path-Touch.
    const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint);
    ```
 
-4. **Cvar-Registration:** `vanguard_hitbox_mode` plus 10
-   damage-cvars in `vg_Hitbox_Init`. CVAR_LATCH für mode,
-   CVAR_ARCHIVE für damage-cvars.
+4. **Cvar-Registration:** `vanguard_hitbox_mode` plus 9
+   damage-cvars (siehe Sektion 2.2 Tabelle) in `vg_Hitbox_Init`.
+   CVAR_LATCH für mode, CVAR_ARCHIVE für damage-cvars.
 
-5. **Hit-File-Load-Integration:** in `vg_Hitbox_Init` rufen
-   `mdx_LoadHitsFile("vanguard", animModelInfo)` für jeden
-   geladenen Player-Model-AnimationGroup. Verifikation per
-   debug-print: "Loaded N hit-areas from vanguard.hits".
+5. **Hit-File-Load-Integration:** `mdx_LoadHitsFile` wird bereits
+   automatisch von `g_character.c:246` aufgerufen sobald
+   `FEATURE_SERVERMDX=ON` (default). VanguardMod muss **nichts
+   selbst aufrufen** — es reicht das `human_base.hit`-File ans
+   richtige etmain-Pfad zu legen. `vg_Hitbox_Init` printet zur
+   Verifikation den `hits[]`-Pool-Status nach erstem Map-Spawn:
+   "vg_Hitbox: loaded N hit-areas from human_base.hit" oder eine
+   **LOUD WARNING** falls 0 (silent-fail vs file-not-found, siehe
+   `docs/HITS_FORMAT.md` Sektion 6.1).
 
-6. **Build + verify:** `cmake --build build`, `vg_Hitbox_Init`-
-   debug-print zeigt "10 areas loaded" beim Map-Load.
+6. **Build + verify:** `cmake --build build`, Map-Spawn → Server-Log
+   zeigt "vg_Hitbox: loaded ≥9 hit-areas".
 
 **Definition of Done:**
-- [ ] `docs/HITS_FORMAT.md` existiert, beschreibt das Format
+- [x] `docs/HITS_FORMAT.md` existiert, beschreibt das Format
   vollständig mit Code-Referenzen auf mdx_LoadHitsFile
-- [ ] `etmain/animations/vanguard.hits` enthält 10 Hit-Areas mit
-  bone-Tag-Anchors für alle IMPACTPOINT_*-Regionen außer
-  IMPACTPOINT_UNUSED
+- [ ] Bone-Namen-Liste aus Task 1.5 vorhanden (für Task 2)
+- [ ] `etmain/animations/human_base.hit` enthält 9+ Hit-Areas mit
+  bone-Anchors für alle 9 IMPACTPOINT_*-Regionen außer UNUSED
 - [ ] `g_vanguard_hitbox.{c,h}` kompiliert, exportiert die 4
   public Functions
-- [ ] `vanguard_hitbox_mode 0/1/2` registriert, default 1
-- [ ] 10× `vanguard_dmg_*` registriert mit Defaults aus Tabelle 2.2
+- [ ] `vanguard_hitbox_mode 0/1` registriert, default 1
+- [ ] 9× `vanguard_dmg_*` registriert mit Defaults aus Tabelle 2.2
 - [ ] Map-Load zeigt "vg_Hitbox: loaded N hit-areas" im Server-Log
+- [ ] LOUD WARNING fires wenn human_base.hit fehlt (negativ-Pfad
+  manuell triggern: pk3-Inhalt vorübergehend ohne hit-File bauen)
 - [ ] Damage-Path NOCH NICHT geändert (Sicherheits-Stufe)
 
-**Estimate:** 3-4 Tage
-- Tag 1: mdx_LoadHitsFile-Reading + HITS_FORMAT.md
-- Tag 2-3: vanguard.hits schreiben + tunen
+**Estimate:** 4-5 Tage
+- Tag 1: mdx_LoadHitsFile-Reading + HITS_FORMAT.md ✅
+- Tag 1.5: Bone-Namen-Discovery via temporärem mdx_load Debug-Print
+- Tag 2-3: human_base.hit schreiben + tunen (per-region scale/radius
+  gegen Modell-Screenshots)
 - Tag 4: g_vanguard_hitbox.* Skeleton + Cvars + Integration
+- Tag 5: Buffer für Iteration (typischerweise scale-tuning nach
+  ersten Live-Tests im Dev-Mode-Renderer)
 
 ### Phase 6.1 — Damage-Path Wiring (3-4 Tage)
 
@@ -368,12 +434,12 @@ funktioniert weiterhin korrekt.
 2. **Stats-Tracking erweitern** in g_stats.c:
    - HR_NUM_HITREGIONS bleibt 4 (nicht refactor wegen Wire-Format
      für Debriefing)
-   - 10 IMPACTPOINT-Regionen via `vg_Hitbox_RegionFor` auf 4
+   - 9 IMPACTPOINT-Regionen via `vg_Hitbox_RegionFor` auf 4
      HR_*-Klassen mappen:
      - HR_HEAD: HEAD
      - HR_BODY: CHEST, GUT, GROIN
      - HR_ARMS: SHOULDER_L, SHOULDER_R
-     - HR_LEGS: KNEE_L, KNEE_R, LEGS_L, LEGS_R
+     - HR_LEGS: KNEE_L, KNEE_R, LEGS
 
 3. **Sanity-Test mit Bots auf Test-Server:**
    - vanguard_hitbox_mode 0: sniper-headshot stehender Bot →
@@ -492,7 +558,7 @@ funktioniert weiterhin korrekt.
 
 | ID | Risk | Wahrscheinlichkeit | Impact | Mitigation |
 |---|---|---|---|---|
-| R1 | .hits-Format ist nicht klar dokumentiert in der Codebase | hoch | mittel | Phase 6.0 startet mit Code-Reading; Fallback: hand-schreiben basierend auf hit_area-Struct ohne Loader-File-Format (direkt programmatic load) |
+| R1 | .hit-Format ist nicht klar dokumentiert in der Codebase | hoch | mittel | Phase 6.0 startet mit Code-Reading; Fallback: hand-schreiben basierend auf hit_area-Struct ohne Loader-File-Format (direkt programmatic load) |
 | R2 | CPU-Overhead bei Multi-Box höher als 5% | mittel | mittel | Mikro-Benchmark in Phase 6.2 misst real; Bone-Snapshot-Cache als Phase-6.x-Optimization wenn nötig |
 | R3 | Damage-Balance kaputt durch 10-Region-Multipliers | mittel | hoch | Defaults konservativ (Sum ≈ 8.6 ÷ 8 = 1.07 average, nahe Vanilla); Cup-Admin-Override über Cvars; Live-Test mit 5+ Spielern Phase 6.2 |
 | R4 | Antilag-Bug bei Multi-Box-Replay | niedrig | hoch | Antilag-State ist bereits replay-fähig (Audit Sektion 3); 30-min-Bot-Test in Phase 6.1; bei jedem Bug sofort revert auf mode=0 |
@@ -551,10 +617,10 @@ Shoulder-spezifische Hit-Areas eventuell Fallback nötig.
 
 **Q2:** Hat `mdx_LoadHitsFile` einen Pfad-Discovery-Mechanismus
 (sucht in animations/ pro Anim-Group) oder muss der Pfad explizit
-übergeben werden? Beeinflusst .hits-File-Placement.
+übergeben werden? Beeinflusst .hit-File-Placement.
 
 **Q3:** Was ist `animationGroup` als Parameter zu mdx_LoadHitsFile?
-Kommt das aus character.cfg? Müssen wir mehrere .hits-Files für
+Kommt das aus character.cfg? Müssen wir mehrere .hit-Files für
 verschiedene Klassen schreiben oder reicht eines?
 
 ### 6.2 Future Phases
@@ -572,8 +638,8 @@ verschiedene Klassen schreiben oder reicht eines?
 - Cvar: `vanguard_dmg_<region>_<class>`
 - Schätzung: 1 Woche
 
-**Phase 8 — Pro-Pose .hits-Files:**
-- jump.hits, prone.hits, crouch.hits zusätzlich zu base.hits
+**Phase 8 — Pro-Pose .hit-Files:**
+- jump.hit, prone.hit, crouch.hit zusätzlich zu base.hit
 - Selection per `legsAnim`-Lookup zur Trace-Zeit
 - Erlaubt sehr enge Pose-spezifische Capsules
 - Schätzung: 1-2 Wochen
