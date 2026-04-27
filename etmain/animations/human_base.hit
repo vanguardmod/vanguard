@@ -1,0 +1,96 @@
+// VanguardMod human_base.hit — multi-box hit-region
+// definitions for the standard human animation skeleton.
+//
+// Auto-loaded by mdx_LoadHitsFile from
+// characterDef.animationgroup ("animations/human_base.anim"
+// → "animations/human_base.hit"). Shared by all 10 vanilla
+// ETLegacy classes (Soldier/Medic/Engineer/FieldOps/Cvops
+// × Allies/Axis).
+//
+// 9 distinct impact-points, 10 hit-areas (LEGS has 2:
+// left + right calf-foot cylinders).
+//
+// Bone names: 3DS-Max Biped naming with "Bip01" prefix.
+// Quoted because they contain spaces. Verified against bone
+// dump from etmain/animations/human/base/body.mdx (53 bones,
+// 2026-04-27).
+//
+// Scale/radius values are conservative starting points;
+// per-region tuning happens during Phase 6.1/6.2 with live
+// playtests, by adjusting the scale lines below.
+//
+// Spec: docs/HITS_FORMAT.md
+// Plan: docs/PHASE_6_PLAN.md (Phase 6.0 Task 2)
+
+// ---- Head ----
+// Sphere on the head bone. radius keyword sets all 3 axes
+// uniformly. With 1 tag and isbox=false → mdx_hit_test_sphere.
+HIT head "Bip01 Head"
+    radius 6
+    impactpoint head
+
+// ---- Chest (upper torso) ----
+// Box between two upper-spine bones, spans the rib cage.
+// 2 tags + box → mdx_hit_test_box2 (rotated along bone axis).
+HIT body "Bip01 Spine2" "Bip01 Spine3"
+    scale 8 6 4
+    scale 8 6 4
+    impactpoint chest
+    box
+
+// ---- Gut (lower torso) ----
+// Box along the lower spine, abdomen region.
+HIT body "Bip01 Spine" "Bip01 Spine1"
+    scale 8 6 4
+    scale 8 6 4
+    impactpoint gut
+    box
+
+// ---- Groin / pelvis ----
+// Sphere at the pelvis bone (skeleton root).
+HIT body "Bip01 Pelvis"
+    radius 5
+    impactpoint groin
+
+// ---- Right Shoulder ----
+// Cylinder from clavicle to upper arm. Tighter at the
+// clavicle end, slightly wider at the upper-arm end.
+HIT arm_R "Bip01 R Clavicle" "Bip01 R UpperArm"
+    radius 3
+    radius 4
+    impactpoint shoulder_right
+
+// ---- Left Shoulder ----
+HIT arm_L "Bip01 L Clavicle" "Bip01 L UpperArm"
+    radius 3
+    radius 4
+    impactpoint shoulder_left
+
+// ---- Right Knee ----
+// Cylinder spanning thigh→calf; mid-region = the knee joint.
+// Thigh-side and calf-side same radius.
+HIT leg_R "Bip01 R Thigh" "Bip01 R Calf"
+    radius 3
+    radius 3
+    impactpoint knee_right
+
+// ---- Left Knee ----
+HIT leg_L "Bip01 L Thigh" "Bip01 L Calf"
+    radius 3
+    radius 3
+    impactpoint knee_left
+
+// ---- Legs — left calf/shin ----
+// Cylinder from calf to foot. Calf-end slightly thicker
+// than foot-end. Both legs use impactpoint=legs (the enum
+// has no L/R split for IMPACTPOINT_LEGS).
+HIT leg_L "Bip01 L Calf" "Bip01 L Foot"
+    radius 3
+    radius 2
+    impactpoint legs
+
+// ---- Legs — right calf/shin ----
+HIT leg_R "Bip01 R Calf" "Bip01 R Foot"
+    radius 3
+    radius 2
+    impactpoint legs
