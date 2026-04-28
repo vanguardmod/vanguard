@@ -65,6 +65,419 @@ static const vec3_t vg_ColorHead = { 1.0f, 0.0f, 0.0f }; /* red    */
 static const vec3_t vg_ColorLegs = { 0.0f, 1.0f, 0.0f }; /* green  */
 
 /* ================================================================== */
+/* Multi-region wireframe rendering (Phase 6.x)                       */
+/* ================================================================== */
+
+/* Hit-area shape kinds — match the on-server primitive selection in
+ * mdx_hit_test (g_mdx.c:2843+). Box2 / Cylinder are 2-tag primitives
+ * with the local Z axis pointing from bone1 to bone2; Sphere is a
+ * 1-tag primitive (no axis). */
+typedef enum
+{
+	VG_SHAPE_SPHERE,
+	VG_SHAPE_CYLINDER,
+	VG_SHAPE_BOX2
+} vg_shape_t;
+
+typedef struct
+{
+	const char *bone1;
+	const char *bone2;        /* NULL for sphere */
+	vg_shape_t  shape;
+	vec3_t      scale1;       /* radii or half-extents at bone1 end */
+	vec3_t      scale2;       /* same at bone2 end (zero for sphere) */
+	int         impactpoint;  /* IMPACTPOINT_* — used for hit-highlight match */
+	vec3_t      color;        /* RGB per region, alpha applied at render time */
+} vg_hit_area_t;
+
+/* Mirrors etmain/animations/human_base.hit (Pass 1+2 retune). Keep
+ * this table in sync manually on each .hit retune; until we codegen
+ * from .hit at build time, drift between client and server here is
+ * the cost of a quick visualisation. */
+static const vg_hit_area_t vg_hit_areas[] = {
+	/* HEAD — sphere radius 6 on Bip01 Head */
+	{ "Bip01 Head",       NULL,                VG_SHAPE_SPHERE,
+	  { 6, 6, 6 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
+	  { 1.0f, 0.2f, 0.2f } },                                /* red */
+
+	/* CHEST — box2 Spine1 -> Neck */
+	{ "Bip01 Spine1",     "Bip01 Neck",        VG_SHAPE_BOX2,
+	  { 9, 7, 5 }, { 9, 7, 5 }, IMPACTPOINT_CHEST,
+	  { 1.0f, 1.0f, 0.2f } },                                /* yellow */
+
+	/* GUT — box2 Pelvis -> Spine2 */
+	{ "Bip01 Pelvis",     "Bip01 Spine2",      VG_SHAPE_BOX2,
+	  { 9, 7, 5 }, { 9, 7, 5 }, IMPACTPOINT_GUT,
+	  { 1.0f, 0.6f, 0.2f } },                                /* orange */
+
+	/* GROIN — sphere radius 7 on Pelvis */
+	{ "Bip01 Pelvis",     NULL,                VG_SHAPE_SPHERE,
+	  { 7, 7, 7 }, { 0, 0, 0 }, IMPACTPOINT_GROIN,
+	  { 1.0f, 0.4f, 0.6f } },                                /* pink */
+
+	/* LEFT SHOULDER — cylinder Clavicle -> UpperArm */
+	{ "Bip01 L Clavicle", "Bip01 L UpperArm",  VG_SHAPE_CYLINDER,
+	  { 5, 5, 5 }, { 5, 5, 5 }, IMPACTPOINT_SHOULDER_LEFT,
+	  { 0.4f, 0.6f, 1.0f } },                                /* blue */
+
+	/* RIGHT SHOULDER */
+	{ "Bip01 R Clavicle", "Bip01 R UpperArm",  VG_SHAPE_CYLINDER,
+	  { 5, 5, 5 }, { 5, 5, 5 }, IMPACTPOINT_SHOULDER_RIGHT,
+	  { 0.4f, 0.6f, 1.0f } },                                /* blue */
+
+	/* LEFT KNEE — cylinder Thigh -> Calf */
+	{ "Bip01 L Thigh",    "Bip01 L Calf",      VG_SHAPE_CYLINDER,
+	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_KNEE_LEFT,
+	  { 0.4f, 1.0f, 0.4f } },                                /* green */
+
+	/* RIGHT KNEE */
+	{ "Bip01 R Thigh",    "Bip01 R Calf",      VG_SHAPE_CYLINDER,
+	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_KNEE_RIGHT,
+	  { 0.4f, 1.0f, 0.4f } },                                /* green */
+
+	/* LEFT LEG (calf->foot, shares IMPACTPOINT_LEGS with right) */
+	{ "Bip01 L Calf",     "Bip01 L Foot",      VG_SHAPE_CYLINDER,
+	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_LEGS,
+	  { 0.2f, 1.0f, 0.8f } },                                /* cyan */
+
+	/* RIGHT LEG */
+	{ "Bip01 R Calf",     "Bip01 R Foot",      VG_SHAPE_CYLINDER,
+	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_LEGS,
+	  { 0.2f, 1.0f, 0.8f } }                                 /* cyan */
+};
+#define VG_HIT_AREA_COUNT ((int)(sizeof(vg_hit_areas) / sizeof(vg_hit_areas[0])))
+
+/**
+ * @brief Build a minimal refEntity_t suitable for trap_R_LerpTag bone
+ *        resolution. Pulls the player's current animation frame data
+ *        from cent->pe (which CG_RunLerpFrameRate populates each
+ *        frame), and sets origin/axis from the snapshot lerp values.
+ *
+ *        This is a reduced version of CG_Player's body refent setup
+ *        (cg_players.c:CG_PlayerAnimation + CG_PlayerAngles). For
+ *        diagnostic visualisation the simplification is acceptable —
+ *        bone positions match within the precision of one player
+ *        snapshot interpolation step.
+ *
+ * @return qfalse if the entity has no character / mdxFile (cannot
+ *         resolve bones at all), else qtrue.
+ */
+static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
+{
+	const clientInfo_t   *ci;
+	const bg_character_t *character;
+	int                   clientNum;
+
+	clientNum = cent->currentState.clientNum;
+	if (clientNum < 0 || clientNum >= MAX_CLIENTS)
+	{
+		return qfalse;
+	}
+
+	ci = &cgs.clientinfo[clientNum];
+	if (!ci->infoValid)
+	{
+		return qfalse;
+	}
+
+	character = CG_CharacterForClientinfo((clientInfo_t *)ci,
+	                                      (centity_t *)cent);
+	if (!character || !character->animModelInfo ||
+	    !character->animModelInfo->animations[0])
+	{
+		return qfalse;
+	}
+
+	memset(body, 0, sizeof(*body));
+
+	body->frame              = cent->pe.legs.frame;
+	body->oldframe           = cent->pe.legs.oldFrame;
+	body->backlerp           = cent->pe.legs.backlerp;
+	body->frameModel         = cent->pe.legs.frameModel;
+	body->oldframeModel      = cent->pe.legs.oldFrameModel;
+	body->torsoFrame         = cent->pe.torso.frame;
+	body->oldTorsoFrame      = cent->pe.torso.oldFrame;
+	body->torsoBacklerp      = cent->pe.torso.backlerp;
+	body->torsoFrameModel    = cent->pe.torso.frameModel;
+	body->oldTorsoFrameModel = cent->pe.torso.oldFrameModel;
+
+	/* Fall back to animation[0] mdxFile if the per-frame model isn't
+	 * set yet (first frame after spawn). */
+	if (!body->frameModel)
+	{
+		body->frameModel    = character->animModelInfo->animations[0]->mdxFile;
+		body->oldframeModel = body->frameModel;
+	}
+	if (!body->torsoFrameModel)
+	{
+		body->torsoFrameModel    = body->frameModel;
+		body->oldTorsoFrameModel = body->frameModel;
+	}
+
+	VectorCopy(cent->lerpOrigin, body->origin);
+	AnglesToAxis(cent->lerpAngles, body->axis);
+	AxisCopy(body->axis, body->torsoAxis);
+
+	return qtrue;
+}
+
+/**
+ * @brief Look up a bone's world-space origin by name.
+ *
+ *        trap_R_LerpTag iterates both the .mdm tag list and the .mdx
+ *        skeleton bones, so passing "Bip01 Head" resolves directly to
+ *        the bone position in the parent refent's local frame. The
+ *        canonical world transform pattern is from
+ *        cg_ents.c:CG_PositionEntityOnTag.
+ *
+ * @return qfalse if the bone is not in the model.
+ */
+static qboolean vg_GetBoneOrigin(const refEntity_t *body, const char *bone,
+                                 vec3_t outWorld)
+{
+	orientation_t lerped;
+	int           i;
+
+	if (trap_R_LerpTag(&lerped, body, bone, 0) < 0)
+	{
+		return qfalse;
+	}
+
+	VectorCopy(body->origin, outWorld);
+	for (i = 0; i < 3; i++)
+	{
+		VectorMA(outWorld, lerped.origin[i], body->axis[i], outWorld);
+	}
+	return qtrue;
+}
+
+/**
+ * @brief Build an orthonormal frame [u, v, axis] given an arbitrary
+ *        unit vector axis. Used to orient cylinder caps and box2
+ *        cross-sections perpendicular to the bone-to-bone direction.
+ */
+static void vg_BuildPerpFrame(const vec3_t axis, vec3_t u, vec3_t v)
+{
+	vec3_t ref;
+
+	/* Pick a reference axis non-parallel to `axis`. World-up works
+	 * unless axis IS world-up, in which case use world-forward. */
+	if (Q_fabs(axis[2]) > 0.9f)
+	{
+		VectorSet(ref, 1.0f, 0.0f, 0.0f);
+	}
+	else
+	{
+		VectorSet(ref, 0.0f, 0.0f, 1.0f);
+	}
+
+	CrossProduct(axis, ref, u);
+	VectorNormalize(u);
+
+	CrossProduct(axis, u, v);
+	VectorNormalize(v);
+}
+
+/**
+ * @brief Wire-sphere via three orthogonal great circles (XY, XZ, YZ).
+ *        8 segments per circle = 24 line draws total per sphere.
+ */
+static void vg_DrawWireSphere(const vec3_t origin, float radius,
+                              const vec3_t color, float alpha)
+{
+	const int segs = 8;
+	vec4_t    rgba;
+	int       plane, i;
+	vec3_t    prev, next;
+	float     a0, a1, c0, s0, c1, s1;
+
+	rgba[0] = color[0]; rgba[1] = color[1]; rgba[2] = color[2];
+	rgba[3] = alpha;
+
+	for (plane = 0; plane < 3; plane++)
+	{
+		/* plane 0: XY (Z fixed)  plane 1: XZ (Y fixed)  plane 2: YZ (X fixed) */
+		for (i = 0; i < segs; i++)
+		{
+			a0 = ((float)i        / (float)segs) * (float)(2.0 * M_PI);
+			a1 = ((float)(i + 1)  / (float)segs) * (float)(2.0 * M_PI);
+			c0 = cos(a0); s0 = sin(a0);
+			c1 = cos(a1); s1 = sin(a1);
+
+			VectorCopy(origin, prev);
+			VectorCopy(origin, next);
+
+			if (plane == 0) {
+				prev[0] += c0 * radius; prev[1] += s0 * radius;
+				next[0] += c1 * radius; next[1] += s1 * radius;
+			} else if (plane == 1) {
+				prev[0] += c0 * radius; prev[2] += s0 * radius;
+				next[0] += c1 * radius; next[2] += s1 * radius;
+			} else {
+				prev[1] += c0 * radius; prev[2] += s0 * radius;
+				next[1] += c1 * radius; next[2] += s1 * radius;
+			}
+			CG_AddLineToScene(prev, next, rgba);
+		}
+	}
+}
+
+/**
+ * @brief Wire-cylinder/cone between two bone positions. Two ring caps
+ *        (8 segments each = 16 lines) plus 4 vertical edges connecting
+ *        the caps at 0/90/180/270 degrees = 20 line draws total.
+ *        Tapered when r1 != r2 (cone-frustum).
+ */
+static void vg_DrawWireCylinder(const vec3_t o1, const vec3_t o2,
+                                float r1, float r2,
+                                const vec3_t color, float alpha)
+{
+	const int segs = 8;
+	vec4_t    rgba;
+	vec3_t    axis, u, v;
+	vec3_t    p1prev, p1next, p2prev, p2next;
+	float     a0, a1, c0, s0, c1, s1;
+	int       i;
+
+	rgba[0] = color[0]; rgba[1] = color[1]; rgba[2] = color[2];
+	rgba[3] = alpha;
+
+	VectorSubtract(o2, o1, axis);
+	if (VectorNormalize(axis) < 0.001f)
+	{
+		return; /* degenerate — bones overlap */
+	}
+	vg_BuildPerpFrame(axis, u, v);
+
+	for (i = 0; i < segs; i++)
+	{
+		a0 = ((float)i        / (float)segs) * (float)(2.0 * M_PI);
+		a1 = ((float)(i + 1)  / (float)segs) * (float)(2.0 * M_PI);
+		c0 = cos(a0); s0 = sin(a0);
+		c1 = cos(a1); s1 = sin(a1);
+
+		/* Bottom cap segment */
+		VectorMA(o1, c0 * r1, u, p1prev);
+		VectorMA(p1prev, s0 * r1, v, p1prev);
+		VectorMA(o1, c1 * r1, u, p1next);
+		VectorMA(p1next, s1 * r1, v, p1next);
+		CG_AddLineToScene(p1prev, p1next, rgba);
+
+		/* Top cap segment */
+		VectorMA(o2, c0 * r2, u, p2prev);
+		VectorMA(p2prev, s0 * r2, v, p2prev);
+		VectorMA(o2, c1 * r2, u, p2next);
+		VectorMA(p2next, s1 * r2, v, p2next);
+		CG_AddLineToScene(p2prev, p2next, rgba);
+
+		/* 4 verticals every 2 segments (at 0/90/180/270 = i 0,2,4,6) */
+		if ((i & 1) == 0)
+		{
+			CG_AddLineToScene(p1prev, p2prev, rgba);
+		}
+	}
+}
+
+/**
+ * @brief Wire-box2 between two bone positions. Both endpoints have
+ *        their own cross-section (scale1 / scale2), so this is a
+ *        possibly-tapered "frustum-of-rectangle" outline. Bottom face
+ *        4 edges + top face 4 edges + 4 verticals = 12 lines.
+ *        scale[0] = u-extent, scale[1] = v-extent at each end.
+ */
+static void vg_DrawWireBox2(const vec3_t o1, const vec3_t o2,
+                            const vec3_t scale1, const vec3_t scale2,
+                            const vec3_t color, float alpha)
+{
+	vec4_t rgba;
+	vec3_t axis, u, v;
+	vec3_t bottom[4], top[4];
+	int    i;
+	static const float corners[4][2] = {
+		{ -1, -1 }, {  1, -1 }, {  1,  1 }, { -1,  1 }
+	};
+
+	rgba[0] = color[0]; rgba[1] = color[1]; rgba[2] = color[2];
+	rgba[3] = alpha;
+
+	VectorSubtract(o2, o1, axis);
+	if (VectorNormalize(axis) < 0.001f)
+	{
+		return;
+	}
+	vg_BuildPerpFrame(axis, u, v);
+
+	for (i = 0; i < 4; i++)
+	{
+		VectorMA(o1, corners[i][0] * scale1[0], u, bottom[i]);
+		VectorMA(bottom[i], corners[i][1] * scale1[1], v, bottom[i]);
+
+		VectorMA(o2, corners[i][0] * scale2[0], u, top[i]);
+		VectorMA(top[i], corners[i][1] * scale2[1], v, top[i]);
+	}
+
+	for (i = 0; i < 4; i++)
+	{
+		CG_AddLineToScene(bottom[i], bottom[(i + 1) & 3], rgba);
+		CG_AddLineToScene(top[i],    top[(i + 1) & 3],    rgba);
+		CG_AddLineToScene(bottom[i], top[i],              rgba);
+	}
+}
+
+/**
+ * @brief Render all 10 multi-region capsules for a single player slot.
+ */
+static void vg_DrawPlayerMultibox(int clientNum, float alpha)
+{
+	const centity_t *cent = &cg_entities[clientNum];
+	refEntity_t      body;
+	vec3_t           o1, o2;
+	int              i;
+
+	if (!vg_BuildBodyRefent(cent, &body))
+	{
+		return;
+	}
+
+	for (i = 0; i < VG_HIT_AREA_COUNT; i++)
+	{
+		const vg_hit_area_t *area = &vg_hit_areas[i];
+
+		if (!vg_GetBoneOrigin(&body, area->bone1, o1))
+		{
+			continue;
+		}
+
+		switch (area->shape)
+		{
+		case VG_SHAPE_SPHERE:
+			vg_DrawWireSphere(o1, area->scale1[0], area->color, alpha);
+			break;
+
+		case VG_SHAPE_CYLINDER:
+			if (!vg_GetBoneOrigin(&body, area->bone2, o2))
+			{
+				break;
+			}
+			vg_DrawWireCylinder(o1, o2,
+			                    area->scale1[0], area->scale2[0],
+			                    area->color, alpha);
+			break;
+
+		case VG_SHAPE_BOX2:
+			if (!vg_GetBoneOrigin(&body, area->bone2, o2))
+			{
+				break;
+			}
+			vg_DrawWireBox2(o1, o2,
+			                area->scale1, area->scale2,
+			                area->color, alpha);
+			break;
+		}
+	}
+}
+
+/* ================================================================== */
 /* Helpers                                                            */
 /* ================================================================== */
 
@@ -341,8 +754,10 @@ static void vg_DrawPlayerHitboxes(int clientNum, float alpha)
 
 void CG_VanguardDev_DrawHitboxes(void)
 {
-	float alpha;
-	int   i;
+	float    alpha;
+	int      i;
+	qboolean drawAabb;
+	qboolean drawMultibox;
 
 	/* Server-authority gate: nothing renders unless vanguard_dev=1
 	 * is published in the serverinfo configstring. */
@@ -351,10 +766,12 @@ void CG_VanguardDev_DrawHitboxes(void)
 		return;
 	}
 
-	/* Client filter. Treat any non-zero value as "on" — the cvar is
-	 * effectively binary; the legacy 0/1/2 schema is left tolerant for
-	 * configs floating around with mode=2. */
-	if (cg_vanguardDevHitboxes.integer == 0)
+	/* Two independent client filters — admin can render legacy AABB
+	 * boxes alone, multi-region capsules alone, both, or neither. */
+	drawAabb     = (cg_vanguardDevHitboxes.integer != 0) ? qtrue : qfalse;
+	drawMultibox = (cg_vanguardDevMultibox.integer  != 0) ? qtrue : qfalse;
+
+	if (!drawAabb && !drawMultibox)
 	{
 		return;
 	}
@@ -376,6 +793,13 @@ void CG_VanguardDev_DrawHitboxes(void)
 		if (cent->currentState.eType != ET_PLAYER) { continue; }
 		if (vg_ShouldSkipSelf(i))              { continue; }
 
-		vg_DrawPlayerHitboxes(i, alpha);
+		if (drawAabb)
+		{
+			vg_DrawPlayerHitboxes(i, alpha);
+		}
+		if (drawMultibox)
+		{
+			vg_DrawPlayerMultibox(i, alpha);
+		}
 	}
 }
