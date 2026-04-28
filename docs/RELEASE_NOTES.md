@@ -3,6 +3,27 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.5 — 2026-04-28 — Diagnostic build (Pass 0.5)
+
+Instrumentation release for Pterodactyl multi-user testing.
+Adds a `VG_DIAG` server-log print after each `mdx_hit_test`
+call to diagnose the ~50% "unknown" hit-rate observed in
+v0.3.4 live-test sessions.
+
+No gameplay changes vs v0.3.4. Same `human_base.hit` geometry,
+same damage multipliers, same cvars. Only addition is
+diagnostic logging.
+
+To analyze: check Pterodactyl `logs/server.log` for `VG_DIAG`
+lines after a test session. Each successful damage trace
+will produce one line with raw `impactpoint` / `hit_type` /
+`fraction` / `mod` values. Reference enum (bg_public.h):
+`UNUSED=0 HEAD=1 CHEST=2 GUT=3 GROIN=4 SHOULDER_RIGHT=5
+SHOULDER_LEFT=6 KNEE_RIGHT=7 KNEE_LEFT=8 LEGS=9`.
+
+The diagnostic print will be reverted (or absorbed into
+the next tune) in v0.3.6.
+
 ## v0.3.4 — 2026-04-28 — Internal testing release (Pass 1+2 tune)
 
 Hitbox geometry retuning following v0.3.3 live-test which

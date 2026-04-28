@@ -258,11 +258,11 @@ To build later:
 
     # Pass the version on EVERY configure (-D form is canonical, env form
     # also works — see cmake/ETLVersion.cmake CI_ETL_TAG handling). The
-    # env-prefix shorthand "CI_ETL_TAG=v0.3.4 cmake ..." used to be enough
+    # env-prefix shorthand "CI_ETL_TAG=v0.3.5 cmake ..." used to be enough
     # but failed silently when re-running one platform manually in a fresh
     # shell — Windows DLLs ended up with "2.83-dirty" while Linux had the
     # right version. The -D form is bullet-proof.
-    VFLAGS=(-DCI_ETL_TAG=v0.3.4 -DCI_ETL_DESCRIBE=v0.3.4)
+    VFLAGS=(-DCI_ETL_TAG=v0.3.5 -DCI_ETL_DESCRIBE=v0.3.5)
 
     # Windows x86_64 (delivered to 64-bit clients) — must run before Linux
     # so the multi-arch pk3 picks up the cross-built DLLs at configure time.
@@ -279,7 +279,7 @@ To build later:
         "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
 
-    # Linux x86_64 + the multi-arch vanguard_v0.3.4.pk3 the server hands out.
+    # Linux x86_64 + the multi-arch vanguard_v0.3.5.pk3 the server hands out.
     # FEATURE_OMNIBOT=ON requires the runtime tarball to be present in
     # vendor/omnibot-runtime/extracted/omni-bot/ — the bootstrap fetches it.
     cmake -B build \\
@@ -296,10 +296,10 @@ fi
 fetch_omnibot_runtime
 
 # Vanguard release version. Injected into upstream's git-describe-driven
-# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.3.4.pk3 instead
+# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.3.5.pk3 instead
 # of falling back to the imported ETLEGACY_VERSION (2.83.x).
 # See docs/RELEASE_PROCESS.md for the full bump checklist.
-export CI_ETL_TAG="${VANGUARD_VERSION:-v0.3.4}"
+export CI_ETL_TAG="${VANGUARD_VERSION:-v0.3.5}"
 export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
 
 # Order matters: Windows cross builds run *before* the Linux configure so the
