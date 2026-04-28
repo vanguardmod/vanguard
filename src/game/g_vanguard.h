@@ -75,6 +75,13 @@ void vg_Hitbox_Init(void);
 qboolean vg_Hitbox_IsActive(void);
 
 /**
+ * @brief Returns qtrue iff vanguard_hitbox_debug is non-zero. Gates
+ *        the per-trace VG_DIAG server-log print in g_combat.c.
+ *        Cheap; safe to call from the damage hot path.
+ */
+qboolean vg_Hitbox_DebugActive(void);
+
+/**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.
  *        Call once per map from G_ShutdownGame for symmetry / hook
  *        point for any future teardown.
