@@ -1,5 +1,38 @@
-// VanguardMod human_base.hit — multi-box hit-region
-// definitions for the standard human animation skeleton.
+// VanguardMod human_base.hit — Pass 1+2 retune (2026-04-28)
+//
+// Geometry retuned based on measured bone distances from
+// docs/notes/bone_distance_dump_2026-04-28.txt (body.mdx,
+// 53 bones), captured during Phase 6.1.3 Pass 0 diagnosis.
+//
+// Live-test of v0.3.3 showed ~10% real-hit-rate for body
+// shots; the bone-dump revealed two structural issues:
+//
+//   - GUT: Spine ↔ Spine1 (parent_dist 0.431 Quake-units)
+//     was practically a 2D plane in the Z direction. Now
+//     using Pelvis ↔ Spine2 — chained distance ≈10.53
+//     Quake-units (Pelvis→Spine 4.876 + Spine→Spine1 0.431
+//     + Spine1→Spine2 5.222), covering the lower torso.
+//
+//   - CHEST: Spine2 ↔ Spine3 (5.083 units) was a thin slice.
+//     Now Spine1 ↔ Neck — chained distance ≈16.58 units
+//     (5.222 + 5.083 + 6.274), spanning most of the upper
+//     torso. Intentional overlap with GUT around Spine1-2
+//     gives redundant coverage of the chest/belly boundary.
+//
+//   - GROIN: pelvis sphere widened from radius 5 → 7 to
+//     cover the hip / lower-pelvis area more reliably.
+//
+//   - Limb cylinders: bone distances are correct
+//     (Thigh→Calf 16.531, Calf→Foot 15.916), but the
+//     radius=3 was too tight for the visible mesh
+//     thickness. Bumped:
+//       SHOULDER: radius 3,4 → 5,5
+//       KNEE:     radius 3,3 → 6,6
+//       LEGS:     radius 3,2/3 → 6,6
+//
+// HEAD unchanged: radius 6 sphere matches the legacy
+// REALHEAD_HEAD size (g_combat.c:G_BuildHead) and was the
+// only region that worked reliably in v0.3.3.
 //
 // Auto-loaded by mdx_LoadHitsFile from
 // characterDef.animationgroup ("animations/human_base.anim"
@@ -11,9 +44,7 @@
 // left + right calf-foot cylinders).
 //
 // Bone names: 3DS-Max Biped naming with "Bip01" prefix.
-// Quoted because they contain spaces. Verified against bone
-// dump from etmain/animations/human/base/body.mdx (53 bones,
-// 2026-04-27).
+// Quoted because they contain spaces.
 //
 // Format constraints (verified parser behaviour, see
 // docs/HITS_FORMAT.md §3.0 and §3.2):
@@ -26,12 +57,8 @@
 //      first; only TAG block second-tokens hit the bone-name
 //      lookup path.
 //
-// Scale/radius values are conservative starting points;
-// per-region tuning happens during Phase 6.1/6.2 with live
-// playtests, by adjusting the scale tokens in the HIT lines.
-//
 // Spec: docs/HITS_FORMAT.md
-// Plan: docs/PHASE_6_PLAN.md (Phase 6.0 Task 2)
+// Plan: docs/notes/HITBOX_SCALE_ANALYSIS.md (Phase 6.1.3)
 
 // ---- TAG bridges (internal-tag → bone) ----
 // Each TAG declares an internal tag that wraps a real
@@ -39,6 +66,7 @@
 // so the bone-name spelling must match the .mdx exactly.
 
 TAG _vg_head      "Bip01 Head"
+TAG _vg_neck      "Bip01 Neck"
 TAG _vg_spine_lo  "Bip01 Spine"
 TAG _vg_spine_mid "Bip01 Spine1"
 TAG _vg_spine_up  "Bip01 Spine2"
@@ -65,32 +93,30 @@ TAG _vg_foot_r    "Bip01 R Foot"
 // Head — sphere on the head bone (1 tag, no box → sphere).
 HIT head _vg_head radius 6 impactpoint head
 
-// Chest — box between upper-spine bones, rotated along the
-// torso axis (2 tags + box → mdx_hit_test_box2).
-HIT body _vg_spine_up _vg_spine_top scale 8 6 4 scale 8 6 4 impactpoint chest box
+// Chest — box Spine1 → Neck (Z ≈ 16.58 units), upper torso.
+HIT body _vg_spine_mid _vg_neck scale 9 7 5 scale 9 7 5 impactpoint chest box
 
-// Gut — box along lower spine, abdomen region.
-HIT body _vg_spine_lo _vg_spine_mid scale 8 6 4 scale 8 6 4 impactpoint gut box
+// Gut — box Pelvis → Spine2 (Z ≈ 10.53 units), lower torso.
+HIT body _vg_pelvis _vg_spine_up scale 9 7 5 scale 9 7 5 impactpoint gut box
 
-// Groin — sphere at the pelvis bone.
-HIT body _vg_pelvis radius 5 impactpoint groin
+// Groin — sphere at the pelvis bone, hip/lower-pelvis area.
+HIT body _vg_pelvis radius 7 impactpoint groin
 
-// Left Shoulder — cylinder Clavicle → UpperArm, slightly
-// wider at the upper-arm end.
-HIT arm_L _vg_clav_l _vg_uarm_l radius 3 radius 4 impactpoint shoulder_left
+// Left Shoulder — cylinder Clavicle → UpperArm.
+HIT arm_L _vg_clav_l _vg_uarm_l radius 5 radius 5 impactpoint shoulder_left
 
 // Right Shoulder — mirror of left.
-HIT arm_R _vg_clav_r _vg_uarm_r radius 3 radius 4 impactpoint shoulder_right
+HIT arm_R _vg_clav_r _vg_uarm_r radius 5 radius 5 impactpoint shoulder_right
 
 // Left Knee — cylinder Thigh → Calf; mid-region = knee joint.
-HIT leg_L _vg_thigh_l _vg_calf_l radius 3 radius 3 impactpoint knee_left
+HIT leg_L _vg_thigh_l _vg_calf_l radius 6 radius 6 impactpoint knee_left
 
 // Right Knee — mirror of left.
-HIT leg_R _vg_thigh_r _vg_calf_r radius 3 radius 3 impactpoint knee_right
+HIT leg_R _vg_thigh_r _vg_calf_r radius 6 radius 6 impactpoint knee_right
 
 // Left Leg (calf/shin) — cylinder Calf → Foot. Both legs
 // share IMPACTPOINT_LEGS — the enum has no L/R split.
-HIT leg_L _vg_calf_l _vg_foot_l radius 3 radius 2 impactpoint legs
+HIT leg_L _vg_calf_l _vg_foot_l radius 6 radius 6 impactpoint legs
 
 // Right Leg (calf/shin).
-HIT leg_R _vg_calf_r _vg_foot_r radius 3 radius 2 impactpoint legs
+HIT leg_R _vg_calf_r _vg_foot_r radius 6 radius 6 impactpoint legs
