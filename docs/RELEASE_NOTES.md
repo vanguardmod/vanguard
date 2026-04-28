@@ -3,6 +3,55 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.3 — 2026-04-28 — Internal testing release
+
+Phase 6 multi-region damage pipeline activation, deployed for
+Pterodactyl test-server validation before the v0.4.0 feature
+release. **Not for public distribution** — the feature is gated
+behind `vanguard_hitbox_mode` (default 1) and falls back
+byte-identically to vanilla on `mode 0`, but it has not yet been
+validated under real network conditions with distinct clients.
+
+  - **Multi-box damage pipeline live.** `G_Damage` now routes
+    through `mdx_hit_test` against `etmain/animations/human_base.hit`
+    when `vanguard_hitbox_mode >= 1`, applies per-region damage
+    multipliers from the `vanguard_dmg_*` cvars, and maps the 9
+    fine-grained `IMPACTPOINT_*` values onto the 4 `HR_*`
+    hit-region buckets used by the existing stats array.
+    Activation depends on the BONE_HITTESTS pipeline (Phase 6.0,
+    `ecaaf27`), the `vg_Hitbox_*` subsystem (`0f5dfe3`), the API
+    implementation (`098fa09`), and the G_Damage wiring
+    (this release).
+
+  - **11 hitbox cvars.** `vanguard_hitbox_mode` (LATCH +
+    SERVERINFO, default 1) plus 9 per-region damage multipliers
+    (`vanguard_dmg_head` 2.0, `_chest` 1.3, `_gut` 1.1,
+    `_groin` 1.2, `_shoulder_l/r` 0.8, `_knee_l/r` 0.6,
+    `_legs` 0.7) plus `vanguard_dmg_default` (1.0, fallback for
+    `IMPACTPOINT_UNUSED`). All damage multipliers are ARCHIVE-
+    only — admins can tune mid-match without a map restart.
+
+  - **Mode=0 byte-identical to vanilla.** Operators rolling
+    back to legacy single-region damage just set
+    `vanguard_hitbox_mode 0` + map restart (the cvar is LATCH).
+    The wrapper-IF + goto-label pattern in `g_combat.c:1696`
+    keeps the legacy `IsHeadShot/IsLegShot/IsArmShot` chain
+    untouched on mode=0.
+
+  - **Antilag-safe.** `Bullet_Fire` already wraps the trace +
+    damage call chain in `G_HistoricalTraceBegin/End`, so by the
+    time `G_Damage` runs, the target is in its rewound pose.
+    Multi-box mirrors the existing `IsHeadShot` /
+    `mdx_gentity_to_grefEntity` pattern (`targ->timeShiftTime`
+    when set, else `level.time`).
+
+  - **Weapon-class gating mirrors `IsHeadShot`.** Multi-box only
+    activates for headshot-capable weapons
+    (`GetMODTableData(mod)->isHeadshot`). Explosives, grenades,
+    flamethrower, knife, MG42 etc. fall through to the legacy
+    chain unchanged — preserving the existing stats convention
+    that "non-headshot weapons don't log a region."
+
 ## v0.3.2 — 2026-04-27
 
 Limbo / connect screen version-string fix, menu title centring,
