@@ -33,6 +33,7 @@
  */
 
 #include "g_local.h"
+#include "g_vanguard.h"   /* VANGUARDMOD: vg_Hitbox_* (Phase 6.1) */
 #include "g_mdx.h"
 
 #ifdef FEATURE_OMNIBOT
@@ -1693,6 +1694,92 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 		}
 	}
 
+	/* VANGUARDMOD: Phase 6.1.3 multi-box hit-region path. The
+	 * pre-gate uses the same client / health / weapon-class
+	 * filter as IsHeadShot internally (g_combat.c:1156, 1164,
+	 * 1169) so explosives / non-headshot-capable weapons fall
+	 * through to the legacy chain unchanged. On a successful
+	 * mdx_hit_test the multi-box branch handles the take-
+	 * multiplier, helmet/EF_HEADSHOT for HEAD, and hr/
+	 * G_LogRegionHit; on miss it falls through to legacy.
+	 *
+	 * Antilag-aware: timeShiftTime is set during a
+	 * G_HistoricalTrace-wrapped damage call (Bullet_Fire wraps
+	 * the whole chain in HistoricalTraceBegin/End), so the
+	 * mdx_gentity_to_grefEntity call mirrors the pattern used
+	 * by G_BuildHead at line 964.
+	 *
+	 * Mode=0 path: gate evaluates false on the first conjunct,
+	 * control flows straight into the legacy chain - byte-
+	 * identical to vanilla. */
+	if (vg_Hitbox_IsActive() && targ->client && targ->health > 0
+	    && GetMODTableData(mod)->isHeadshot)
+	{
+		int                     mdx_hit_type;
+		vec_t                   mdx_fraction;
+		animScriptImpactPoint_t mdx_ip;
+
+		mdx_gentity_to_grefEntity(targ, &refent,
+		    targ->timeShiftTime ? targ->timeShiftTime : level.time);
+
+		if (mdx_hit_test(muzzleTrace, point, targ, &refent,
+		                 &mdx_hit_type, &mdx_fraction, &mdx_ip))
+		{
+			float       mult      = vg_Hitbox_DamageMultiplierFor(mdx_ip);
+			hitRegion_t mapped_hr = vg_Hitbox_RegionFor(mdx_ip);
+
+			take = (int)(take * mult);
+
+			if (mdx_ip == IMPACTPOINT_HEAD)
+			{
+				/* Mirror legacy helmet / EF_HEADSHOT / stats
+				 * handling so mode=1 HEAD hits behave
+				 * consistently with mode=0 (helmet pop on first
+				 * hit, scoped weapons skip the 0.8x absorb,
+				 * headshot stats incremented). */
+				if (!(targ->client->ps.eFlags & EF_HEADSHOT))
+				{
+					G_AddEvent(targ, EV_LOSE_HAT, DirToByte(dir));
+					if (mod != MOD_K43_SCOPE && mod != MOD_GARAND_SCOPE)
+					{
+						take = (int)(take * 0.8f);
+					}
+				}
+				targ->client->ps.eFlags |= EF_HEADSHOT;
+
+				if (attacker && attacker->client
+#ifndef DEBUG_STATS
+				    && attacker->client->sess.sessionTeam != targ->client->sess.sessionTeam
+#endif
+				    )
+				{
+					G_addStatsHeadShot(attacker, mod);
+					if (hitEventType != HIT_TEAMSHOT)
+					{
+						hitEventType = HIT_HEADSHOT;
+					}
+				}
+			}
+
+			if (mapped_hr != HR_NUM_HITREGIONS)
+			{
+				G_LogRegionHit(attacker, mapped_hr);
+				hr = mapped_hr;
+			}
+
+			if (g_debugBullets.integer)
+			{
+				trap_SendServerCommand(attacker - g_entities,
+				    va("print \"VG hit: %s (mult=%.2f)\n\"",
+				       vg_Hitbox_RegionName(mdx_ip), mult));
+			}
+
+			goto vg_skip_legacy_hit_chain;
+		}
+		/* mdx_hit_test miss -> fall through to legacy chain. */
+	}
+	/* END VANGUARDMOD */
+
 	if (IsHeadShot(targ, dir, point, mod, &refent, qtrue))
 	{
 		// FIXME: also when damage is 0 ?
@@ -1788,6 +1875,8 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			//BG_AnimScriptEvent(&targ->client->ps, targ->client->pers.character->animModelInfo, ANIM_ET_PAIN, qfalse);
 		}
 	}
+
+vg_skip_legacy_hit_chain: /* VANGUARDMOD: target for multi-box success-skip (Phase 6.1.3) */
 
 	if (g_antilag.integer)
 	{

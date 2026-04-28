@@ -283,6 +283,11 @@ void vg_Hitbox_Shutdown(void)
 	memset(&s_hitbox, 0, sizeof(s_hitbox));
 }
 
+qboolean vg_Hitbox_IsActive(void)
+{
+	return (s_hitbox.mode.integer >= 1) ? qtrue : qfalse;
+}
+
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
 {
 	switch (impactpoint)
