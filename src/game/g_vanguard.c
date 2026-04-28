@@ -241,6 +241,12 @@ typedef struct
 	 * (e.g. trace landed on a hit-area that was registered without an
 	 * impactpoint or on a region the .hit file doesn't cover yet). */
 	vmCvar_t dmg_default;
+
+	/* Diagnostic-print toggle. Gates the VG_DIAG server-log line that
+	 * surfaces raw IMPACTPOINT values from mdx_hit_test (g_combat.c).
+	 * Default 0 — admins enable live without rebuilding when tuning
+	 * the .hit geometry or chasing hit-rate regressions. */
+	vmCvar_t debug;
 } vg_hitbox_state_t;
 
 static vg_hitbox_state_t s_hitbox;
@@ -271,6 +277,11 @@ void vg_Hitbox_Init(void)
 	trap_Cvar_Register(&s_hitbox.dmg_legs,       "vanguard_dmg_legs",       "0.7", CVAR_ARCHIVE);
 	trap_Cvar_Register(&s_hitbox.dmg_default,    "vanguard_dmg_default",    "1.0", CVAR_ARCHIVE);
 
+	/* Diagnostic toggle — default off, ARCHIVE so an admin who flips
+	 * it on for a debugging session keeps it across map changes
+	 * without re-typing. */
+	trap_Cvar_Register(&s_hitbox.debug,          "vanguard_hitbox_debug",   "0",   CVAR_ARCHIVE);
+
 	G_Printf("VG_Hitbox: initialized (mode=%d)\n", s_hitbox.mode.integer);
 }
 
@@ -286,6 +297,15 @@ void vg_Hitbox_Shutdown(void)
 qboolean vg_Hitbox_IsActive(void)
 {
 	return (s_hitbox.mode.integer >= 1) ? qtrue : qfalse;
+}
+
+qboolean vg_Hitbox_DebugActive(void)
+{
+	/* CVAR_ARCHIVE without LATCH — admins toggle live, so refresh
+	 * the cached value before reading. trap_Cvar_Update is a no-op
+	 * if the cvar hasn't changed. */
+	trap_Cvar_Update(&s_hitbox.debug);
+	return (s_hitbox.debug.integer != 0) ? qtrue : qfalse;
 }
 
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)

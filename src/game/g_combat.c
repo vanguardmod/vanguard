@@ -1728,21 +1728,24 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			float       mult;
 			hitRegion_t mapped_hr;
 
-			/* VANGUARDMOD-DIAG: Phase 6.1.3 Pass 0.5
-			 * instrumentation. Released as part of the v0.3.5
-			 * diagnostic build to surface raw IMPACTPOINT
-			 * values, hit_type, fraction, and mod from
-			 * mdx_hit_test on a live Pterodactyl test session
-			 * (~50% "unknown" rate observed in v0.3.4). To be
-			 * reverted or absorbed into v0.3.6 once diagnosis
-			 * is complete. Reference enum (bg_public.h):
+			/* VANGUARDMOD-DIAG: Phase 6.1.3 instrumentation.
+			 * Surfaces raw IMPACTPOINT values, hit_type,
+			 * fraction, and mod from mdx_hit_test for live
+			 * diagnosis. Cvar-gated on vanguard_hitbox_debug
+			 * (default 0) — admins enable when chasing
+			 * hit-rate regressions or .hit geometry tuning,
+			 * disable for normal play to keep the server log
+			 * clean. Reference enum (bg_public.h):
 			 * UNUSED=0 HEAD=1 CHEST=2 GUT=3 GROIN=4
 			 * SHOULDER_RIGHT=5 SHOULDER_LEFT=6 KNEE_RIGHT=7
 			 * KNEE_LEFT=8 LEGS=9 NUM=10. */
-			G_Printf("VG_DIAG: mdx_hit_test -> hit_type=%d "
-			         "impactpoint=%d fraction=%.3f mod=%d\n",
-			         mdx_hit_type, (int)mdx_ip,
-			         (double)mdx_fraction, (int)mod);
+			if (vg_Hitbox_DebugActive())
+			{
+				G_Printf("VG_DIAG: mdx_hit_test -> hit_type=%d "
+				         "impactpoint=%d fraction=%.3f mod=%d\n",
+				         mdx_hit_type, (int)mdx_ip,
+				         (double)mdx_fraction, (int)mod);
+			}
 
 			mult      = vg_Hitbox_DamageMultiplierFor(mdx_ip);
 			mapped_hr = vg_Hitbox_RegionFor(mdx_ip);
