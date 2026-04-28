@@ -3,6 +3,56 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.6 — 2026-04-29 — Hitbox visualisation + diagnostic cvar-gate
+
+Major addition: client-side rendering of all 10 multi-region
+hit-capsules as wireframe primitives in real-time. Designed for
+diagnostic use during the ongoing Phase 6 tuning, but also a
+nice marketing surface for showing the precision of VanguardMod's
+bone-tracked hit detection. v0.3.5's live-test indicated ~64% of
+mdx_hit_test traces returned `IMPACTPOINT_UNUSED`, plus HEAD
+detection at only ~2%; without visualisation we can only infer
+where the capsules are. This release lets you see them.
+
+  - **10 wireframe capsules per visible player.** Spheres for
+    HEAD and GROIN (radius 6 / 7), boxes for CHEST and GUT
+    (Spine1↔Neck and Pelvis↔Spine2 box2 primitives), cylinders
+    for SHOULDER L/R, KNEE L/R, and LEGS (calf↔foot, both
+    sides). Capsule positions match
+    `etmain/animations/human_base.hit` (Pass 1+2 retune) bone-
+    for-bone via `trap_R_LerpTag` against each player's
+    animation refent.
+
+  - **Per-region colour palette.** HEAD red, CHEST yellow, GUT
+    orange, GROIN pink, SHOULDER blue, KNEE green, LEGS cyan.
+    Lets you spot at a glance whether the HEAD-sphere is
+    positioned in the right place relative to the player model
+    (the v0.3.5 telemetry bug-hunt suggests it is not).
+
+  - **Cvar control.** `cg_vanguardDevMultibox` (CVAR_ARCHIVE,
+    default 1) toggles the multi-region overlay independently
+    of the legacy `cg_vanguardDevHitboxes` AABB cvar. Server-
+    side `vanguard_dev=1` remains the primary gate. Admin can
+    show legacy AABB alone, multi-region alone, both, or
+    neither.
+
+  - **Diagnostic cvar-gate.** v0.3.5's always-on `VG_DIAG`
+    server-log print is now gated on `vanguard_hitbox_debug`
+    (CVAR_ARCHIVE, default 0). Enable live during a debugging
+    session, leave off otherwise. Removes the log spam during
+    normal play without losing the diagnostic capability.
+
+Static visualisation only — hit-highlight pulse on registered
+hits is deferred to a later release because the simplest
+implementations would break the existing CG_PlayHitSound switch
+on HIT_HEADSHOT / HIT_BODYSHOT enum values. A clean public-event
+design is warranted but out of scope here.
+
+Known issue carried over: HEAD hit-detection still ~2% rate.
+The visualisation should now make it obvious whether the
+HEAD-sphere is positioned correctly vs the player model's
+actual head bone.
+
 ## v0.3.5 — 2026-04-28 — Diagnostic build (Pass 0.5)
 
 Instrumentation release for Pterodactyl multi-user testing.
