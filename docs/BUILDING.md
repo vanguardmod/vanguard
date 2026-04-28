@@ -66,7 +66,7 @@ by upstream's `mod_pk3` target (with Vanguard-specific patches in
 `cmake/ETLBuildMod.cmake`).
 
 `bootstrap.sh` builds the three platforms in the right order and emits
-`build/vanguard/vanguard_v0.3.2.pk3` as part of the Linux build's `ALL`
+`build/vanguard/vanguard_v0.3.3.pk3` as part of the Linux build's `ALL`
 target. To repack ad-hoc after touching a single platform's binaries:
 
     cmake --build build --target mod_pk3
@@ -83,8 +83,8 @@ dedicated server can `dlopen()` them directly; only remote clients pull
 the `.pk3` over the wire (visible as a brief "Awaiting downloads…" screen
 on first connect, then cached in their game folder).
 
-Override the version by reconfiguring with `CI_ETL_TAG=v0.3.2
-CI_ETL_DESCRIBE=v0.3.2 cmake -B build …` — these env vars are upstream's
+Override the version by reconfiguring with `CI_ETL_TAG=v0.3.3
+CI_ETL_DESCRIBE=v0.3.3 cmake -B build …` — these env vars are upstream's
 `ETLVersion.cmake` overrides and become the `_${VERSION}.pk3` suffix.
 
 ## Protected build (core devs only)
