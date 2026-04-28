@@ -67,6 +67,14 @@ void vg_DevMode_OnFrame(int leveltime);
 void vg_Hitbox_Init(void);
 
 /**
+ * @brief Returns qtrue iff vanguard_hitbox_mode >= 1, i.e. the
+ *        multi-box damage path is active for this map. CVAR_LATCH
+ *        on the underlying cvar means the result is stable for
+ *        the map lifetime; cheap to call from a hot path.
+ */
+qboolean vg_Hitbox_IsActive(void);
+
+/**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.
  *        Call once per map from G_ShutdownGame for symmetry / hook
  *        point for any future teardown.

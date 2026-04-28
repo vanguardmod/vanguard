@@ -6,6 +6,7 @@
 # Test server runtime artefacts
 /scripts/testserver/server.log
 /vanguard
+/omni-bot
 *.qvm
 *.so
 *.so.*
