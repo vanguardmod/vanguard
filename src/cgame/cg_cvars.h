@@ -263,6 +263,7 @@ extern vmCvar_t cg_debugBullets;
 // passive: they can only down-filter what the server already broadcasts.
 extern vmCvar_t cg_vanguardDevHitboxes;  ///< 0 off, 1 boxes only, 2 boxes + bullet lines
 extern vmCvar_t cg_vanguardDevAlpha;     ///< 0.0..1.0 alpha for railtrail rendering
+extern vmCvar_t cg_vanguardDevMultibox;  ///< 0 off, 1 render the 10 multi-region capsules
 
 // scoreboard
 extern vmCvar_t cg_scoreboard;
