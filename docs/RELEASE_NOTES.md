@@ -3,6 +3,35 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.4 — 2026-04-28 — Internal testing release (Pass 1+2 tune)
+
+Hitbox geometry retuning following v0.3.3 live-test which
+showed ~10% real-hit-rate for body shots. Bone-distance
+measurement (Pass 0) identified `Bip01 Spine` ↔ `Bip01 Spine1`
+distance of 0.431 Quake-units as primary cause — the GUT
+capsule was a 2D plane in Z. Secondary cause: limb cylinder
+radii too narrow for the visible mesh thickness.
+
+No code changes vs v0.3.3, only the `human_base.hit` asset:
+
+  - **CHEST:** retagged `Bip01 Spine1 ↔ Bip01 Neck` (chained
+    Z ≈ 16.58 units) instead of `Spine2 ↔ Spine3` (5.08).
+    `scale 9 7 5` for both ends.
+  - **GUT:** retagged `Bip01 Pelvis ↔ Bip01 Spine2` (chained
+    Z ≈ 10.53 units) instead of `Spine ↔ Spine1` (0.43).
+    `scale 9 7 5` for both ends.
+  - **GROIN:** sphere radius 5 → 7 on `Bip01 Pelvis`.
+  - **SHOULDER cylinders:** radius `3, 4` → `5, 5`.
+  - **KNEE cylinders:** radius `3, 3` → `6, 6`.
+  - **LEGS cylinders:** radius `3, 2/3` → `6, 6`.
+  - **HEAD unchanged:** radius 6 sphere on `Bip01 Head`,
+    matches the legacy `REALHEAD_HEAD` size and was the only
+    region with reliable detection in v0.3.3.
+
+Expected hit-rate post-tune: >70% real region detection for
+body shots vs ~10% in v0.3.3. Live-test verification on
+Pterodactyl follows.
+
 ## v0.3.3 — 2026-04-28 — Internal testing release
 
 Phase 6 multi-region damage pipeline activation, deployed for
