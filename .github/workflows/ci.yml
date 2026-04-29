@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+#
+# CI workflow — build validation on push to main and on every PR.
+#
+# Lighter than release.yml: only Linux and Windows x86_64 are built
+# (skipping Win32 keeps CI under ~5 minutes), no Omni-Bot fetch
+# (FEATURE_OMNIBOT=OFF), no pk3 packaging, no artifact uploads, no
+# release. Pure compilation gate — fails the commit/PR if the C code
+# stops building on either tier-1 platform.
+#
+# Triggers from any push to main and any PR targeting main. The two
+# jobs run in parallel.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # -------------------------------------------------------------------
+  # build-linux — quick Linux compile. FEATURE_OMNIBOT=OFF skips the
+  # ~20 MB tarball fetch (we don't need the runtime to validate the
+  # mod compiles), BUILD_MOD_PK3=OFF skips the multi-arch packaging.
+  # -------------------------------------------------------------------
+  build-linux:
+    name: Build Linux x86_64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCI_ETL_TAG=ci-${GITHUB_SHA::8} \
+            -DCI_ETL_DESCRIBE=ci-${GITHUB_SHA::8} \
+            -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
+            -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
+            -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
+            -DINSTALL_EXTRA=OFF
+
+      - name: Build
+        run: cmake --build build -j
+
+  # -------------------------------------------------------------------
+  # build-windows-x64 — Windows x86_64 cross via mingw-w64. Same
+  # flags as the release workflow, just no upload.
+  # -------------------------------------------------------------------
+  build-windows-x64:
+    name: Build Windows x86_64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config mingw-w64
+
+      - name: Configure
+        run: |
+          cmake -B build-windows \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCI_ETL_TAG=ci-${GITHUB_SHA::8} \
+            -DCI_ETL_DESCRIBE=ci-${GITHUB_SHA::8} \
+            -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
+            -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
+            -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
+            -DINSTALL_EXTRA=OFF
+
+      - name: Build
+        run: cmake --build build-windows -j
