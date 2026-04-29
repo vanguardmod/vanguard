@@ -235,11 +235,53 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 static qboolean vg_GetBoneOrigin(const refEntity_t *body, const char *bone,
                                  vec3_t outWorld)
 {
-	orientation_t lerped;
-	int           i;
+	/* VG_DIAG (v0.3.7, Phase 6.x bug-hunt): if trap_R_LerpTag fails for
+	 * a bone-name, log it once per second per name. v0.3.6 live-test on
+	 * Pterodactyl showed only one of the ten multi-region capsules ever
+	 * rendered, despite a render-loop with no highlight gating — the
+	 * suspected cause is that the .mdm tag-list does not export the
+	 * MDX skeleton bones ("Bip01 *") under those names. This print
+	 * surfaces the failing bone + refEntity context so v0.3.8 can fix
+	 * the real lookup path. Remove once the fix lands. Throttle uses
+	 * pointer-equality on `bone` because the caller always passes
+	 * pointers from vg_hit_areas[] (stable string literals). */
+	static int         vg_diag_lastPrintTime[16];
+	static const char *vg_diag_recentBones[16];
+	int                slot;
+	orientation_t      lerped;
+	int                i;
 
 	if (trap_R_LerpTag(&lerped, body, bone, 0) < 0)
 	{
+		slot = -1;
+		for (i = 0; i < 16; i++)
+		{
+			if (vg_diag_recentBones[i] == bone)
+			{
+				slot = i;
+				break;
+			}
+		}
+		if (slot < 0)
+		{
+			for (i = 0; i < 16; i++)
+			{
+				if (!vg_diag_recentBones[i])
+				{
+					vg_diag_recentBones[i] = bone;
+					slot                   = i;
+					break;
+				}
+			}
+		}
+		if (slot >= 0 && cg.time - vg_diag_lastPrintTime[slot] > 1000)
+		{
+			CG_Printf("VG_DIAG: vg_GetBoneOrigin FAIL bone='%s' "
+			          "frameModel=%d frame=%d torsoFrame=%d\n",
+			          bone, (int)body->frameModel,
+			          body->frame, body->torsoFrame);
+			vg_diag_lastPrintTime[slot] = cg.time;
+		}
 		return qfalse;
 	}
 
