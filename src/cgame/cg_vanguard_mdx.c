@@ -647,6 +647,42 @@ qboolean vg_mdx_compute_bone_world_with_offset(const refEntity_t *body,
 		                               body, boneIndex, boneAxis);
 		vec3_rotate(boneLocalOffset, boneAxis, rotated);
 		VectorAdd(modelLocal, rotated, modelLocal);
+
+		/* VG_DIAG (v0.4.2): one-shot dump of the bone-axis matrix +
+		 * offset transform for "Bip01 Head". v0.4.1 shipped with
+		 * `offset 0 0 6.5` and the sphere wandered to the player's
+		 * back (top-down view: medic-pack); v0.4.2 switches to
+		 * `offset 6.5 0 0` based on the 3DS-Max Biped convention
+		 * (bone-local +X = parent->child direction). This print
+		 * confirms the convention by showing each row of the bone-
+		 * local axis matrix in model frame and tells us — if the
+		 * v0.4.2 fix lands wrong — exactly which axis to use in
+		 * v0.4.3. Remove this whole block in v0.4.3 once the visual
+		 * fix is verified. Bone name is matched case-sensitively
+		 * against the canonical Bip01 spelling used in vg_hit_areas[]. */
+		{
+			static qboolean vg_diag_axis_printed;
+
+			if (!vg_diag_axis_printed && !strcmp(boneName, "Bip01 Head"))
+			{
+				CG_Printf("VG_DIAG: Bip01 Head bone-axis (model frame):\n");
+				CG_Printf("VG_DIAG:   row0 = (%.3f, %.3f, %.3f)\n",
+				          boneAxis[0][0], boneAxis[0][1], boneAxis[0][2]);
+				CG_Printf("VG_DIAG:   row1 = (%.3f, %.3f, %.3f)\n",
+				          boneAxis[1][0], boneAxis[1][1], boneAxis[1][2]);
+				CG_Printf("VG_DIAG:   row2 = (%.3f, %.3f, %.3f)\n",
+				          boneAxis[2][0], boneAxis[2][1], boneAxis[2][2]);
+				CG_Printf("VG_DIAG: offset_in (bone-local) = (%.3f, %.3f, %.3f)\n",
+				          boneLocalOffset[0], boneLocalOffset[1], boneLocalOffset[2]);
+				CG_Printf("VG_DIAG: offset_out (model frame) = (%.3f, %.3f, %.3f)\n",
+				          rotated[0], rotated[1], rotated[2]);
+				CG_Printf("VG_DIAG: body.axis row0 (player frame) = (%.3f, %.3f, %.3f)\n",
+				          body->axis[0][0], body->axis[0][1], body->axis[0][2]);
+				CG_Printf("VG_DIAG: body.axis row2 (player frame) = (%.3f, %.3f, %.3f)\n",
+				          body->axis[2][0], body->axis[2][1], body->axis[2][2]);
+				vg_diag_axis_printed = qtrue;
+			}
+		}
 	}
 
 	/* Transform model-local origin into world-space:

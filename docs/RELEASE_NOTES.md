@@ -3,6 +3,84 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.4.2 — 2026-04-29 — HEAD anchor offset axis correction
+
+Patch release on top of v0.4.1 to correct the offset axis used
+for the HEAD-sphere anchor. v0.4.1 added `offset 0 0 6.5` to the
+`_vg_head` interntag in `human_base.hit` by analogy with the
+legacy `mdx_head_position` constant — but that helper applies
+its `+6.5` along an MDM tag's world-frame `axis[2]`, which is
+NOT the same as a bone-local axis applied via
+`mdx_tag_orientation`'s `vec3_rotate(tag->offset, tmpaxis, ...)`
+chain. Live-test on Pterodactyl with 13 screenshots in varied
+poses (frontal, profile, top-down, crouch, prone, sprint)
+confirmed the symptom: HEAD-sphere wandered consistently to the
+back of the head — most visibly the top-down view where it
+overlapped the medic-pack red cross on the player's back.
+
+Recon (`docs/notes/CGAME_BONE_CALC_RECON.md` follow-up):
+
+  - The offset is rotated by the bone's local-axis matrix from
+    `mdx_bone_orientation` (`g_mdx.c:1644-1664`). For a 3DS-Max
+    biped bone, local +X is the bone direction (parent → child),
+    not local +Z. Confirmed in `mdx_calculate_bone`
+    (`g_mdx.c:1402`) where `parent_dist` is placed on `tmp[0]`
+    (X) before the per-frame rotation.
+  - For `Bip01 Head` whose parent is `Bip01 Neck` and whose
+    child direction is "up the skull" in the bind pose, the
+    bone-local +X corresponds to world-up for an upright player.
+  - v0.4.1's `0 0 6.5` rotated through the bone-local axis
+    landed on bone-local +Z, which for `Bip01 Head` is the
+    skull-back direction — hence the "sphere on the medic pack"
+    symptom.
+
+Fix:
+
+  - **`etmain/animations/human_base.hit`** — `TAG _vg_head`
+    offset switched from `0 0 6.5` to `6.5 0 0`. Comment block
+    updated to document the correction and contrast with the
+    legacy `mdx_head_position` axis convention.
+  - **`src/cgame/cg_vanguard_dev.c` `vg_hit_areas[]`** — HEAD
+    entry's `offset1` switched from `(0, 0, 6.5)` to
+    `(6.5, 0, 0)` to mirror the .hit-side anchor.
+  - **`src/cgame/cg_vanguard_mdx.c`** — temporary one-shot
+    `VG_DIAG: Bip01 Head bone-axis ...` print added inside
+    `vg_mdx_compute_bone_world_with_offset`. Fires once per
+    cgame session for the `Bip01 Head` lookup. Logs the bone-
+    local axis matrix rows in MODEL frame plus the rotated
+    offset vector, so we can verify the axis convention from
+    the live-test log even if the visual fix lands wrong (in
+    which case v0.4.3 ships with the right axis informed by
+    the diagnostic data). Removed in v0.4.3 once the visual
+    fix is confirmed.
+
+Server-cgame parity unchanged from v0.4.1: both sides apply the
+same `+6.5` along `Bip01 Head` local +X, both rotate via the
+same bone-axis math chain. Visualisation continues to track
+trace position 1:1.
+
+Expected impact:
+
+  - HEAD-sphere visualisation centers on the skull from all
+    viewing angles (top-down: above the helmet, NOT on the
+    backpack). Animation tracking via bone-local rotation —
+    sphere follows head tilt and rotation.
+  - HEAD impactpoint hit-rate climbs as the trace position
+    finally lands on the visible skull. Carry-over expectation
+    from v0.4.1: ~10–15% of total body shots, varying with
+    match style.
+
+If the v0.4.2 visual fix STILL lands wrong (sphere not at skull
+centre), the `VG_DIAG: Bip01 Head bone-axis` log lines from a
+brief Pterodactyl run-through will let v0.4.3 ship with the
+correct axis the same day. The candidate fallbacks per the
+v0.4.2 brief are `0 6.5 0`, `-6.5 0 0`, `0 0 -6.5`, `0 -6.5 0`,
+or a world-frame offset added post-bone-world-transform that
+bypasses bone-axis rotation entirely.
+
+No gameplay logic changes outside the HEAD trace position. Same
+hit-detection, multipliers, capsule geometry as v0.4.1.
+
 ## v0.4.1 — 2026-04-29 — HEAD anchor fix (+6.5 Z)
 
 Patch release on top of v0.4.0 to fix the HEAD-sphere position
