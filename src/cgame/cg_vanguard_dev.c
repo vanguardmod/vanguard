@@ -32,6 +32,7 @@
 
 #include "cg_local.h"
 #include "cg_vanguard_dev.h"
+#include "cg_vanguard_mdx.h"
 
 /* ================================================================== */
 /* Constants                                                          */
@@ -232,67 +233,32 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 /**
  * @brief Look up a bone's world-space origin by name.
  *
- *        trap_R_LerpTag iterates both the .mdm tag list and the .mdx
- *        skeleton bones, so passing "Bip01 Head" resolves directly to
- *        the bone position in the parent refent's local frame. The
- *        canonical world transform pattern is from
- *        cg_ents.c:CG_PositionEntityOnTag.
+ *        Phase 6 Strategy I (v0.4.0): primary path is our own MDX
+ *        loader (cg_vanguard_mdx.c) which parses the player's .mdx
+ *        files and computes bone positions with the same math the
+ *        server uses for hit-detection — vg_mdx_compute_bone_world
+ *        is functionally equivalent to qagame's mdx_calculate_bone_lerp
+ *        for origin output. Falls back to trap_R_LerpTag for tag
+ *        names (e.g. "tag_head", "tag_weapon") and for clients whose
+ *        MDX file path failed to register in the bg_animgroup table.
  *
- * @return qfalse if the bone is not in the model.
+ * @return qfalse if both paths fail.
  */
 static qboolean vg_GetBoneOrigin(const refEntity_t *body, const char *bone,
                                  vec3_t outWorld)
 {
-	/* VG_DIAG (v0.3.7, Phase 6.x bug-hunt): if trap_R_LerpTag fails for
-	 * a bone-name, log it once per second per name. v0.3.6 live-test on
-	 * Pterodactyl showed only one of the ten multi-region capsules ever
-	 * rendered, despite a render-loop with no highlight gating — the
-	 * suspected cause is that the .mdm tag-list does not export the
-	 * MDX skeleton bones ("Bip01 *") under those names. This print
-	 * surfaces the failing bone + refEntity context so v0.3.8 can fix
-	 * the real lookup path. Remove once the fix lands. Throttle uses
-	 * pointer-equality on `bone` because the caller always passes
-	 * pointers from vg_hit_areas[] (stable string literals). */
-	static int         vg_diag_lastPrintTime[16];
-	static const char *vg_diag_recentBones[16];
-	int                slot;
-	orientation_t      lerped;
-	int                i;
+	orientation_t lerped;
+	int           i;
+
+	if (vg_mdx_compute_bone_world(body, bone, outWorld))
+	{
+		return qtrue;
+	}
 
 	if (trap_R_LerpTag(&lerped, body, bone, 0) < 0)
 	{
-		slot = -1;
-		for (i = 0; i < 16; i++)
-		{
-			if (vg_diag_recentBones[i] == bone)
-			{
-				slot = i;
-				break;
-			}
-		}
-		if (slot < 0)
-		{
-			for (i = 0; i < 16; i++)
-			{
-				if (!vg_diag_recentBones[i])
-				{
-					vg_diag_recentBones[i] = bone;
-					slot                   = i;
-					break;
-				}
-			}
-		}
-		if (slot >= 0 && cg.time - vg_diag_lastPrintTime[slot] > 1000)
-		{
-			CG_Printf("VG_DIAG: vg_GetBoneOrigin FAIL bone='%s' "
-			          "frameModel=%d frame=%d torsoFrame=%d\n",
-			          bone, (int)body->frameModel,
-			          body->frame, body->torsoFrame);
-			vg_diag_lastPrintTime[slot] = cg.time;
-		}
 		return qfalse;
 	}
-
 	VectorCopy(body->origin, outWorld);
 	for (i = 0; i < 3; i++)
 	{
@@ -487,60 +453,6 @@ static void vg_DrawPlayerMultibox(int clientNum, float alpha)
 	if (!vg_BuildBodyRefent(cent, &body))
 	{
 		return;
-	}
-
-	/* VG_DIAG (v0.3.8a, Strategy II prep): probe the MDM tag list
-	 * once per client. Each candidate is a tag we plan to use as an
-	 * anchor when remapping vg_hit_areas[] in v0.3.8 — see
-	 * docs/notes/CGAME_BONE_CALC_RECON.md §5.II. result >= 0 means
-	 * the tag exists on this player's MDM and the lerp produced a
-	 * valid origin in body-local space; result == -1 means the tag
-	 * is not exported. Remove this whole block in v0.3.8 once the
-	 * remap lands. */
-	{
-		static qboolean         vg_diag_probed[MAX_CLIENTS];
-		static const char *const vg_diag_candidate_tags[] = {
-			"tag_head",
-			"tag_chest",
-			"tag_torso",
-			"tag_back",
-			"tag_armleft",
-			"tag_armright",
-			"tag_legleft",
-			"tag_legright",
-			"tag_footleft",
-			"tag_footright",
-			"tag_ubelt",
-			"tag_weapon",
-			"tag_weapon2",
-			"tag_mouth",
-			"tag_bipod",
-			NULL
-		};
-
-		if (clientNum >= 0 && clientNum < MAX_CLIENTS &&
-		    !vg_diag_probed[clientNum])
-		{
-			int           t;
-			orientation_t lerped;
-			int           result;
-
-			CG_Printf("VG_DIAG: MDM tag probe client=%d "
-			          "hModel=%d frameModel=%d frame=%d\n",
-			          clientNum, (int)body.hModel,
-			          (int)body.frameModel, body.frame);
-			for (t = 0; vg_diag_candidate_tags[t]; t++)
-			{
-				result = trap_R_LerpTag(&lerped, &body,
-				                        vg_diag_candidate_tags[t], 0);
-				CG_Printf("VG_DIAG:   '%s' result=%d "
-				          "origin=(%.1f,%.1f,%.1f)\n",
-				          vg_diag_candidate_tags[t], result,
-				          lerped.origin[0], lerped.origin[1],
-				          lerped.origin[2]);
-			}
-			vg_diag_probed[clientNum] = qtrue;
-		}
 	}
 
 	for (i = 0; i < VG_HIT_AREA_COUNT; i++)
