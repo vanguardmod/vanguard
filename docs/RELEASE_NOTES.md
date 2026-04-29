@@ -3,6 +3,97 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.4.1 — 2026-04-29 — HEAD anchor fix (+6.5 Z)
+
+Patch release on top of v0.4.0 to fix the HEAD-sphere position
+in both the multi-region damage trace and the cgame visualisation.
+
+The v0.4.0 live-test on Pterodactyl confirmed all ten capsules
+render and follow animations as designed, but the HEAD sphere
+sat visibly too low — at the chin / atlas rather than the skull
+centre. Server-side hit-detection produced ~2% HEAD impactpoint
+hits in a 1h match log, low enough that the multi-region pipeline
+was effectively delivering body-shot damage on what should have
+been headshots.
+
+Root cause traced through `src/game/g_mdx.c`:
+
+  - The Phase 6 multi-region `mdx_hit_test` (`g_mdx.c:2754`)
+    walks each `_vg_*` interntag from `human_base.hit` and
+    traces against the bone position returned by
+    `mdx_tag_orientation` (`g_mdx.c:1686`). For `_vg_head`
+    the lookup resolves to the raw `Bip01 Head` bone origin —
+    which sits at the atlas (skull-base / upper neck) in the
+    3DS-Max biped skeleton, not at the visible skull centre.
+  - The legacy realhead trace path `mdx_head_position`
+    (`g_mdx.c:2946-2971`, used by `g_combat.c:G_BuildHead`
+    when `g_realHead & REALHEAD_HEAD`) has compensated for
+    this since the original ETLegacy implementation by
+    applying `+6.5` units along the head bone's local Z and
+    `+0.5` along its local X. Those constants are **not**
+    inherited by `mdx_hit_test` — the multi-region path
+    silently lost them when v0.3.3 declared `_vg_head` with
+    no offset modifier.
+  - The cgame visualisation correctly mirrored the trace
+    position (chin/atlas), so v0.4.0's sphere visually
+    matched where the server actually hit. The mismatch was
+    between the server **and the player model**, not between
+    server and visualisation.
+
+Fix:
+
+  - **`etmain/animations/human_base.hit`** —
+    `TAG _vg_head "Bip01 Head"` → `TAG _vg_head "Bip01 Head"
+    offset 0 0 6.5`. The TAG-block parser
+    (`g_mdx.c:740` → `hit_parse_tag`) supports an `offset
+    X Y Z` modifier on each interntag, applied bone-local
+    by `mdx_tag_orientation` via `vec3_rotate(tag->offset,
+    tmpaxis, ...)`. With the +6.5 Z restored, the server's
+    HEAD sphere recenters on the visible skull. The 0.5
+    forward offset that `mdx_head_position` also applies
+    is intentionally omitted — for an isotropic radius-6
+    sphere it has no effect on the hit volume centre.
+  - **`src/cgame/cg_vanguard_dev.c` `vg_hit_areas[]`** —
+    HEAD entry gains an `offset1 = (0, 0, 6.5)` field
+    matching the .hit-side anchor.
+  - **`src/cgame/cg_vanguard_mdx.c`** — new
+    `vg_mdx_compute_bone_world_with_offset` function ports
+    the bone-local-axis path from qagame's
+    `mdx_bone_orientation` (`g_mdx.c:1644-1664`): reads the
+    per-frame `anglesF` field that the v0.4.0 parser was
+    skipping, lerps current/old via backlerp, builds the
+    bone-local axis matrix as
+    `transpose(AnglesToAxis(anglesF))`, rotates the offset
+    by it, and adds the rotated vector to the bone's
+    model-local origin before the world transform. The
+    v0.4.0 `vg_mdx_compute_bone_world` becomes a thin
+    wrapper that passes a zero offset.
+  - **`src/cgame/cg_vanguard_dev.c` `vg_GetBoneOrigin`** —
+    accepts the offset and routes to the new helper. The
+    fallback path (when `vg_mdx_*` rejects the lookup) also
+    applies the offset, in tag-local frame via the engine
+    `trap_R_LerpTag` axis — an approximation but the
+    closest the engine syscall can produce.
+
+Expected impact: HEAD impactpoint hit-rate climbs from
+the ~2% v0.4.0 baseline toward the historically validated
+realhead range (~10–15% of all body shots, varying with
+match style). Cgame visualisation continues to match the
+server trace position 1:1 — both sides now show / hit the
+skull centre.
+
+Bonus: `docs/notes/CGAME_BONE_CALC_RECON.md` updated with a
+follow-up section documenting that the multi-region
+pipeline does **not** inherit `mdx_head_position`'s legacy
+offsets. Important for any future region tuning where the
+visible mesh region differs from the bone-root location —
+the `.hit` file must compensate per-region with a
+`TAG offset` modifier.
+
+No gameplay logic changes outside of the HEAD trace
+position. Other regions (CHEST, GUT, GROIN, SHOULDER L/R,
+KNEE L/R, LEGS) unchanged. Damage multipliers unchanged.
+
 ## v0.4.0 — 2026-04-29 — Phase 6 major release
 
 VanguardMod's first feature release: the **Multi-Region Damage

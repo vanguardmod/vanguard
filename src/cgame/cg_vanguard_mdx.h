@@ -62,4 +62,31 @@ qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
                                     const char *boneName,
                                     vec3_t outWorld);
 
+/**
+ * @brief Same as vg_mdx_compute_bone_world but additionally applies
+ *        a bone-local-frame offset before the world transform.
+ *
+ *        Mirrors qagame's mdx_tag_orientation chain (g_mdx.c:1726-1727)
+ *        where `vec3_rotate(tag->offset, tmpaxis, ...)` rotates the
+ *        offset by the bone's local axis matrix and adds it to the
+ *        bone's model-local origin. Used by the cgame visualisation
+ *        to track _vg_head's `+6.5 Z` anchor: the human_base.hit
+ *        TAG line declares the offset bone-local, the server applies
+ *        it via mdx_tag_orientation, and this function lets the
+ *        cgame wireframe visualisation match the same trace point.
+ *
+ *        offset = (0, 0, 0) is identical to vg_mdx_compute_bone_world.
+ *
+ * @param[in]  body            refEntity built by vg_BuildBodyRefent
+ * @param[in]  boneName        exact .mdx skeleton bone name
+ * @param[in]  boneLocalOffset offset in the bone's local frame
+ * @param[out] outWorld        world-space origin (bone position + rotated offset)
+ *
+ * @return same failure cases as vg_mdx_compute_bone_world.
+ */
+qboolean vg_mdx_compute_bone_world_with_offset(const refEntity_t *body,
+                                                const char *boneName,
+                                                const vec3_t boneLocalOffset,
+                                                vec3_t outWorld);
+
 #endif /* VANGUARD_CGAME_VANGUARD_MDX_H */
