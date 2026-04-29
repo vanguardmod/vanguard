@@ -66,7 +66,7 @@ by upstream's `mod_pk3` target (with Vanguard-specific patches in
 `cmake/ETLBuildMod.cmake`).
 
 `bootstrap.sh` builds the three platforms in the right order and emits
-`build/vanguard/vanguard_v0.4.2.pk3` as part of the Linux build's `ALL`
+`build/vanguard/vanguard_v0.4.3.pk3` as part of the Linux build's `ALL`
 target. To repack ad-hoc after touching a single platform's binaries:
 
     cmake --build build --target mod_pk3
@@ -83,8 +83,8 @@ dedicated server can `dlopen()` them directly; only remote clients pull
 the `.pk3` over the wire (visible as a brief "Awaiting downloads…" screen
 on first connect, then cached in their game folder).
 
-Override the version by reconfiguring with `CI_ETL_TAG=v0.4.2
-CI_ETL_DESCRIBE=v0.4.2 cmake -B build …` — these env vars are upstream's
+Override the version by reconfiguring with `CI_ETL_TAG=v0.4.3
+CI_ETL_DESCRIBE=v0.4.3 cmake -B build …` — these env vars are upstream's
 `ETLVersion.cmake` overrides and become the `_${VERSION}.pk3` suffix.
 
 ## Protected build (core devs only)
@@ -128,3 +128,14 @@ is always this simple.
 To be set up. Recommended layout: GitHub Actions matrix building both
 community and protected flavours on Linux and Windows, with the private
 repo cloned via a deploy key on the build host only.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

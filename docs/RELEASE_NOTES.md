@@ -3,6 +3,97 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.4.3 — 2026-04-29 — Strict hitbox + cgame position-lag fix + SPDX
+
+Three changes shipped together:
+
+### Strict-hitbox mode (server-side)
+
+`G_Damage`'s multi-region branch (`g_combat.c`, gated on
+`vg_Hitbox_IsActive() && weapon-is-headshot`) used to fall through
+to the legacy chain when `mdx_hit_test` couldn't match the trace
+endpoint to any of the ten `human_base.hit` capsules. The legacy
+chain then credited the shot as an ordinary body hit at full
+damage. The engine's broad-phase player-AABB trace can be ~6 units
+wider than the visible mesh in some poses, so this turned every
+"shot beside the player" into damage — exactly the behaviour
+competitive players had been complaining about.
+
+  - **New cvar `vanguard_hitbox_strict`** (`CVAR_ARCHIVE`,
+    default `1`). When non-zero, an `mdx_hit_test` miss inside the
+    multi-region branch returns immediately from `G_Damage`
+    instead of falling through. The trace is treated as a clean
+    miss; the broad-phase tolerance no longer leaks into the
+    damage path.
+  - **Cup-compatibility:** `set vanguard_hitbox_strict 0` restores
+    the v0.4.x byte-identical behaviour for organisers who need
+    to lock a tournament to the legacy semantics.
+  - **Diagnostic note:** under `vanguard_hitbox_debug 1` each
+    rejection emits one `VG_DIAG: strict-hitbox reject ...` line so
+    admins can audit the rejection rate during a tuning session.
+  - Non-headshot weapons (explosives, throwables) are unaffected —
+    they don't enter the multi-region branch in the first place.
+
+### Cgame hitbox position-lag fix
+
+The visualisation in v0.4.0–v0.4.2 manually rebuilt its body
+refEntity from `cent->lerpOrigin` / `cent->lerpAngles` /
+`cent->pe.legs.*`, which produced a visible 5–15 unit drift
+during walking and sprinting because `lerpAngles` is the player's
+view direction (instant) rather than the smoothed legs direction
+the renderer's body model uses. v0.4.3 reuses the renderer's own
+cached `cent->pe.bodyRefEnt` instead — the refEntity that
+`CG_Player` builds at `cg_players.c:2977` with proper
+`CG_PlayerAngles` (yaw smoothing via `CG_SwingAngles`) and
+`CG_PlayerAnimation` (per-frame animation state) applied. The
+order is safe: `CG_VanguardDev_DrawHitboxes` runs after
+`CG_AddPacketEntities` in `CG_DrawActiveFrame`, so `bodyRefEnt`
+is fresh by the time we read it. A manual reconstruction is kept
+as a fallback for entities that haven't been through `CG_Player`
+yet (e.g. first frame after spawn).
+
+The v0.4.2 `VG_DIAG: Bip01 Head bone-axis` one-shot diagnostic
+print is removed in this release — the bone-axis convention is
+now well understood and documented in
+`docs/notes/CGAME_BONE_CALC_RECON.md`.
+
+### SPDX copyright headers + LICENSE / COPYRIGHT / NOTICE
+
+Long-overdue legal hygiene pass.
+
+  - **SPDX-License-Identifier headers** added to all
+    VanguardMod-specific source files (cgame `cg_vanguard_*`, game
+    `g_vanguard_*`, the WolfGuard public surface, the test-server
+    launcher, the Vanguard cmake modules, the bootstrap script).
+  - **SPDX modifications block** appended to imported ETLegacy
+    files that VanguardMod has touched (`g_mdx.{c,h}`,
+    `bg_animgroup.c`, `bg_public.h`, `g_combat.c`,
+    `cmake/ETLVersion.cmake`, `cmake/ETLBuildMod.cmake`). The
+    original upstream copyright headers are kept verbatim — the
+    Vanguard block sits below them and only covers our changes.
+  - **`LICENSE`** cleaned up — the placeholder GPL-2.0 paragraph
+    is replaced by an actual SPDX-tagged GPL-3.0-or-later notice
+    that points at `COPYING.txt` (which already carries the full
+    GPL-3.0 text from the upstream import).
+  - **New `COPYRIGHT`** root file lists the primary VanguardMod
+    copyright holders and points at `git shortlog` for the
+    contributor list.
+  - **New `NOTICE`** root file acknowledges ETLegacy, Wolfenstein:
+    Enemy Territory, Quake III Arena, cJSON, and the Zinx
+    Verituse MDX bone math — the third-party stack VanguardMod is
+    built on, with each component's license terms.
+  - **Markdown docs** under `docs/` get a Copyright Notice footer
+    so the same SPDX information is reachable from documentation
+    consumers.
+  - **Asset header** added to `etmain/animations/human_base.hit`
+    — the `.hit` format supports `//` comments at the top so the
+    SPDX block is visible to anyone inspecting the asset.
+
+No gameplay logic changes from v0.4.2 outside the strict-hitbox
+gate. Same multi-region damage pipeline, same multipliers, same
+hit-area geometry, same HEAD anchor offset, same cgame
+visualisation algorithm.
+
 ## v0.4.2 — 2026-04-29 — HEAD anchor offset axis correction
 
 Patch release on top of v0.4.1 to correct the offset axis used
@@ -845,3 +936,14 @@ VanguardMod main-menu theming pass — three layers, one release.
     and depends on an SDK-internal sqlite layer not in the public
     API. Replaced with a stub (`g_xp_saver_stub.c`); restore or
     re-implement when VanguardMod's persistence story lands.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

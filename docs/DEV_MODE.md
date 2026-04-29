@@ -237,6 +237,17 @@ rcon exec configs/vanguard_competitive.cfg
     head/leg origin math from `G_BuildHead` / `G_BuildLeg` in
     `src/game/g_combat.c`, no-MDX fallback path.
   - `cmake/ETLBuildMod.cmake` packs the `configs/` folder above into
-    `vanguard_v0.4.2.pk3`, so any client connecting to a dev-mode
+    `vanguard_v0.4.3.pk3`, so any client connecting to a dev-mode
     server already has both presets locally as
     `configs/vanguard_dev.cfg` and `configs/vanguard_competitive.cfg`.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

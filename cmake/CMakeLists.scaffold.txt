@@ -1,7 +1,15 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+#
+# This file is part of VanguardMod.
+# Built on ETLegacy (https://www.etlegacy.com), licensed under GPL-3.0-or-later.
+# Licensed under GPL-3.0-or-later. See LICENSE for details.
+
 cmake_minimum_required(VERSION 3.16)
 
 project(VanguardMod
-    VERSION 0.4.2
+    VERSION 0.4.3
     DESCRIPTION "Wolfenstein: Enemy Territory competitive mod for ETLegacy"
     LANGUAGES C
 )
