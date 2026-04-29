@@ -65,28 +65,33 @@
 // skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
 // so the bone-name spelling must match the .mdx exactly.
 //
-// _vg_head additionally applies an `offset 0 0 6.5` along the
-// head bone's local Z (up). The Bip01 Head bone-origin in the
-// 3DS-Max biped skeleton sits at the atlas / skull-base — a
-// radius-6 sphere centered there lands on the chin/upper-neck
-// in the visible mesh, far below the actual skull-cap. The
-// legacy realhead trace path (mdx_head_position, g_mdx.c:2946)
-// has used this exact +6.5 Z offset since the original
-// implementation; the multi-region mdx_hit_test pipeline that
-// went live in Phase 6 (v0.3.3) accidentally lost it because
-// _vg_head was declared without modifiers. v0.4.0 live-test
-// confirmed the symptom: ~2% HEAD-shot rate vs the legacy AABB
-// path's much higher rate. v0.4.1 restores the +6.5 anchor and
-// brings hit-detection up to the visible skull. The matching
+// _vg_head applies a `+6.5` offset along the head bone's local
+// X axis. The Bip01 Head bone-origin in the 3DS-Max biped
+// skeleton sits at the atlas / skull-base — a radius-6 sphere
+// centered there lands on the chin/upper-neck in the visible
+// mesh, far below the actual skull-cap. v0.4.1 first attempted
+// `offset 0 0 6.5` (Z), copying the legacy mdx_head_position
+// constant verbatim — but mdx_head_position uses world-frame
+// `orientation.axis[2]` (an MDM tag's axis, modeled with `axis[2]
+// = up` by convention), whereas mdx_tag_orientation rotates
+// interntag offsets by the BONE-LOCAL axis matrix from
+// mdx_bone_orientation. For a 3DS-Max biped bone, local +X is
+// the bone direction (parent → child), confirmed by
+// `mdx_calculate_bone` (g_mdx.c:1402) where parent_dist is
+// placed on `tmp[0]` (X). So for Bip01 Head — whose child
+// direction is "up the skull" in the rest pose — bone-local +X
+// is the world-up direction the offset has to follow. v0.4.1
+// shipped with `0 0 6.5` and produced a sphere that wandered to
+// the back of the head (top-down view: on the medic-pack
+// backpack); v0.4.2 switches to the correct axis. The matching
 // offset is hardcoded in cgame's vg_hit_areas[] HEAD entry so
 // the wireframe visualisation tracks the real trace position.
 //
-// 0.5 forward (which mdx_head_position also applies) is
-// intentionally omitted — for a sphere it has no effect on the
-// hit volume centre, only on the orientation of any rotated
-// scale vector, and we use isotropic radius-6.
+// The 0.5 forward component that mdx_head_position also applies
+// is intentionally omitted — for an isotropic radius-6 sphere
+// it has no effect on the hit volume centre.
 
-TAG _vg_head      "Bip01 Head" offset 0 0 6.5
+TAG _vg_head      "Bip01 Head" offset 6.5 0 0
 TAG _vg_neck      "Bip01 Neck"
 TAG _vg_spine_lo  "Bip01 Spine"
 TAG _vg_spine_mid "Bip01 Spine1"

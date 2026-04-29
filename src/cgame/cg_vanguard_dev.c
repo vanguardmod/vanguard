@@ -105,15 +105,20 @@ typedef struct
  * the cost of a quick visualisation. */
 static const vg_hit_area_t vg_hit_areas[] = {
 	/* HEAD — sphere radius 6 on Bip01 Head, +6.5 along the head bone's
-	 * local Z to anchor at the skull centre rather than the atlas. The
-	 * offset mirrors the `offset 0 0 6.5` modifier added in v0.4.1 to
-	 * the _vg_head TAG line in etmain/animations/human_base.hit; both
-	 * sides apply the same transform so the wireframe sits exactly
-	 * where mdx_hit_test traces. */
+	 * local X (the parent-to-child / bone-direction axis in the 3DS-Max
+	 * biped convention; for Bip01 Head this is "up the skull" in the
+	 * bind pose). v0.4.1 used `0 0 6.5` (Z) by analogy with the legacy
+	 * mdx_head_position constant, but that helper applies its offset
+	 * along an MDM tag's world-frame axis[2] — bone-local axes don't
+	 * have the same convention. The bone direction is +X per
+	 * mdx_calculate_bone (g_mdx.c:1402). The offset matches the
+	 * `offset 6.5 0 0` modifier on the _vg_head TAG line in
+	 * etmain/animations/human_base.hit so cgame and server trace at
+	 * the same point. */
 	{ "Bip01 Head",       NULL,                VG_SHAPE_SPHERE,
 	  { 6, 6, 6 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
 	  { 1.0f, 0.2f, 0.2f },                                  /* red */
-	  { 0, 0, 6.5f }, { 0, 0, 0 } },
+	  { 6.5f, 0, 0 }, { 0, 0, 0 } },
 
 	/* CHEST — box2 Spine1 -> Neck */
 	{ "Bip01 Spine1",     "Bip01 Neck",        VG_SHAPE_BOX2,
