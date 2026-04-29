@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+#
+# This file is part of VanguardMod.
+# Built on ETLegacy (https://www.etlegacy.com), licensed under GPL-3.0-or-later.
+# Licensed under GPL-3.0-or-later. See LICENSE for details.
+#
 # VanguardMod local test server launcher.
 #
 # Brings up etlded with our mod loaded against an isolated fs_homepath so

@@ -662,3 +662,14 @@ verschiedene Klassen schreiben oder reicht eines?
 
 *Plan-Ende. Phase 6.0 startet auf User-Yes — erste Aktion ist
 mdx_LoadHitsFile-Code-Reading + docs/HITS_FORMAT.md.*
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

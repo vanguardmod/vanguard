@@ -1,3 +1,15 @@
+# Modifications for VanguardMod:
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Modified for VanguardMod (https://vanguardmod.com).
+# Modifications licensed under GPL-3.0-or-later (consistent with original).
+#
+# Vanguard-specific additions: CI_ETL_TAG / CI_ETL_DESCRIBE accepted as
+# cmake cache variables (line ~100), and ETL_CMAKE_VERSION_INT leading-
+# zero stripping (octal-literal fix for any patch >= 8) added in v0.4.3.
+
 #-----------------------------------------------------------------
 # Version
 #-----------------------------------------------------------------

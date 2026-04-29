@@ -48,3 +48,14 @@ Keeping the API public and the impl private means:
 
 Never put implementation logic in `wolfguard_null.c` beyond what is needed
 to keep the build linkable. Detection belongs in `private/` exclusively.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

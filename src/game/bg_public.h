@@ -28,6 +28,20 @@
  *
  * id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
  */
+
+/*
+ * Modifications for VanguardMod:
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Modified for VanguardMod (https://vanguardmod.com).
+ * Modifications licensed under GPL-3.0-or-later (consistent with original).
+ *
+ * Vanguard-specific additions: vg_mdx_path_entry_t / vg_FindMDXPath
+ * declarations for the bg_animgroup.c <-> cg_vanguard_mdx.c bridge.
+ */
+
 /**
  * @file bg_public.h
  * @brief Definitions shared by both the server game and client game modules. (server.h includes this)

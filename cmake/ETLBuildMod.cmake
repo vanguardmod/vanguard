@@ -1,3 +1,14 @@
+# Modifications for VanguardMod:
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Modified for VanguardMod (https://vanguardmod.com).
+# Modifications licensed under GPL-3.0-or-later (consistent with original).
+#
+# Vanguard-specific additions: BONE_HITTESTS=1 propagation across
+# qagame compile units, multi-arch DLL bundling into vanguard_v*.pk3.
+
 #-----------------------------------------------------------------
 # Build mod pack
 #-----------------------------------------------------------------

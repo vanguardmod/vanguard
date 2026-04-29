@@ -171,3 +171,14 @@ Delete the cache and re-bootstrap to pull a newer Omni-Bot:
 
     rm -rf vendor/omnibot-runtime/
     ./scripts/bootstrap.sh
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

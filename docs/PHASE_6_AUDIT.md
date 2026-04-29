@@ -507,3 +507,14 @@ Aus Phase 5.1 Refactor:
 ---
 
 *Audit-Ende. Nächster Schritt: Architektur-Plan-Diskussion basierend auf den Findings dieser Sektionen.*
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).
