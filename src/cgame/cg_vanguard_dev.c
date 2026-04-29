@@ -190,6 +190,14 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 
 	memset(body, 0, sizeof(*body));
 
+	/* hModel is the MDM mesh; the engine's R_LerpTag
+	 * dispatches via refent->hModel through R_GetModelByHandle,
+	 * not via frameModel — without hModel the lookup hits the
+	 * placeholder model and returns -1 for every tag. v0.3.6/.7
+	 * left this unset; v0.3.8a probe + Strategy II both need
+	 * it set. (cg_players.c:2969 / :3348 do the same.) */
+	body->hModel             = character->mesh;
+
 	body->frame              = cent->pe.legs.frame;
 	body->oldframe           = cent->pe.legs.oldFrame;
 	body->backlerp           = cent->pe.legs.backlerp;
@@ -479,6 +487,60 @@ static void vg_DrawPlayerMultibox(int clientNum, float alpha)
 	if (!vg_BuildBodyRefent(cent, &body))
 	{
 		return;
+	}
+
+	/* VG_DIAG (v0.3.8a, Strategy II prep): probe the MDM tag list
+	 * once per client. Each candidate is a tag we plan to use as an
+	 * anchor when remapping vg_hit_areas[] in v0.3.8 — see
+	 * docs/notes/CGAME_BONE_CALC_RECON.md §5.II. result >= 0 means
+	 * the tag exists on this player's MDM and the lerp produced a
+	 * valid origin in body-local space; result == -1 means the tag
+	 * is not exported. Remove this whole block in v0.3.8 once the
+	 * remap lands. */
+	{
+		static qboolean         vg_diag_probed[MAX_CLIENTS];
+		static const char *const vg_diag_candidate_tags[] = {
+			"tag_head",
+			"tag_chest",
+			"tag_torso",
+			"tag_back",
+			"tag_armleft",
+			"tag_armright",
+			"tag_legleft",
+			"tag_legright",
+			"tag_footleft",
+			"tag_footright",
+			"tag_ubelt",
+			"tag_weapon",
+			"tag_weapon2",
+			"tag_mouth",
+			"tag_bipod",
+			NULL
+		};
+
+		if (clientNum >= 0 && clientNum < MAX_CLIENTS &&
+		    !vg_diag_probed[clientNum])
+		{
+			int           t;
+			orientation_t lerped;
+			int           result;
+
+			CG_Printf("VG_DIAG: MDM tag probe client=%d "
+			          "hModel=%d frameModel=%d frame=%d\n",
+			          clientNum, (int)body.hModel,
+			          (int)body.frameModel, body.frame);
+			for (t = 0; vg_diag_candidate_tags[t]; t++)
+			{
+				result = trap_R_LerpTag(&lerped, &body,
+				                        vg_diag_candidate_tags[t], 0);
+				CG_Printf("VG_DIAG:   '%s' result=%d "
+				          "origin=(%.1f,%.1f,%.1f)\n",
+				          vg_diag_candidate_tags[t], result,
+				          lerped.origin[0], lerped.origin[1],
+				          lerped.origin[2]);
+			}
+			vg_diag_probed[clientNum] = qtrue;
+		}
 	}
 
 	for (i = 0; i < VG_HIT_AREA_COUNT; i++)
