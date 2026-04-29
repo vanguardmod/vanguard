@@ -3,6 +3,58 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.8a — 2026-04-29 — Tag-list probe + body.hModel fix
+
+Pre-implementation diagnostic for v0.3.8 Strategy II
+(tag-anchored hitbox visualization, see
+`docs/notes/CGAME_BONE_CALC_RECON.md`). Two changes in
+`vg_BuildBodyRefent` / `vg_DrawPlayerMultibox`:
+
+  - **`body.hModel` is now set to `character->mesh`.** v0.3.6
+    and v0.3.7 left this unset; the engine's `R_LerpTag`
+    dispatches via `refent->hModel` through
+    `R_GetModelByHandle`, so an unset hModel hits the
+    placeholder model and returns -1 for every tag — independent
+    of the tag name. This was a silent second bug stacked on
+    top of the bone-name issue (the v0.3.7 VG_DIAG output
+    couldn't distinguish "Bip01 Head" missing from "hModel=0"
+    failing). With hModel set, the v0.3.8a probe gives a
+    truthful answer for each candidate tag. The standard
+    player render path in `cg_players.c` already does this
+    (`:2969`, `:3348`); the multibox path missed it.
+
+  - **15-tag MDM probe** at first multibox render per client.
+    Candidates: `tag_head`, `tag_chest`, `tag_torso`, `tag_back`,
+    `tag_armleft`, `tag_armright`, `tag_legleft`, `tag_legright`,
+    `tag_footleft`, `tag_footright`, `tag_ubelt`, `tag_weapon`,
+    `tag_weapon2`, `tag_mouth`, `tag_bipod`. Each `trap_R_LerpTag`
+    return code and tag-local origin is logged. The probe is
+    one-shot per client (`vg_diag_probed[MAX_CLIENTS]` static
+    flag), so the log isn't spammed at 60 Hz.
+
+This is a diagnostic-only release. The output decides the v0.3.8
+work plan: which tags exist drives the `vg_hit_areas[]` remap, and
+which are missing tells us where capsule positions need synthetic
+interpolation between neighbouring tags.
+
+To diagnose: connect to a v0.3.8a server with at least one other
+visible player (the multibox render skips self in first-person —
+either spectate, third-person, or have a teammate connected).
+After ~30 seconds, grep `server.log` (or the Pterodactyl console
+output) for `VG_DIAG: MDM tag probe` lines. Each visible player
+slot produces one banner plus 15 tag-result lines.
+
+The v0.3.7 VG_DIAG bone-resolution print is retained — failed
+"Bip01 *" lookups are still expected (the render-loop hasn't been
+remapped yet) and the print remains throttled to once per second
+per bone-name. Both diagnostics will be removed in v0.3.8 once
+the remap lands. The hModel set in `vg_BuildBodyRefent` stays
+permanently — it's a bug fix, not a diagnostic.
+
+No gameplay changes vs v0.3.7. No hit-detection / multiplier
+changes. Same 0-of-10 capsules visible at the moment, same
+server-side hit math. Cgame-only diagnostic addition.
+
 ## v0.3.7 — 2026-04-29 — Diagnostic build (bone resolution)
 
 Diagnostic-only release for Pterodactyl multi-user testing. Adds a
