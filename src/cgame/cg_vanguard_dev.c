@@ -1,4 +1,28 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ *
+ * This file is part of VanguardMod.
+ *
+ * VanguardMod is built on ETLegacy (https://www.etlegacy.com),
+ * which is licensed under GPL-3.0-or-later.
+ *
+ * VanguardMod is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * VanguardMod is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with VanguardMod. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
  * cg_vanguard_dev.c — VanguardMod client-side dev-mode hitbox renderer.
  *
  * The original implementation drove hitbox visualisation through the
@@ -177,16 +201,34 @@ static const vg_hit_area_t vg_hit_areas[] = {
 #define VG_HIT_AREA_COUNT ((int)(sizeof(vg_hit_areas) / sizeof(vg_hit_areas[0])))
 
 /**
- * @brief Build a minimal refEntity_t suitable for trap_R_LerpTag bone
- *        resolution. Pulls the player's current animation frame data
- *        from cent->pe (which CG_RunLerpFrameRate populates each
- *        frame), and sets origin/axis from the snapshot lerp values.
+ * @brief Build a refEntity_t suitable for bone-position lookups.
  *
- *        This is a reduced version of CG_Player's body refent setup
- *        (cg_players.c:CG_PlayerAnimation + CG_PlayerAngles). For
- *        diagnostic visualisation the simplification is acceptable —
- *        bone positions match within the precision of one player
- *        snapshot interpolation step.
+ *        v0.4.3: returns the renderer's own bodyRefEnt cache. CG_Player
+ *        constructs a full player refEntity each frame (cg_players.c:
+ *        CG_PlayerAnimation + CG_PlayerAngles + the body assignment at
+ *        :2972-2977) and stashes it in cent->pe.bodyRefEnt for any
+ *        consumer that needs the same axes/animation state. We're one
+ *        such consumer — using it directly guarantees our hitbox
+ *        capsules sit at exactly the same world positions the visible
+ *        mesh does, including the legs/torso yaw smoothing that
+ *        CG_SwingAngles applies in CG_PlayerAngles. Earlier versions
+ *        manually rebuilt the refent from cent->lerpOrigin /
+ *        cent->lerpAngles / cent->pe.legs.* directly, which produced
+ *        a visible 5-15 unit drift during walking and sprinting
+ *        because lerpAngles is the player's view direction (instant)
+ *        rather than the smoothed legs direction the renderer uses.
+ *
+ *        Call ordering: CG_VanguardDev_DrawHitboxes runs after
+ *        CG_AddPacketEntities in CG_DrawActiveFrame (cg_view.c:2711-
+ *        2712), and CG_AddPacketEntities is what triggers CG_Player
+ *        for every visible player. So bodyRefEnt is fresh by the
+ *        time we read it.
+ *
+ *        Fallback to the manual reconstruction when bodyRefEnt is
+ *        empty — typically the very first frame after spawn before
+ *        CG_Player has run for this entity. The fallback uses
+ *        lerpAngles (still wrong for swung yaw) but at least keeps
+ *        the bone math from running against a zero-filled refent.
  *
  * @return qfalse if the entity has no character / mdxFile (cannot
  *         resolve bones at all), else qtrue.
@@ -217,16 +259,19 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 		return qfalse;
 	}
 
+	if (cent->pe.bodyRefEnt.hModel != 0)
+	{
+		*body = cent->pe.bodyRefEnt;
+		return qtrue;
+	}
+
+	/* Fallback: CG_Player hasn't run for this entity yet (e.g. first
+	 * frame after spawn). Build a best-effort refent from snapshot
+	 * state. Will produce the v0.4.2-era yaw drift for the few frames
+	 * it takes for CG_Player to populate bodyRefEnt, then the primary
+	 * path takes over. */
 	memset(body, 0, sizeof(*body));
-
-	/* hModel is the MDM mesh; the engine's R_LerpTag
-	 * dispatches via refent->hModel through R_GetModelByHandle,
-	 * not via frameModel — without hModel the lookup hits the
-	 * placeholder model and returns -1 for every tag. v0.3.6/.7
-	 * left this unset; v0.3.8a probe + Strategy II both need
-	 * it set. (cg_players.c:2969 / :3348 do the same.) */
 	body->hModel             = character->mesh;
-
 	body->frame              = cent->pe.legs.frame;
 	body->oldframe           = cent->pe.legs.oldFrame;
 	body->backlerp           = cent->pe.legs.backlerp;
@@ -237,9 +282,6 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 	body->torsoBacklerp      = cent->pe.torso.backlerp;
 	body->torsoFrameModel    = cent->pe.torso.frameModel;
 	body->oldTorsoFrameModel = cent->pe.torso.oldFrameModel;
-
-	/* Fall back to animation[0] mdxFile if the per-frame model isn't
-	 * set yet (first frame after spawn). */
 	if (!body->frameModel)
 	{
 		body->frameModel    = character->animModelInfo->animations[0]->mdxFile;
@@ -250,11 +292,9 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 		body->torsoFrameModel    = body->frameModel;
 		body->oldTorsoFrameModel = body->frameModel;
 	}
-
 	VectorCopy(cent->lerpOrigin, body->origin);
 	AnglesToAxis(cent->lerpAngles, body->axis);
 	AxisCopy(body->axis, body->torsoAxis);
-
 	return qtrue;
 }
 
