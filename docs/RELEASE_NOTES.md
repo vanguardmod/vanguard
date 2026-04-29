@@ -3,6 +3,52 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.3.7 — 2026-04-29 — Diagnostic build (bone resolution)
+
+Diagnostic-only release for Pterodactyl multi-user testing. Adds a
+rate-limited `VG_DIAG` print at the failure path of
+`vg_GetBoneOrigin` (`src/cgame/cg_vanguard_dev.c`) so we can identify
+which of the ten "Bip01 *" bone-names fail `trap_R_LerpTag` lookup
+in the cgame VM.
+
+The v0.3.6 live-test surfaced that the multi-region capsules are not
+permanently visible despite a render-loop that draws every area
+unconditionally. Inspection ruled out highlight-gating (none exists)
+and the alpha cvar default (`cg_vanguardDevAlpha "0.4"`). The
+remaining failure mode is `vg_GetBoneOrigin` returning `qfalse` →
+`continue;` skipping that area. The strong hypothesis is that the
+`.mdm` tag-list does not export the MDX skeleton bones under those
+names, so all but one (or zero) of the per-frame `trap_R_LerpTag`
+calls fails silently.
+
+This release adds throttled logging at that exact failure path:
+
+  - **Per-bone-name throttle.** Each distinct bone-name prints at
+    most once per second per cgame instance. With 10 capsules at 60
+    Hz that prevents 600 prints/sec spam if all ten fail.
+  - **Refent context.** Each line emits `bone='<name>'`,
+    `frameModel=<qhandle>`, `frame=<int>`, `torsoFrame=<int>` so we
+    can tell whether the failure is structural ("bone unknown to
+    every model") or transient ("frameModel == 0 first frame after
+    spawn").
+  - **No cvar gate.** The diagnostic always prints in v0.3.7 because
+    we want a 30-second live-test session to capture the full set of
+    failing bones without requiring an admin to flip a toggle. The
+    output is conditional on the failure path itself, so a clean run
+    produces zero lines.
+
+No gameplay changes vs v0.3.6. Same hit-detection, same multipliers,
+same render-loop logic. Only addition is failure logging.
+
+To diagnose: connect to a v0.3.7 server, walk around visible players
+for ~30 seconds, then check `server.log` for `VG_DIAG: vg_GetBoneOrigin
+FAIL` lines. The collected bone-name list determines the v0.3.8 fix
+path (rename to MDM tag conventions, switch to a different lookup
+API, or compute origins from a parent tag + offset).
+
+This print will be removed (or properly cvar-gated) in v0.3.8 once
+the fix lands.
+
 ## v0.3.6 — 2026-04-29 — Hitbox visualisation + diagnostic cvar-gate
 
 Major addition: client-side rendering of all 10 multi-region
