@@ -1,0 +1,49 @@
+VanguardMod — Copyright Holders
+SPDX-License-Identifier: GPL-3.0-or-later
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)
+Copyright (c) 2026 VanguardMod Project Contributors
+
+VanguardMod is licensed under GPL-3.0-or-later. See LICENSE for the
+license summary and COPYING.txt for the full text of the GNU General
+Public License version 3.
+
+This file lists the primary copyright holders of VanguardMod-specific
+code (everything under wolfguard/, src/cgame/cg_vanguard_*.{c,h},
+src/game/g_vanguard.{c,h}, the VanguardMod-specific cmake modules,
+the Vanguard scripts, and the documentation under docs/). For the
+copyright holders of the imported ETLegacy SDK that VanguardMod is
+built on, see the per-file headers retained from upstream and the
+ETLegacy attribution in NOTICE.
+
+------------------------------------------------------------------
+
+PRIMARY MAINTAINER
+
+  wahke <info@wahke.lu>
+  https://wahke.lu
+
+  Project lead, primary author of the VanguardMod-specific code,
+  responsible for the Phase 6 multi-region damage pipeline and
+  cgame-side hitbox visualisation.
+
+PROJECT CONTRIBUTORS
+
+  Listed collectively as "VanguardMod Project Contributors" on each
+  source-file SPDX header. For the up-to-date individual list see
+  the CONTRIBUTORS file (when present) or the git history:
+
+      git shortlog -sne v0.1.0..HEAD
+
+------------------------------------------------------------------
+
+WolfGuard
+
+  The public WolfGuard interface (wolfguard/wolfguard.h) and the
+  no-op community provider (wolfguard/wolfguard_null.c) are part of
+  VanguardMod and licensed under GPL-3.0-or-later as above.
+
+  The closed-source WolfGuard private implementation (when checked
+  out under wolfguard/private/) is NOT covered by this license and
+  is distributed under separate restrictive terms — see the LICENSE
+  file inside that directory when present.

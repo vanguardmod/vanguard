@@ -1,0 +1,84 @@
+VanguardMod — Third-Party Acknowledgments
+SPDX-License-Identifier: GPL-3.0-or-later
+
+This file lists the third-party software that VanguardMod is built
+on or includes, with the copyright notices and license terms each
+project requires for redistribution. VanguardMod itself is licensed
+under GPL-3.0-or-later (see LICENSE / COPYING.txt); the third-party
+components below remain under their original licenses.
+
+------------------------------------------------------------------
+
+ET: Legacy — https://www.etlegacy.com
+  Copyright (c) 2012-2026 ET:Legacy team and contributors
+  Licensed under GPL-3.0-or-later
+
+  VanguardMod is a mod built on top of the ET:Legacy runtime and
+  Mod SDK. The ETLegacy source tree is imported into this repository
+  by scripts/bootstrap.sh and large parts of src/, etmain/, vendor/
+  and most of cmake/ are vendored from upstream verbatim. Vanguard-
+  specific changes to those files are flagged with `VANGUARD:` /
+  `VANGUARDMOD:` markers in the source and with an additional SPDX
+  modifications block in the file header (see CODING_STYLE.md).
+
+  ETLegacy itself derives from id Software's release of the
+  Wolfenstein: Enemy Territory GPL Source Code (see below); upstream
+  ETLegacy contributions live under the same GPL-3.0-or-later terms.
+
+------------------------------------------------------------------
+
+Wolfenstein: Enemy Territory GPL Source Code
+  Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company
+  Licensed under GPL-3.0-or-later
+
+  The original game engine and SDK that ETLegacy and therefore
+  VanguardMod ultimately derive from. id Software released the
+  source code under GPL-3 in 2010; the per-file headers preserved
+  in src/ retain the original Wolfenstein: Enemy Territory copyright
+  notices required by the license.
+
+  In addition, the Wolfenstein: Enemy Territory GPL Source Code is
+  subject to certain additional terms documented in the original
+  release; those terms are inherited by ETLegacy and VanguardMod.
+
+------------------------------------------------------------------
+
+Quake III Arena GPL Source Code
+  Copyright (C) 1999-2005 Id Software, Inc.
+  Licensed under GPL-2.0-or-later
+
+  The renderer and game architecture in W:ET / ETLegacy /
+  VanguardMod ultimately derive from the Quake III Arena codebase.
+  Q3 was released under GPL-2-or-later, which is upgrade-compatible
+  with W:ET's GPL-3 licensing.
+
+------------------------------------------------------------------
+
+cJSON — https://github.com/DaveGamble/cJSON
+  Copyright (c) 2009-2017 Dave Gamble and cJSON contributors
+  Licensed under MIT
+
+  Bundled under vendor/cjson/ and compiled directly into each
+  VanguardMod module. ETLegacy and VanguardMod redistribute cJSON
+  unmodified in source form; the MIT license permits this.
+
+------------------------------------------------------------------
+
+Bone-tracked hitbox math (mdx_calculate_bone, mdx_load, etc.)
+  Copyright (C) 2003-2005 Christopher Lais (aka "Zinx Verituse")
+  Licensed under a permissive zlib-style attribution license
+
+  The MDX skeleton-bone math originally written by Zinx Verituse is
+  used by VanguardMod's Phase 6 multi-region damage pipeline (server
+  side via src/game/g_mdx.c) and by the cgame-side hitbox
+  visualisation (client side via src/cgame/cg_vanguard_mdx.c, which
+  is a derived port of the same algorithm). The original notice
+  required by the zlib-style license is preserved in both files.
+
+------------------------------------------------------------------
+
+For libraries listed in upstream ETLegacy's COPYING.txt that
+VanguardMod consumes via the imported SDK (SDL2, libsqlite3,
+libcurl, OpenAL, freetype, libpng, libjpeg-turbo, ogg/vorbis/theora,
+zlib, MiniZip, GLEW, ...), the original copyright notices and
+license terms apply. See COPYING.txt for the full chain.
