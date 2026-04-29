@@ -1,4 +1,28 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ *
+ * This file is part of VanguardMod.
+ *
+ * VanguardMod is built on ETLegacy (https://www.etlegacy.com),
+ * which is licensed under GPL-3.0-or-later.
+ *
+ * VanguardMod is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * VanguardMod is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with VanguardMod. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
  * g_xp_saver_stub.c — Empty stubs for XP-Saver functions.
  *
  * The original g_xp_saver.c is disabled in this build (see

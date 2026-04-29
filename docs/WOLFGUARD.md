@@ -81,3 +81,14 @@ The provider **cannot**:
 This boundary is the reason the API is small and read-mostly. The mod
 remains the single source of truth for "what happens to the player";
 WolfGuard only supplies signals.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

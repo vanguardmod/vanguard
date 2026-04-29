@@ -728,3 +728,14 @@ Beide Korrekturen verifiziert via VG_HITDUMP-Live-Test 2026-04-27.
 (BONE_HITTESTS=on, 4 upstream compile-bugs gefixt, .hit auto-loaded
 und 10 hit-areas registriert). Tag 2's initiale Annahmen
 (multi-line, bone-direkt) waren falsch und sind in Q7 dokumentiert.*
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

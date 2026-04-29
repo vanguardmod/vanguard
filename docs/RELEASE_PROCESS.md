@@ -232,3 +232,14 @@ This was deferred from the v0.1.1 release because it's a
 schema-refactor and we needed to ship a deployment fix, not
 restructure the build. Worth picking up before the next bump if
 the six-spot edit causes any churn.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

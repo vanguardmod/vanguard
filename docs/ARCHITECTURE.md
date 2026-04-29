@@ -146,3 +146,14 @@ Considered and rejected. Forking the engine means:
 Staying as a QVM-distributed mod (with a server-side native `qagame` for
 the protected flavour) gives us the anti-cheat depth we want without
 dragging the entire engine along for the ride.
+
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).

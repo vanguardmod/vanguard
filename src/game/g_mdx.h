@@ -26,6 +26,20 @@
 
 */
 
+/*
+ * Modifications for VanguardMod:
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Modified for VanguardMod (https://vanguardmod.com).
+ * Modifications licensed under GPL-3.0-or-later (consistent with original).
+ *
+ * Vanguard-specific changes flagged with VANGUARDMOD: / VANGUARD:
+ * markers — most notably the unconditional BONE_HITTESTS define
+ * that activates the Phase 6 multi-region damage pipeline.
+ */
+
 #ifndef INCLUDE_G_MDX_H
 #define INCLUDE_G_MDX_H
 

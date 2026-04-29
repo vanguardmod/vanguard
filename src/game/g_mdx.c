@@ -27,6 +27,22 @@
     5. This software has been altered by NQ & ET: Legacy team and must not be
     misrepresented as being the original software.
 */
+
+/*
+ * Modifications for VanguardMod:
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Modified for VanguardMod (https://vanguardmod.com).
+ * Modifications licensed under GPL-3.0-or-later (consistent with original).
+ *
+ * Vanguard-specific changes are flagged with VANGUARDMOD: / VANGUARD:
+ * markers in the source. Phase 6 BONE_HITTESTS pipeline activation
+ * (unconditionally enabled at the top of g_mdx.h) is the largest
+ * vanguard-side modification in this file.
+ */
+
 #ifdef FEATURE_SERVERMDX
 
 #include "g_local.h"
