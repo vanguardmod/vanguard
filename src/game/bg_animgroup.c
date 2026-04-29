@@ -41,6 +41,62 @@
 
 static animation_t animationPool[MAX_ANIMPOOL_SIZE];
 
+/* VANGUARD: storage for the path-table declared in bg_public.h.
+ * Populated below in BG_RAG_ParseAnimFile each time a fresh MDX
+ * is registered; consumed by cg_vanguard_mdx.c. */
+vg_mdx_path_entry_t vg_mdx_path_table[VG_MDX_PATH_MAX];
+int                 vg_mdx_path_count = 0;
+
+const char *vg_FindMDXPath(qhandle_t handle)
+{
+	int i;
+
+	if (handle == 0)
+	{
+		return NULL;
+	}
+	for (i = 0; i < vg_mdx_path_count; i++)
+	{
+		if (vg_mdx_path_table[i].handle == handle)
+		{
+			return vg_mdx_path_table[i].path;
+		}
+	}
+	return NULL;
+}
+
+static void vg_StoreMDXPath(qhandle_t handle, const char *path)
+{
+	int i;
+
+	if (handle == 0 || !path)
+	{
+		return;
+	}
+	/* Same handle/path already registered (e.g. anim group reused
+	 * across class-variants) — keep the first entry, drop dupes. */
+	for (i = 0; i < vg_mdx_path_count; i++)
+	{
+		if (vg_mdx_path_table[i].handle == handle)
+		{
+			return;
+		}
+	}
+	if (vg_mdx_path_count >= VG_MDX_PATH_MAX)
+	{
+		/* Silently drop. Capacity headroom is generous (64 vs ~13
+		 * MDX files in human_base) so this should never fire in
+		 * practice; if it does, cgame falls back to trap_R_LerpTag
+		 * (MDM tags only) for the missing handle. */
+		return;
+	}
+	vg_mdx_path_table[vg_mdx_path_count].handle = handle;
+	Q_strncpyz(vg_mdx_path_table[vg_mdx_path_count].path, path,
+	           sizeof(vg_mdx_path_table[vg_mdx_path_count].path));
+	vg_mdx_path_count++;
+}
+/* END VANGUARD */
+
 /**
  * @brief BG_ClearAnimationPool
  */
@@ -248,6 +304,8 @@ static qboolean BG_RAG_ParseAnimFile(int handle, animModelInfo_t *animModelInfo)
 	{
 		return BG_RAG_ParseError(handle, "failed to load %s", token.string);
 	}
+	/* VANGUARD: record handle->path mapping for cgame's MDX loader. */
+	vg_StoreMDXPath(mdxFile, token.string);
 #else
 	Q_strncpyz(mdxFileName, token.string, sizeof(mdxFileName));
 #endif // USE_MDXFILE

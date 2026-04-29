@@ -1763,6 +1763,30 @@ typedef struct animation_s
 	int movetype;
 } animation_t;
 
+/* VANGUARD: parallel table mapping engine MDX qhandles to file
+ * paths. The engine's R_LerpTag exposes only MDM tags, so cgame
+ * cannot resolve skeleton-bone positions via the engine. Phase 6
+ * Strategy I (docs/notes/CGAME_BONE_CALC_RECON.md) loads MDX files
+ * directly in cgame for bone math; that loader needs the path
+ * string but qhandles are opaque, so we record the path string
+ * here at registration time and let cgame translate handle->path
+ * via vg_FindMDXPath(). bg_animgroup.c populates the table from
+ * BG_RAG_ParseAnimFile, which both qagame and cgame call during
+ * character setup. */
+#define VG_MDX_PATH_MAX 64
+
+typedef struct vg_mdx_path_entry_s
+{
+	qhandle_t handle;
+	char      path[MAX_QPATH];
+} vg_mdx_path_entry_t;
+
+extern vg_mdx_path_entry_t vg_mdx_path_table[VG_MDX_PATH_MAX];
+extern int                 vg_mdx_path_count;
+
+const char *vg_FindMDXPath(qhandle_t handle);
+/* END VANGUARD */
+
 /*
  * @enum animHeadNumber_t
  * @brief Head animations
