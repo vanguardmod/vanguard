@@ -89,6 +89,14 @@ typedef struct
 	vec3_t      scale2;       /* same at bone2 end (zero for sphere) */
 	int         impactpoint;  /* IMPACTPOINT_* — used for hit-highlight match */
 	vec3_t      color;        /* RGB per region, alpha applied at render time */
+	vec3_t      offset1;      /* bone-local offset added to bone1 origin (mirrors */
+	vec3_t      offset2;      /* a server-side TAG `offset X Y Z` modifier in     */
+	                          /* etmain/animations/human_base.hit). HEAD uses     */
+	                          /* (0, 0, 6.5) at bone1 to match _vg_head's anchor; */
+	                          /* other regions zero. Applied bone-local-frame, so */
+	                          /* the offset rotates with the bone like the server */
+	                          /* trace does — see                                 */
+	                          /* vg_mdx_compute_bone_world_with_offset.           */
 } vg_hit_area_t;
 
 /* Mirrors etmain/animations/human_base.hit (Pass 1+2 retune). Keep
@@ -96,55 +104,70 @@ typedef struct
  * from .hit at build time, drift between client and server here is
  * the cost of a quick visualisation. */
 static const vg_hit_area_t vg_hit_areas[] = {
-	/* HEAD — sphere radius 6 on Bip01 Head */
+	/* HEAD — sphere radius 6 on Bip01 Head, +6.5 along the head bone's
+	 * local Z to anchor at the skull centre rather than the atlas. The
+	 * offset mirrors the `offset 0 0 6.5` modifier added in v0.4.1 to
+	 * the _vg_head TAG line in etmain/animations/human_base.hit; both
+	 * sides apply the same transform so the wireframe sits exactly
+	 * where mdx_hit_test traces. */
 	{ "Bip01 Head",       NULL,                VG_SHAPE_SPHERE,
 	  { 6, 6, 6 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
-	  { 1.0f, 0.2f, 0.2f } },                                /* red */
+	  { 1.0f, 0.2f, 0.2f },                                  /* red */
+	  { 0, 0, 6.5f }, { 0, 0, 0 } },
 
 	/* CHEST — box2 Spine1 -> Neck */
 	{ "Bip01 Spine1",     "Bip01 Neck",        VG_SHAPE_BOX2,
 	  { 9, 7, 5 }, { 9, 7, 5 }, IMPACTPOINT_CHEST,
-	  { 1.0f, 1.0f, 0.2f } },                                /* yellow */
+	  { 1.0f, 1.0f, 0.2f },                                  /* yellow */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* GUT — box2 Pelvis -> Spine2 */
 	{ "Bip01 Pelvis",     "Bip01 Spine2",      VG_SHAPE_BOX2,
 	  { 9, 7, 5 }, { 9, 7, 5 }, IMPACTPOINT_GUT,
-	  { 1.0f, 0.6f, 0.2f } },                                /* orange */
+	  { 1.0f, 0.6f, 0.2f },                                  /* orange */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* GROIN — sphere radius 7 on Pelvis */
 	{ "Bip01 Pelvis",     NULL,                VG_SHAPE_SPHERE,
 	  { 7, 7, 7 }, { 0, 0, 0 }, IMPACTPOINT_GROIN,
-	  { 1.0f, 0.4f, 0.6f } },                                /* pink */
+	  { 1.0f, 0.4f, 0.6f },                                  /* pink */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* LEFT SHOULDER — cylinder Clavicle -> UpperArm */
 	{ "Bip01 L Clavicle", "Bip01 L UpperArm",  VG_SHAPE_CYLINDER,
 	  { 5, 5, 5 }, { 5, 5, 5 }, IMPACTPOINT_SHOULDER_LEFT,
-	  { 0.4f, 0.6f, 1.0f } },                                /* blue */
+	  { 0.4f, 0.6f, 1.0f },                                  /* blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* RIGHT SHOULDER */
 	{ "Bip01 R Clavicle", "Bip01 R UpperArm",  VG_SHAPE_CYLINDER,
 	  { 5, 5, 5 }, { 5, 5, 5 }, IMPACTPOINT_SHOULDER_RIGHT,
-	  { 0.4f, 0.6f, 1.0f } },                                /* blue */
+	  { 0.4f, 0.6f, 1.0f },                                  /* blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* LEFT KNEE — cylinder Thigh -> Calf */
 	{ "Bip01 L Thigh",    "Bip01 L Calf",      VG_SHAPE_CYLINDER,
 	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_KNEE_LEFT,
-	  { 0.4f, 1.0f, 0.4f } },                                /* green */
+	  { 0.4f, 1.0f, 0.4f },                                  /* green */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* RIGHT KNEE */
 	{ "Bip01 R Thigh",    "Bip01 R Calf",      VG_SHAPE_CYLINDER,
 	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_KNEE_RIGHT,
-	  { 0.4f, 1.0f, 0.4f } },                                /* green */
+	  { 0.4f, 1.0f, 0.4f },                                  /* green */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* LEFT LEG (calf->foot, shares IMPACTPOINT_LEGS with right) */
 	{ "Bip01 L Calf",     "Bip01 L Foot",      VG_SHAPE_CYLINDER,
 	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_LEGS,
-	  { 0.2f, 1.0f, 0.8f } },                                /* cyan */
+	  { 0.2f, 1.0f, 0.8f },                                  /* cyan */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* RIGHT LEG */
 	{ "Bip01 R Calf",     "Bip01 R Foot",      VG_SHAPE_CYLINDER,
 	  { 6, 6, 6 }, { 6, 6, 6 }, IMPACTPOINT_LEGS,
-	  { 0.2f, 1.0f, 0.8f } }                                 /* cyan */
+	  { 0.2f, 1.0f, 0.8f },                                  /* cyan */
+	  { 0, 0, 0 }, { 0, 0, 0 } }
 };
 #define VG_HIT_AREA_COUNT ((int)(sizeof(vg_hit_areas) / sizeof(vg_hit_areas[0])))
 
@@ -231,28 +254,56 @@ static qboolean vg_BuildBodyRefent(const centity_t *cent, refEntity_t *body)
 }
 
 /**
- * @brief Look up a bone's world-space origin by name.
+ * @brief Look up a bone's world-space origin by name, optionally
+ *        applying a bone-local-frame offset.
  *
  *        Phase 6 Strategy I (v0.4.0): primary path is our own MDX
  *        loader (cg_vanguard_mdx.c) which parses the player's .mdx
  *        files and computes bone positions with the same math the
- *        server uses for hit-detection — vg_mdx_compute_bone_world
- *        is functionally equivalent to qagame's mdx_calculate_bone_lerp
- *        for origin output. Falls back to trap_R_LerpTag for tag
- *        names (e.g. "tag_head", "tag_weapon") and for clients whose
- *        MDX file path failed to register in the bg_animgroup table.
+ *        server uses for hit-detection. Falls back to trap_R_LerpTag
+ *        for tag names (e.g. "tag_head", "tag_weapon") and for
+ *        clients whose MDX file path failed to register in the
+ *        bg_animgroup table.
  *
- * @return qfalse if both paths fail.
+ *        v0.4.1: `offset` lets a hit-area carry a per-tag bone-local
+ *        offset that mirrors a `TAG ... offset X Y Z` modifier in
+ *        the .hit file. The MDX path applies it bone-local-frame
+ *        (rotated by the bone's axis) so it tracks animations the
+ *        same way the server-side mdx_tag_orientation does. The
+ *        fallback path applies it tag-local-frame; if a hit-area
+ *        with offset ever has to fall back, this is the closest
+ *        approximation the engine syscall can produce.
+ *
+ * @param[in]  body    refEntity built by vg_BuildBodyRefent
+ * @param[in]  bone    .mdx skeleton bone name or .mdm tag name
+ * @param[in]  offset  bone-local offset (NULL or zero == disabled)
+ * @param[out] outWorld world-space origin
+ *
+ * @return qfalse if both primary and fallback fail.
  */
 static qboolean vg_GetBoneOrigin(const refEntity_t *body, const char *bone,
-                                 vec3_t outWorld)
+                                 const vec3_t offset, vec3_t outWorld)
 {
 	orientation_t lerped;
 	int           i;
+	qboolean      haveOffset;
 
-	if (vg_mdx_compute_bone_world(body, bone, outWorld))
+	haveOffset = (offset != NULL) &&
+	             (offset[0] != 0.0f || offset[1] != 0.0f || offset[2] != 0.0f);
+
+	if (haveOffset)
 	{
-		return qtrue;
+		if (vg_mdx_compute_bone_world_with_offset(body, bone, offset, outWorld))
+		{
+			return qtrue;
+		}
+	}
+	else
+	{
+		if (vg_mdx_compute_bone_world(body, bone, outWorld))
+		{
+			return qtrue;
+		}
 	}
 
 	if (trap_R_LerpTag(&lerped, body, bone, 0) < 0)
@@ -263,6 +314,17 @@ static qboolean vg_GetBoneOrigin(const refEntity_t *body, const char *bone,
 	for (i = 0; i < 3; i++)
 	{
 		VectorMA(outWorld, lerped.origin[i], body->axis[i], outWorld);
+	}
+	if (haveOffset)
+	{
+		/* Tag-local offset via lerped.axis is the closest approximation
+		 * to bone-local frame from the trap_R_LerpTag fallback path.
+		 * We expect this branch to be cold — the MDX path covers all
+		 * registered animation models. */
+		for (i = 0; i < 3; i++)
+		{
+			VectorMA(outWorld, offset[i], lerped.axis[i], outWorld);
+		}
 	}
 	return qtrue;
 }
@@ -459,7 +521,7 @@ static void vg_DrawPlayerMultibox(int clientNum, float alpha)
 	{
 		const vg_hit_area_t *area = &vg_hit_areas[i];
 
-		if (!vg_GetBoneOrigin(&body, area->bone1, o1))
+		if (!vg_GetBoneOrigin(&body, area->bone1, area->offset1, o1))
 		{
 			continue;
 		}
@@ -471,7 +533,7 @@ static void vg_DrawPlayerMultibox(int clientNum, float alpha)
 			break;
 
 		case VG_SHAPE_CYLINDER:
-			if (!vg_GetBoneOrigin(&body, area->bone2, o2))
+			if (!vg_GetBoneOrigin(&body, area->bone2, area->offset2, o2))
 			{
 				break;
 			}
@@ -481,7 +543,7 @@ static void vg_DrawPlayerMultibox(int clientNum, float alpha)
 			break;
 
 		case VG_SHAPE_BOX2:
-			if (!vg_GetBoneOrigin(&body, area->bone2, o2))
+			if (!vg_GetBoneOrigin(&body, area->bone2, area->offset2, o2))
 			{
 				break;
 			}

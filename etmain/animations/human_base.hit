@@ -64,8 +64,29 @@
 // Each TAG declares an internal tag that wraps a real
 // skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
 // so the bone-name spelling must match the .mdx exactly.
+//
+// _vg_head additionally applies an `offset 0 0 6.5` along the
+// head bone's local Z (up). The Bip01 Head bone-origin in the
+// 3DS-Max biped skeleton sits at the atlas / skull-base — a
+// radius-6 sphere centered there lands on the chin/upper-neck
+// in the visible mesh, far below the actual skull-cap. The
+// legacy realhead trace path (mdx_head_position, g_mdx.c:2946)
+// has used this exact +6.5 Z offset since the original
+// implementation; the multi-region mdx_hit_test pipeline that
+// went live in Phase 6 (v0.3.3) accidentally lost it because
+// _vg_head was declared without modifiers. v0.4.0 live-test
+// confirmed the symptom: ~2% HEAD-shot rate vs the legacy AABB
+// path's much higher rate. v0.4.1 restores the +6.5 anchor and
+// brings hit-detection up to the visible skull. The matching
+// offset is hardcoded in cgame's vg_hit_areas[] HEAD entry so
+// the wireframe visualisation tracks the real trace position.
+//
+// 0.5 forward (which mdx_head_position also applies) is
+// intentionally omitted — for a sphere it has no effect on the
+// hit volume centre, only on the orientation of any rotated
+// scale vector, and we use isotropic radius-6.
 
-TAG _vg_head      "Bip01 Head"
+TAG _vg_head      "Bip01 Head" offset 0 0 6.5
 TAG _vg_neck      "Bip01 Neck"
 TAG _vg_spine_lo  "Bip01 Spine"
 TAG _vg_spine_mid "Bip01 Spine1"

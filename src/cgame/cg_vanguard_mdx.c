@@ -47,7 +47,8 @@ typedef struct vg_mdx_bone_s
 
 typedef struct vg_mdx_frame_bone_s
 {
-	short offset_angles[2];
+	short  offset_angles[2];   /* read from byte  8.. of mdx_frame_bone */
+	vec3_t anglesF;            /* per-frame Euler angles, pre-converted */
 } vg_mdx_frame_bone_t;
 
 typedef struct vg_mdx_frame_s
@@ -373,12 +374,25 @@ static qboolean vg_mdx_parse(vg_mdx_model_t *out, const byte *mem, int len)
 		fb = fr + VG_MDX_FRAME_HDR_SIZE;
 		for (j = 0; j < bone_count; j++)
 		{
-			/* offset_angles starts at byte 8 within the frame_bone
-			 * (angles[6] + unused[2] = 8). */
-			const byte *oa = fb + j * VG_MDX_FRAME_BONE_SIZE + 8;
+			const byte *fb_entry = fb + j * VG_MDX_FRAME_BONE_SIZE;
+			short       a0;
+			short       a1;
+			short       a2;
 
-			out->frames[i].bones[j].offset_angles[0] = vg_mdx_read_short(oa);
-			out->frames[i].bones[j].offset_angles[1] = vg_mdx_read_short(oa + 2);
+			/* angles[3] starts at byte 0 within the frame_bone — used
+			 * (anglesF below) for bone-local axis math. v0.4.1 added
+			 * this to support bone-local-frame offsets like _vg_head's
+			 * +6.5 Z anchor; v0.4.0 only read offset_angles. */
+			a0 = vg_mdx_read_short(fb_entry);
+			a1 = vg_mdx_read_short(fb_entry + 2);
+			a2 = vg_mdx_read_short(fb_entry + 4);
+			out->frames[i].bones[j].anglesF[0] = SHORT2ANGLE(a0);
+			out->frames[i].bones[j].anglesF[1] = SHORT2ANGLE(a1);
+			out->frames[i].bones[j].anglesF[2] = SHORT2ANGLE(a2);
+
+			/* offset_angles starts at byte 8 (angles[6] + unused[2]). */
+			out->frames[i].bones[j].offset_angles[0] = vg_mdx_read_short(fb_entry + 8);
+			out->frames[i].bones[j].offset_angles[1] = vg_mdx_read_short(fb_entry + 10);
 		}
 	}
 
@@ -498,9 +512,83 @@ static int vg_mdx_find_bone(const vg_mdx_model_t *mdx, const char *name)
 	return -1;
 }
 
+/* ============================================================= */
+/* Bone-local axis matrix (model-frame)                           */
+/*                                                                */
+/* Direct port of mdx_bone_orientation's axis-only path           */
+/* (g_mdx.c:1644-1673), simplified for cgame: the qagame torso-   */
+/* axis mixing via MatrixWeight is omitted because cgame's        */
+/* refent->torsoAxis is set to body->axis (the player's WORLD-    */
+/* frame rotation), not the qagame in-MODEL torsoAxis. With that  */
+/* mismatch, MatrixWeight would produce a matrix in the wrong     */
+/* frame and rotate the offset incorrectly. Skipping it lands us  */
+/* on transpose(AnglesToAxis(lerpedAnglesF)), which is the bone's */
+/* MODEL-LOCAL orientation — the right basis for offsets that     */
+/* should rotate with the bone (e.g. _vg_head's +6.5 Z).          */
+/* ============================================================= */
+
+static void vg_mdx_compute_bone_axis_local(vg_mdx_model_t *legsModel,
+                                           vg_mdx_model_t *oldLegsModel,
+                                           vg_mdx_model_t *torsoModel,
+                                           vg_mdx_model_t *oldTorsoModel,
+                                           const refEntity_t *body,
+                                           int i,
+                                           vec3_t outAxis[3])
+{
+	vg_mdx_model_t            *boneFrameModel;
+	vg_mdx_model_t            *oldBoneFrameModel;
+	int                        frame;
+	int                        oldframe;
+	float                      backlerp;
+	const vg_mdx_frame_bone_t *frameBone;
+	const vg_mdx_frame_bone_t *oldFrameBone;
+	vec3_t                     angles;
+	vec3_t                     pre;
+
+	if (legsModel->bones[i].torso_weight != 0.0f)
+	{
+		boneFrameModel    = torsoModel;
+		oldBoneFrameModel = oldTorsoModel;
+		frame             = body->torsoFrame;
+		oldframe          = body->oldTorsoFrame;
+		backlerp          = body->torsoBacklerp;
+	}
+	else
+	{
+		boneFrameModel    = legsModel;
+		oldBoneFrameModel = oldLegsModel;
+		frame             = body->frame;
+		oldframe          = body->oldframe;
+		backlerp          = body->backlerp;
+	}
+
+	if (frame < 0)                                  { frame = 0; }
+	if (frame >= boneFrameModel->frame_count)       { frame = boneFrameModel->frame_count - 1; }
+	if (oldframe < 0)                               { oldframe = 0; }
+	if (oldframe >= oldBoneFrameModel->frame_count) { oldframe = oldBoneFrameModel->frame_count - 1; }
+
+	frameBone    = &boneFrameModel->frames[frame].bones[i];
+	oldFrameBone = &oldBoneFrameModel->frames[oldframe].bones[i];
+
+	VectorScale(oldFrameBone->anglesF, backlerp, angles);
+	VectorMA(angles, 1.0f - backlerp, frameBone->anglesF, angles);
+
+	AnglesToAxis(angles, pre);
+	TransposeMatrix(pre, outAxis);
+}
+
 qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
                                     const char *boneName,
                                     vec3_t outWorld)
+{
+	static const vec3_t zero = { 0, 0, 0 };
+	return vg_mdx_compute_bone_world_with_offset(body, boneName, zero, outWorld);
+}
+
+qboolean vg_mdx_compute_bone_world_with_offset(const refEntity_t *body,
+                                                const char *boneName,
+                                                const vec3_t boneLocalOffset,
+                                                vec3_t outWorld)
 {
 	vg_mdx_model_t *legs;
 	vg_mdx_model_t *oldLegs;
@@ -508,12 +596,11 @@ qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
 	vg_mdx_model_t *oldTorso;
 	int             boneIndex;
 	int             k;
+	vec3_t          modelLocal;
+	qboolean        haveOffset;
 
 	if (!body || !boneName || !outWorld)                                      { return qfalse; }
 
-	/* Lazy-register all four MDX handles attached to this refent.
-	 * vg_mdx_register_for_handle is idempotent and skips already-
-	 * registered handles. */
 	vg_mdx_register_for_handle(body->frameModel);
 	vg_mdx_register_for_handle(body->oldframeModel);
 	vg_mdx_register_for_handle(body->torsoFrameModel);
@@ -526,9 +613,6 @@ qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
 	torso    = vg_mdx_get(body->torsoFrameModel);
 	oldTorso = vg_mdx_get(body->oldTorsoFrameModel);
 
-	/* Match qagame's QHANDLETOINDEX_SAFE fallback chain — if a
-	 * secondary model failed to register (e.g. mid-anim load),
-	 * substitute the next stable handle. */
 	if (!oldLegs)                                                             { oldLegs  = legs; }
 	if (!torso)                                                               { torso    = legs; }
 	if (!oldTorso)                                                            { oldTorso = torso; }
@@ -547,13 +631,31 @@ qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
 	vg_mdx_calculate_bone_lerp(legs, oldLegs, torso, oldTorso,
 	                           body, boneIndex, qtrue);
 
+	VectorCopy(vg_mdx_scratch[boneIndex], modelLocal);
+
+	haveOffset = (boneLocalOffset != NULL) &&
+	             (boneLocalOffset[0] != 0.0f ||
+	              boneLocalOffset[1] != 0.0f ||
+	              boneLocalOffset[2] != 0.0f);
+
+	if (haveOffset)
+	{
+		vec3_t boneAxis[3];
+		vec3_t rotated;
+
+		vg_mdx_compute_bone_axis_local(legs, oldLegs, torso, oldTorso,
+		                               body, boneIndex, boneAxis);
+		vec3_rotate(boneLocalOffset, boneAxis, rotated);
+		VectorAdd(modelLocal, rotated, modelLocal);
+	}
+
 	/* Transform model-local origin into world-space:
-	 *   world = body->origin + sum_k(scratch[boneIndex][k] * body->axis[k])
+	 *   world = body->origin + sum_k(modelLocal[k] * body->axis[k])
 	 * matching mdx_tag_orientation's tail (g_mdx.c:1734-1738). */
 	VectorCopy(body->origin, outWorld);
 	for (k = 0; k < 3; k++)
 	{
-		VectorMA(outWorld, vg_mdx_scratch[boneIndex][k], body->axis[k], outWorld);
+		VectorMA(outWorld, modelLocal[k], body->axis[k], outWorld);
 	}
 	return qtrue;
 }
