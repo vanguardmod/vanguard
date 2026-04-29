@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(VanguardMod
-    VERSION 0.3.8a
+    VERSION 0.4.0
     DESCRIPTION "Wolfenstein: Enemy Territory competitive mod for ETLegacy"
     LANGUAGES C
 )
