@@ -3,6 +3,129 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.4.0 — 2026-04-29 — Phase 6 major release
+
+VanguardMod's first feature release: the **Multi-Region Damage
+Pipeline** plus a **bone-tracked hitbox visualisation** that
+matches it server-side hit-by-hit. This is the milestone that
+activates ETPro/RtCW's dormant multi-region damage architecture
+in ETLegacy for the first time, and pairs it with a custom
+cgame-side MDX skeleton loader so what the client sees is what
+the server hits.
+
+### Multi-Region Damage Pipeline (server-side)
+
+Activated in stages from v0.3.3 through v0.3.4 and verified live
+in the v0.3.4–v0.3.5 multi-user testing on Pterodactyl. Stable
+since v0.3.4; this release packages it as a first-class feature
+rather than an internal-testing flag.
+
+  - **Nine fine-grained body regions.** HEAD, CHEST, GUT, GROIN,
+    SHOULDER L/R, KNEE L/R, LEGS — each with its own damage
+    multiplier (`vanguard_dmg_head` … `vanguard_dmg_legs`,
+    `CVAR_ARCHIVE`, mid-match tunable).
+  - **Bone-tracked hit detection.** `mdx_hit_test` against
+    `etmain/animations/human_base.hit` (Pass 1+2 retune)
+    follows the player's MDX skeleton across every animation
+    frame — far more accurate than vanilla AABB hitboxes.
+  - **Latched mode cvar.** `vanguard_hitbox_mode 1`
+    (`CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO`) is the
+    master switch; `mode 0` falls back byte-identically to the
+    vanilla pipeline. Latched so a server cannot drift between
+    regimes mid-match.
+  - **Verified hit-rate.** v0.3.5 instrumentation logged 0%
+    `IMPACTPOINT_UNUSED` across the gestern Multi-User-Test
+    (Alphaloki, 8/8 valid hits). Vanilla AABB had been
+    bottlenecking around the 10% mark in equivalent setups.
+
+### Cgame Hitbox Visualisation (client-side, Strategy I)
+
+The visualisation that v0.3.6 promised, finally working. The
+v0.3.6–v0.3.8a iterations identified that the engine's
+`R_LerpTag` exposes only MDM tags (`tag_head`, `tag_chest`,
+…), never the raw skeleton bones our hit-areas are anchored to.
+This release ships a self-contained MDX loader in cgame so the
+visualisation runs the same bone math the server uses.
+
+  - **Ten wireframe capsules per visible player.** Spheres for
+    HEAD and GROIN (radius 6 / 7), `box2` primitives for CHEST
+    and GUT (`Spine1↔Neck`, `Pelvis↔Spine2`), cylinders for
+    SHOULDER L/R, KNEE L/R, and LEGS (calf↔foot).
+  - **Per-region colour palette.** HEAD red, CHEST yellow,
+    GUT orange, GROIN pink, SHOULDER blue, KNEE green, LEGS
+    cyan. Lets the eye spot misalignment at a glance.
+  - **Custom MDX loader** (`src/cgame/cg_vanguard_mdx.c`,
+    ~430 lines). Direct port of `mdx_load` +
+    `mdx_calculate_bone_lerp` from `g_mdx.c`, origin-only
+    (mesh-deformation paths skipped). Loads MDX files via
+    `trap_FS_*` syscalls into a private 16-slot registry,
+    walks the bone hierarchy with the same per-frame
+    `offset_angles` lerp the server uses for hit-detection,
+    transforms model-local origins to world space via
+    `body->origin + body->axis`. The result is 1:1
+    positionally with `mdx_hit_test`'s view of the skeleton.
+  - **Path-table bridge** (`src/game/bg_animgroup.c`).
+    Engine MDX qhandles are opaque from inside the cgame VM,
+    so we record the file path string at registration time
+    (in `BG_RAG_ParseAnimFile`) into a parallel
+    `vg_mdx_path_table[64]` declared in `bg_public.h`.
+    Cgame translates handle → path via `vg_FindMDXPath()`
+    when it needs to load a fresh MDX. Capacity is generous
+    (16 cgame registry slots vs ~13 MDX files in `human_base`).
+  - **Cvar control unchanged from v0.3.6.**
+    `cg_vanguardDevMultibox 1` (CVAR_ARCHIVE, default 1)
+    toggles the multi-region overlay independently of the
+    legacy AABB cvar. Server-side `vanguard_dev 1` is the
+    primary gate. `cg_vanguardDevAlpha 0.4` controls
+    transparency.
+  - **Fallback to `trap_R_LerpTag`** for handles whose path
+    failed to register (e.g. stale snapshot during a model
+    hot-reload). Tag-name lookups still work for non-skeleton
+    anchors if a future hit-area uses one.
+
+### Diagnostic cleanup
+
+  - Removed v0.3.7's per-bone `VG_DIAG: vg_GetBoneOrigin FAIL`
+    print and v0.3.8a's MDM tag probe block from
+    `cg_vanguard_dev.c`. The `body.hModel = character->mesh`
+    fix introduced in v0.3.8a stays — it's a real bug fix,
+    not diagnostic.
+  - The server-side `VG_DIAG: mdx_hit_test` print
+    (`g_combat.c`) is unchanged: still cvar-gated on
+    `vanguard_hitbox_debug`, default off.
+
+### Infrastructure fix
+
+  - **`fix(cmake): strip leading zeros from ETL_BUILD_VERSION_INT`**
+    (`32da1a0`, originally shipped as part of the v0.3.8a
+    release). Latent C-octal-literal bug in the upstream
+    `cmake/version_generated.h.in` template that broke the
+    build for any version with a digit ≥ 8 in the padded
+    form. Fix: drop leading zeros so the literal is parsed as
+    decimal. Unblocks every future v0.X.Y where any
+    component digit is 8 or 9. Tagged with `# VANGUARD:`
+    markers, eligible for upstreaming.
+
+### Phase 6 progression
+
+  - v0.3.3 → BONE_HITTESTS pipeline activation
+  - v0.3.4 → `human_base.hit` Pass 1+2 geometry retune
+  - v0.3.5 → IMPACTPOINT diagnostic instrumentation
+  - v0.3.6 → cgame multi-region visualisation (Bip01 names —
+    didn't render because of the MDX/MDM tag mismatch
+    discovered in the v0.3.7 live-test)
+  - v0.3.7 → bone-resolution diagnostic
+  - v0.3.8a → MDM tag list probe + `body.hModel` fix
+  - **v0.4.0 → Strategy I full MDX port + Phase 6 release**
+
+No gameplay changes since v0.3.4. Same hit-detection, same
+multipliers, same `human_base.hit` geometry. The only new
+runtime work is in cgame: MDX file parsing on first sight of
+each animation pose (~30 KB per file × ~13 files = ~400 KB
+total once the player has been observed in every animation
+context), then ~200 multiply-adds per visible player per
+frame for bone-position lookup. Negligible.
+
 ## v0.3.8a — 2026-04-29 — Tag-list probe + body.hModel fix
 
 Pre-implementation diagnostic for v0.3.8 Strategy II
