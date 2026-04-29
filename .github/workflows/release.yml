@@ -1,0 +1,315 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+# SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+#
+# Release workflow — tag-triggered build + package + GitHub Release.
+#
+# Pushing a tag matching `v*` (e.g. v0.4.3, v0.4.4, v1.0.0-rc1) kicks
+# off three parallel/sequential builds and publishes a GitHub Release
+# with two ZIP assets:
+#   * vanguard-vX.Y.Z-server.zip — server binaries (Linux + Windows
+#     x64/x86) plus the multi-arch vanguard_vX.Y.Z.pk3
+#   * vanguard-vX.Y.Z-client.zip — client pk3 only
+#
+# Workflow architecture (see docs/CI.md for the full rationale):
+#
+#   build-windows-x64 ─┐
+#                      ├─→ build-linux-and-package ─→ GitHub Release
+#   build-windows-x86 ─┘
+#
+# The Linux step needs the cross-built Windows DLLs available on disk
+# at cmake-configure time, because cmake/ETLBuildMod.cmake's BUILD_MOD_PK3
+# target does a FILE(GLOB) over build-windows*/vanguard/*.dll while
+# generating its mod_pk3 dependency list. Running Linux after the two
+# Windows jobs (and downloading the DLL artifacts into the expected
+# directory layout) is what makes the multi-arch pk3 work.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Single env-level toggle: set to "false" once the workflow is
+# trusted to publish releases without manual review.
+env:
+  RELEASE_DRAFT: "true"
+
+# Common cmake flags shared between the three build jobs. Mirrors the
+# canonical sequence in docs/RELEASE_PROCESS.md and scripts/bootstrap.sh.
+# Pulled out as a top-level env var so the three jobs stay in sync.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # -------------------------------------------------------------------
+  # build-windows-x64 — cross-compile via mingw-w64 x86_64 toolchain.
+  # Outputs four DLLs (cgame_mp_x64.dll, qagame_mp_x64.dll,
+  # tvgame_mp_x64.dll, ui_mp_x64.dll) uploaded as the 'win-x64-dlls'
+  # artifact for the package job to download.
+  # -------------------------------------------------------------------
+  build-windows-x64:
+    name: Build Windows x86_64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config mingw-w64
+
+      - name: Configure
+        run: |
+          cmake -B build-windows \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCI_ETL_TAG=${{ github.ref_name }} \
+            -DCI_ETL_DESCRIBE=${{ github.ref_name }} \
+            -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
+            -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
+            -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
+            -DINSTALL_EXTRA=OFF
+
+      - name: Build
+        run: cmake --build build-windows -j
+
+      - name: Upload Win64 DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-x64-dlls
+          path: build-windows/vanguard/*.dll
+          if-no-files-found: error
+          retention-days: 7
+
+  # -------------------------------------------------------------------
+  # build-windows-x86 — same as above but with the 32-bit toolchain
+  # and CROSS_COMPILE32=ON.
+  # -------------------------------------------------------------------
+  build-windows-x86:
+    name: Build Windows x86
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config mingw-w64
+
+      - name: Configure
+        run: |
+          cmake -B build-windows-32 \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \
+            -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCI_ETL_TAG=${{ github.ref_name }} \
+            -DCI_ETL_DESCRIBE=${{ github.ref_name }} \
+            -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
+            -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
+            -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
+            -DINSTALL_EXTRA=OFF
+
+      - name: Build
+        run: cmake --build build-windows-32 -j
+
+      - name: Upload Win32 DLLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-x86-dlls
+          path: build-windows-32/vanguard/*.dll
+          if-no-files-found: error
+          retention-days: 7
+
+  # -------------------------------------------------------------------
+  # build-linux-and-package — final stage. Downloads the DLL artifacts
+  # from the two Windows jobs into the layout cmake/ETLBuildMod.cmake
+  # expects (build-windows/vanguard/, build-windows-32/vanguard/), then
+  # runs the canonical Linux build with BUILD_MOD_PK3=ON which generates
+  # the multi-arch vanguard_vX.Y.Z.pk3. Finally assembles two ZIPs and
+  # creates the GitHub Release.
+  # -------------------------------------------------------------------
+  build-linux-and-package:
+    name: Build Linux + Package + Release
+    needs: [build-windows-x64, build-windows-x86]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write   # required for softprops/action-gh-release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config curl zip
+
+      - name: Download Win64 DLLs
+        uses: actions/download-artifact@v4
+        with:
+          name: win-x64-dlls
+          path: build-windows/vanguard
+
+      - name: Download Win32 DLLs
+        uses: actions/download-artifact@v4
+        with:
+          name: win-x86-dlls
+          path: build-windows-32/vanguard
+
+      # The Omni-Bot runtime is a ~20 MB tarball ETLegacy distributes.
+      # qagame, when built with FEATURE_OMNIBOT=ON, dlopen()s pieces of
+      # it at map load. Cache it across runs so we don't hammer the
+      # mirror on every release. Cache key tied to bootstrap.sh content
+      # because that's where the URL + extraction logic lives.
+      - name: Cache Omni-Bot runtime
+        id: omnibot-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor/omnibot-runtime/extracted
+          key: omnibot-${{ hashFiles('scripts/bootstrap.sh') }}
+
+      - name: Fetch Omni-Bot runtime (cache miss)
+        if: steps.omnibot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p vendor/omnibot-runtime/extracted
+          curl --fail --location --silent --show-error \
+            --output /tmp/omnibot.tar.gz \
+            https://mirror.etlegacy.com/omnibot/omnibot-linux-latest.tar.gz
+          tar -xzf /tmp/omnibot.tar.gz -C vendor/omnibot-runtime/extracted
+          rm /tmp/omnibot.tar.gz
+          test -d vendor/omnibot-runtime/extracted/omni-bot
+
+      - name: Configure Linux + pk3
+        run: |
+          cmake -B build \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON \
+            -DCI_ETL_TAG=${{ github.ref_name }} \
+            -DCI_ETL_DESCRIBE=${{ github.ref_name }} \
+            -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
+            -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
+            -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
+            -DINSTALL_EXTRA=OFF
+
+      - name: Build Linux + generate pk3
+        run: cmake --build build -j
+
+      - name: Extract version
+        id: version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      # Pull the matching `## v0.X.Y — DATE — TITLE` section out of
+      # docs/RELEASE_NOTES.md. Falls back to a `git log` summary if the
+      # release notes don't have a section for this tag.
+      - name: Generate changelog
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          NOTES="docs/RELEASE_NOTES.md"
+
+          BODY=""
+          if [ -f "${NOTES}" ]; then
+            BODY=$(awk -v tag="${TAG}" '
+              $0 ~ "^## " tag " " { found=1; next }
+              found && /^## v/    { exit }
+              found               { print }
+            ' "${NOTES}")
+          fi
+
+          if [ -z "${BODY// }" ]; then
+            echo "::warning::No section found in ${NOTES} for ${TAG} — falling back to git log"
+            PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+            if [ -n "${PREV}" ]; then
+              BODY=$(git log --pretty=format:'- %s' "${PREV}..${TAG}")
+              BODY=$(printf '## Changelog (auto-generated from git log)\n\n%s\n' "${BODY}")
+            else
+              BODY="Initial release."
+            fi
+          fi
+
+          {
+            printf '%s\n' "${BODY}"
+            printf '\n---\n\n'
+            printf '**Build:** %s run #%s\n' "${{ github.workflow }}" "${{ github.run_number }}"
+            printf '**Commit:** %s\n\n' "${{ github.sha }}"
+            printf '## Downloads\n\n'
+            printf -- '- `vanguard-%s-server.zip` — server binaries (Linux + Win x64/x86) + multi-arch pk3\n' "${TAG}"
+            printf -- '- `vanguard-%s-client.zip` — client pk3 only (~23 MB)\n\n' "${TAG}"
+            printf 'Install instructions: see `INSTALL_SERVER.md` / `INSTALL_CLIENT.md` inside each archive.\n'
+          } > release_body.md
+
+          echo "--- release_body.md preview ---"
+          head -30 release_body.md
+          echo "--- (truncated) ---"
+
+      - name: Assemble server ZIP
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          STAGING="staging-server"
+
+          mkdir -p "${STAGING}/vanguard"
+
+          # Linux .so
+          cp build/vanguard/cgame.mp.x86_64.so   "${STAGING}/vanguard/"
+          cp build/vanguard/qagame.mp.x86_64.so  "${STAGING}/vanguard/"
+          cp build/vanguard/tvgame.mp.x86_64.so  "${STAGING}/vanguard/"
+          cp build/vanguard/ui.mp.x86_64.so      "${STAGING}/vanguard/"
+
+          # Windows .dll
+          cp build/vanguard/cgame_mp_x64.dll     "${STAGING}/vanguard/"
+          cp build/vanguard/qagame_mp_x64.dll    "${STAGING}/vanguard/"
+          cp build/vanguard/tvgame_mp_x64.dll    "${STAGING}/vanguard/"
+          cp build/vanguard/ui_mp_x64.dll        "${STAGING}/vanguard/"
+          cp build/vanguard/cgame_mp_x86.dll     "${STAGING}/vanguard/"
+          cp build/vanguard/qagame_mp_x86.dll    "${STAGING}/vanguard/"
+          cp build/vanguard/tvgame_mp_x86.dll    "${STAGING}/vanguard/"
+          cp build/vanguard/ui_mp_x86.dll        "${STAGING}/vanguard/"
+
+          # Multi-arch pk3
+          cp "build/vanguard/vanguard_${TAG}.pk3" "${STAGING}/vanguard/"
+
+          # Legal + install metadata
+          cp LICENSE COPYRIGHT NOTICE            "${STAGING}/"
+          cp docs/INSTALL_SERVER.md              "${STAGING}/INSTALL.md"
+
+          (cd "${STAGING}" && zip -r "../vanguard-${TAG}-server.zip" .)
+          ls -lh "vanguard-${TAG}-server.zip"
+
+      - name: Assemble client ZIP
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          STAGING="staging-client"
+
+          mkdir -p "${STAGING}/vanguard"
+          cp "build/vanguard/vanguard_${TAG}.pk3" "${STAGING}/vanguard/"
+          cp LICENSE                              "${STAGING}/"
+          cp docs/INSTALL_CLIENT.md               "${STAGING}/INSTALL.md"
+
+          (cd "${STAGING}" && zip -r "../vanguard-${TAG}-client.zip" .)
+          ls -lh "vanguard-${TAG}-client.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Toggle via top-level env. Switch to false once the workflow
+          # is trusted (one-line edit, no logic change).
+          draft: ${{ env.RELEASE_DRAFT == 'true' }}
+          tag_name: ${{ github.ref_name }}
+          name: VanguardMod ${{ github.ref_name }}
+          body_path: release_body.md
+          files: |
+            vanguard-${{ steps.version.outputs.tag }}-server.zip
+            vanguard-${{ steps.version.outputs.tag }}-client.zip
+          fail_on_unmatched_files: true
