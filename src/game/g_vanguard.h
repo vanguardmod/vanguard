@@ -1,4 +1,28 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ *
+ * This file is part of VanguardMod.
+ *
+ * VanguardMod is built on ETLegacy (https://www.etlegacy.com),
+ * which is licensed under GPL-3.0-or-later.
+ *
+ * VanguardMod is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * VanguardMod is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with VanguardMod. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
  * g_vanguard.h — VanguardMod server-side feature module entry points.
  *
  * Master header for VanguardMod-specific qagame extensions that sit on
@@ -80,6 +104,27 @@ qboolean vg_Hitbox_IsActive(void);
  *        Cheap; safe to call from the damage hot path.
  */
 qboolean vg_Hitbox_DebugActive(void);
+
+/**
+ * @brief Returns qtrue iff vanguard_hitbox_strict is non-zero —
+ *        i.e. shots that pass the engine's broad-phase player AABB
+ *        but fail to land in any of the multi-region capsules
+ *        defined by human_base.hit must be REJECTED rather than
+ *        falling through to the legacy chain (which would credit
+ *        them as ordinary body shots with full damage).
+ *
+ *        v0.4.3 default 1: strict on. AABB tolerance can be ~6 units
+ *        wider than the visible mesh in some poses, and the legacy
+ *        fallback turning that tolerance into damage is not a
+ *        behaviour competitive players want. Cup admins or anyone
+ *        wanting byte-identical legacy behaviour can flip it to 0.
+ *
+ *        Only meaningful when vg_Hitbox_IsActive() is qtrue and the
+ *        weapon's MOD has isHeadshot set; non-headshot weapons
+ *        (explosives etc.) skip the multi-region branch entirely
+ *        and are not affected by strict mode.
+ */
+qboolean vg_Hitbox_StrictMode(void);
 
 /**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.

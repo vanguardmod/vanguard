@@ -1,4 +1,28 @@
 /*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ *
+ * This file is part of VanguardMod.
+ *
+ * VanguardMod is built on ETLegacy (https://www.etlegacy.com),
+ * which is licensed under GPL-3.0-or-later.
+ *
+ * VanguardMod is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * VanguardMod is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with VanguardMod. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*
  * g_vanguard.c — VanguardMod server-side feature module.
  *
  * Houses Vanguard-specific qagame extensions. Currently implements the
@@ -247,6 +271,15 @@ typedef struct
 	 * Default 0 — admins enable live without rebuilding when tuning
 	 * the .hit geometry or chasing hit-rate regressions. */
 	vmCvar_t debug;
+
+	/* Strict-hitbox toggle. When enabled (default in v0.4.3) the
+	 * G_Damage multi-region branch rejects hits that pass the engine's
+	 * broad-phase player AABB but fail to land in any human_base.hit
+	 * capsule — instead of letting them fall through to the legacy
+	 * chain with full body-shot damage. CVAR_ARCHIVE so the admin
+	 * choice persists; not LATCH so cup organisers can flip live for
+	 * the casual portion of an event. */
+	vmCvar_t strict;
 } vg_hitbox_state_t;
 
 static vg_hitbox_state_t s_hitbox;
@@ -282,7 +315,12 @@ void vg_Hitbox_Init(void)
 	 * without re-typing. */
 	trap_Cvar_Register(&s_hitbox.debug,          "vanguard_hitbox_debug",   "0",   CVAR_ARCHIVE);
 
-	G_Printf("VG_Hitbox: initialized (mode=%d)\n", s_hitbox.mode.integer);
+	/* Strict-hitbox toggle — default 1 (reject AABB-only hits).
+	 * CVAR_ARCHIVE so admin choice persists across map changes. */
+	trap_Cvar_Register(&s_hitbox.strict,         "vanguard_hitbox_strict",  "1",   CVAR_ARCHIVE);
+
+	G_Printf("VG_Hitbox: initialized (mode=%d, strict=%d)\n",
+	         s_hitbox.mode.integer, s_hitbox.strict.integer);
 }
 
 void vg_Hitbox_Shutdown(void)
@@ -306,6 +344,12 @@ qboolean vg_Hitbox_DebugActive(void)
 	 * if the cvar hasn't changed. */
 	trap_Cvar_Update(&s_hitbox.debug);
 	return (s_hitbox.debug.integer != 0) ? qtrue : qfalse;
+}
+
+qboolean vg_Hitbox_StrictMode(void)
+{
+	trap_Cvar_Update(&s_hitbox.strict);
+	return (s_hitbox.strict.integer != 0) ? qtrue : qfalse;
 }
 
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)

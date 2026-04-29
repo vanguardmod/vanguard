@@ -28,6 +28,23 @@
  *
  * id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
  */
+
+/*
+ * Modifications for VanguardMod:
+ * SPDX-FileCopyrightText: 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * SPDX-FileCopyrightText: 2026 VanguardMod Project Contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * Modified for VanguardMod (https://vanguardmod.com).
+ * Modifications licensed under GPL-3.0-or-later (consistent with original).
+ *
+ * Vanguard-specific additions in this file: the Phase 6 multi-region
+ * damage branch in G_Damage that gates on vg_Hitbox_IsActive() and
+ * dispatches to mdx_hit_test for per-region damage multipliers, plus
+ * v0.4.3's vg_Hitbox_StrictMode() rejection of broad-phase-only hits
+ * that don't match any human_base.hit capsule.
+ */
+
 /**
  * @file g_combat.c
  */
@@ -1798,7 +1815,30 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 
 			goto vg_skip_legacy_hit_chain;
 		}
-		/* mdx_hit_test miss -> fall through to legacy chain. */
+		/* mdx_hit_test miss. v0.4.3: when vanguard_hitbox_strict is
+		 * non-zero (the default), reject the hit entirely — the
+		 * engine's broad-phase player-AABB trace can be ~6 units
+		 * wider than the visible mesh in some poses, and turning
+		 * that tolerance into full body-shot damage on the legacy
+		 * fallback chain is what produced the "shot beside the
+		 * player still registered" behaviour competitive players
+		 * complained about. The cvar lets cup organisers keep the
+		 * old behaviour byte-identical when they need it (`set
+		 * vanguard_hitbox_strict 0`). Diagnostic note printed
+		 * under vanguard_hitbox_debug so admins can audit the
+		 * rejection rate during a tuning session. */
+		if (vg_Hitbox_StrictMode())
+		{
+			if (vg_Hitbox_DebugActive())
+			{
+				G_Printf("VG_DIAG: strict-hitbox reject "
+				         "attacker=%d target=%d weapon=%d mod=%d\n",
+				         (int)(attacker - g_entities),
+				         (int)(targ - g_entities),
+				         (int)attacker->s.weapon, (int)mod);
+			}
+			return;
+		}
 	}
 	/* END VANGUARDMOD */
 
