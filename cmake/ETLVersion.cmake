@@ -196,6 +196,30 @@ endif()
 
 VERSION_INT(ETL_CMAKE_VERSION_INT ${ETLEGACY_VERSION_MAJOR} ${ETLEGACY_VERSION_MINOR} ${ETLEGACY_VERSION_PATCH} ${ETLEGACY_VERSION_COMMIT})
 
+# VANGUARD: strip leading zeros from ETL_CMAKE_VERSION_INT.
+#
+# VERSION_INT() above pads minor/patch/commit with leading zeros to
+# fixed widths so the resulting digit string sorts lexicographically.
+# That string is then emitted verbatim into version_generated.h as
+#
+#     #define ETL_BUILD_VERSION_INT 0031380000
+#
+# When the C preprocessor sees a numeric literal that starts with `0`
+# it parses the rest as octal — and `8` / `9` are not valid octal
+# digits, so any version with a digit >= 8 anywhere in the padded
+# form fails to compile with "invalid digit ... in octal constant".
+# v0.3.7 happened to dodge this because every digit was 0-7; v0.3.8
+# (or any patch-version >= 8, or any minor digit >= 8) hits it.
+#
+# Fix: drop leading zeros so the literal is parsed as decimal. The
+# value still sorts the same numerically; only the textual padding
+# is removed. Empty result (all zeros) is normalised back to "0".
+string(REGEX REPLACE "^0+" "" ETL_CMAKE_VERSION_INT "${ETL_CMAKE_VERSION_INT}")
+if("${ETL_CMAKE_VERSION_INT}" STREQUAL "")
+	set(ETL_CMAKE_VERSION_INT "0")
+endif()
+# END VANGUARD
+
 if(NOT CMAKE_VERSION VERSION_LESS 3.0.2)
 	string(TIMESTAMP ETL_CMAKE_BUILD_TIME "%Y-%m-%dT%H:%M:%S" UTC)
 	string(TIMESTAMP ETL_CMAKE_BUILD_DATE "%Y-%m-%d" UTC)
