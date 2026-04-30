@@ -128,30 +128,34 @@ typedef struct
  * from .hit at build time, drift between client and server here is
  * the cost of a quick visualisation. */
 static const vg_hit_area_t vg_hit_areas[] = {
-	/* HEAD — sphere radius 6 on Bip01 Head, +2.0 along the head bone's
+	/* HEAD — sphere radius 6 on Bip01 Head, +6.5 along the head bone's
 	 * local X (the parent-to-child / bone-direction axis in the 3DS-Max
 	 * biped convention; for Bip01 Head this is "up the skull" in the
 	 * bind pose). The axis is +X per mdx_calculate_bone (g_mdx.c:1402);
 	 * v0.4.1 first tried `0 0 6.5` (Z) by analogy with mdx_head_position
 	 * but that helper applies its offset along an MDM tag's world-frame
 	 * axis[2] — bone-local conventions differ. v0.4.2 switched to the
-	 * correct axis, v0.5.2 retuned the magnitude.
+	 * correct axis.
 	 *
-	 * Magnitude (v0.5.2): tuned from VG_DIAG_DUMP measurements —
-	 * idle/crouch samples consistently produced delta head-neck Z =
-	 * 10.85 with the previous +6.5, placing the sphere centre at the
-	 * top of the skull instead of the face. Base bone distance
-	 * Neck→Head is ~4.35 units, so offset 2.0 lands the centre at
-	 * ~+6.35 over neck (face/eye level), with the radius-6 sphere
-	 * spanning neck-base to top-of-head — the anatomical target.
+	 * Magnitude history: v0.4.2-v0.5.1 used 6.5; v0.5.2 retuned to 2.0
+	 * based on measured delta-Z without realising the perceived
+	 * displacement was the cgame MatrixWeight bug (Stage 3, fixed in
+	 * v0.5.2 alongside the magnitude change). v0.5.2.1 reverts to 6.5
+	 * — live-test screenshots confirmed the v0.5.2 sphere sat at
+	 * neck/shoulder level (sphere centre at +6.35 above neck-bone is
+	 * below the visible chin in this character model). The 6.5 value
+	 * places the sphere centre at ~+10.85 above neck-bone (face /
+	 * forehead zone) with the radius-6 sphere covering chin to top of
+	 * helmet — the original v0.4.2-v0.5.1 placement was correct, only
+	 * the visualisation was wrong.
 	 *
-	 * Mirror of `offset 2.0 0 0` on the _vg_head TAG line in
+	 * Mirror of `offset 6.5 0 0` on the _vg_head TAG line in
 	 * etmain/animations/human_base.hit. Both must be kept in sync —
 	 * any retune touches both files. */
 	{ "Bip01 Head",       NULL,                VG_SHAPE_SPHERE,
 	  { 6, 6, 6 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
 	  { 1.0f, 0.2f, 0.2f },                                  /* red */
-	  { 2.0f, 0, 0 }, { 0, 0, 0 } },
+	  { 6.5f, 0, 0 }, { 0, 0, 0 } },
 
 	/* CHEST — box2 Spine1 -> Neck */
 	{ "Bip01 Spine1",     "Bip01 Neck",        VG_SHAPE_BOX2,

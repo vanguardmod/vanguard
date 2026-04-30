@@ -75,7 +75,7 @@
 // skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
 // so the bone-name spelling must match the .mdx exactly.
 //
-// _vg_head applies a `+2.0` offset along the head bone's local
+// _vg_head applies a `+6.5` offset along the head bone's local
 // X axis. The Bip01 Head bone-origin in the 3DS-Max biped
 // skeleton sits at the atlas / skull-base — a radius-6 sphere
 // centered there lands on the chin/upper-neck in the visible
@@ -95,22 +95,21 @@
 // the back of the head (top-down view: on the medic-pack
 // backpack); v0.4.2 switches to the correct axis.
 //
-// Magnitude tuned in v0.5.2 from the v0.5.2-rc3 multi-pose
-// VG_DIAG_DUMP measurements. Five samples (3 idle + 2 crouch)
-// returned a consistent `delta head-neck Z = 10.85` regardless
-// of pose — the bone projection stays vertical because the
-// engine's animations keep the head level across stances. With
-// the base bone-distance Bip01 Neck → Bip01 Head ≈ 4.35 units,
-// the previous `+6.5` placed the sphere CENTRE at the top of
-// the skull (chin-to-+12.5-above-neck), shifting hits upward
-// from the visible head. The anatomical target — radius-6
-// sphere covering from chin to crown — wants the centre at the
-// face/eye-level zone, around `+6` over neck. That requires
-// offset = 6.0 - 4.35 = 1.65 in bone-local X; rounded to 2.0
-// for a clean number, the centre lands at ~+6.35 over neck and
-// the sphere covers neck-base to top-of-head. Verified locally
-// on a dedicated linux test server before shipping; multi-pose
-// validation expected to confirm 5-7 over neck in idle + crouch.
+// Magnitude history: v0.4.2-v0.5.1 used 6.5; v0.5.2 retuned to
+// 2.0 based on measured `delta head-neck Z = 10.85` from the
+// rc3 diagnostic; v0.5.2.1 reverts to 6.5. Reason for the
+// revert: the original Phase 7.0.1 bug was LATERAL displacement
+// (cgame's MatrixWeight skip — fixed independently in v0.5.2's
+// Stage 3). The vertical capsule position was already correct
+// at 6.5 — the "displacement" perception was the broken cgame
+// visualisation drifting away from the (correctly-placed)
+// server-side capsule. With Stage 3 now correcting the cgame
+// overlay, the v0.5.2 magnitude reduction overshot in the wrong
+// direction and dropped the capsule to neck/shoulder level
+// (live-test screenshots confirmed). Restoring 6.5 puts the
+// sphere centre at ~+10.85 over neck — at the face/forehead
+// zone with the radius-6 sphere covering chin (+4.85) to top of
+// helmet (+16.85), matching the visible head model.
 //
 // The 0.5 forward component that mdx_head_position also applies
 // is intentionally omitted — for an isotropic radius-6 sphere
@@ -120,7 +119,7 @@
 // for the wireframe visualisation. Keep them in sync — every
 // .hit retune of _vg_head requires a matching cgame edit.
 
-TAG _vg_head      "Bip01 Head" offset 2.0 0 0
+TAG _vg_head      "Bip01 Head" offset 6.5 0 0
 TAG _vg_neck      "Bip01 Neck"
 TAG _vg_spine_lo  "Bip01 Spine"
 TAG _vg_spine_mid "Bip01 Spine1"
