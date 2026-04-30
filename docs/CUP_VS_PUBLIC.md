@@ -1,0 +1,208 @@
+# Cup vs Public — Netcode Profile
+
+VanguardMod ships a single cvar that swaps the server between
+"cup-grade" and "public-grade" netcode tuning without touching
+`server.cfg`:
+
+```
+set vanguard_netcode_profile "cup"     // tournament / scrim
+set vanguard_netcode_profile "public"  // pub server (default)
+set vanguard_netcode_profile "custom"  // hands-off, admin owns it
+```
+
+The cvar is `CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO`:
+
+  - **Latched** — locked for the map lifetime. Change requires a
+    map restart. By design (no mid-match drift between regimes).
+  - **Archived** — persists in `etconfig_server.cfg`, no need to
+    re-set after server restart.
+  - **Serverinfo** — published to clients on connect; future
+    cgame work will surface the profile in HUD / disclaimer copy.
+
+## What each profile does
+
+| Setting | `public` (default) | `cup` | `custom` |
+|---|---|---|---|
+| `sv_fps` | engine default (20) | 40 | untouched |
+| `g_antilag` | engine default (1) | re-assert 1 | untouched |
+| `g_antiwarp` | engine default (1) | re-assert 1 | untouched |
+| Behaviour vs v0.4.x | byte-identical | competitive tuning | admin-owned |
+
+For the **`cup`** profile, each cvar is set via `trap_Cvar_Set`
+and verified by reading back through `trap_Cvar_VariableIntegerValue`.
+The verify-after-set pattern catches the Pterodactyl edge case
+(see "Pterodactyl gotcha" below).
+
+For **`public`**, nothing changes — same behaviour any v0.4.x
+server has today. Default value chosen so existing servers can
+upgrade to v0.5.0 with zero config edits.
+
+For **`custom`**, the apply path is also a no-op — VanguardMod
+deliberately doesn't touch sv_fps / g_antilag / g_antiwarp. The
+admin's `server.cfg` is authoritative, and the profile flag in
+serverinfo signals "this server is hand-tuned" to anyone who's
+looking.
+
+## Phase 6 lag-comp covers multi-region damage automatically
+
+A frequently asked question coming into Phase 7.2 was whether
+ETLegacy's lag-compensation rewinds the per-bone animation state
+needed by the multi-region `mdx_hit_test` damage path, or whether
+it only rolls back player-origin and leaves the bone calculations
+running off current-frame data (which would mis-credit hits on
+laggy clients).
+
+**It rewinds the bone state.** `G_StoreClientPosition`
+(`g_antilag.c:125-188`) captures, per server tick per client:
+
+  - origin / mins / maxs / viewangles
+  - eFlags / pm_flags / viewheight / groundEntityNum
+  - **the full torsoFrame state** (frame, oldFrame, frameModel,
+    oldFrameModel, frameTime, oldFrameTime, yawAngle,
+    pitchAngle, yawing, pitching, animation->movetype)
+  - **the full legsFrame state** (same set)
+
+`G_AdjustSingleClientPosition` (`g_antilag.c:196-486`) lerps the
+continuous fields and snaps the discrete fields back to either of
+the two markers bracketing the requested historical time, then
+calls `trap_LinkEntity` to make the engine notice. By the time
+`G_Damage`'s multi-region branch reads `ent->torsoFrame.*` /
+`ent->legsFrame.*` (via `mdx_gentity_to_grefEntity`,
+`g_mdx.c:298-349`), those fields are the historical values,
+and `mdx_calculate_bone_lerp` walks the historical pose.
+
+So **no Phase 7.2 work was needed** for that question. Both `cup`
+and `public` (and `custom`) inherit the same lag-comp behaviour
+the multi-region damage pipeline has been getting correctly since
+v0.3.3 — the question only existed because nobody had traced the
+chain end-to-end before.
+
+## Caveats and tradeoffs
+
+### Lag-comp history window shrinks at higher sv_fps
+
+`MAX_CLIENT_MARKERS = 40` (`g_local.h:912`) — a fixed-size circular
+buffer of historical client states. The buffer covers
+`MAX_CLIENT_MARKERS / sv_fps` seconds of rewind history:
+
+  - At `sv_fps = 20` (public default): **2 seconds** of history.
+  - At `sv_fps = 40` (cup): **1 second** of history.
+
+For typical cup pings (40-100 ms one-way → ≤200 ms `serverTime`
+deficit), 1 second is comfortable. For pings approaching 500 ms
+total (≥250 ms one-way), the buffer can clip and the antilag falls
+back to current-time hits for the worst-case players.
+
+If a future cup ever needs `sv_fps = 60` AND admits players with
+≥200 ms pings, the constant would need bumping. Today both
+constraints are unlikely; the buffer size stays at 40.
+
+### Animation timing comment in bg_pmove
+
+`bg_pmove.c:5458` carries a TODO from upstream:
+
+```c
+// in reality, this should be split according to sv_fps,
+```
+
+The comment is about animation-frame timing math that was
+historically only validated at `sv_fps = 20`. Most ETLegacy cup
+servers run at `sv_fps = 40` in production with no observable
+animation issues, so the comment is likely a latent issue with no
+real bug behind it. Flagged here in case a future cup live-test
+turns up an animation glitch that traces to it.
+
+### Pterodactyl gotcha
+
+Some managed-hosting providers (most prominently Pterodactyl) lock
+certain engine cvars at the engine layer and silently drop
+`trap_Cvar_Set` calls on them. If the cup-preset apply hits this,
+the server log will show:
+
+```
+VG_Netcode: WARNING sv_fps set to 40 but engine reports 20 —
+host may lock the cvar. Set in server.cfg and switch profile to
+"custom" to avoid this warning.
+```
+
+The remedy on a locked-cvar host is the documented escape hatch:
+
+1. Set `sv_fps 40` (and `g_antilag 1`, `g_antiwarp 1`) directly in
+   `server.cfg` — these the engine accepts as part of normal cvar
+   loading.
+2. Set `vanguard_netcode_profile "custom"` — VanguardMod stops
+   trying to set the cvars itself, the WARNING goes away, and the
+   profile's published serverinfo value tells observers "this
+   server is hand-tuned".
+
+`vanguard_netcode_profile = "custom"` is also the right choice for
+admins who want a non-standard combination (e.g. `sv_fps 40` for
+hit-detection precision but `g_antiwarp 0` because they want to
+gate it via a different layer — unusual, but the profile shouldn't
+override that).
+
+### Cup profile is latched
+
+`vanguard_netcode_profile` is `CVAR_LATCH`, so changing the value
+mid-match has no effect until the next map load. This is by
+design: cup organisers don't want the regime drifting between
+maps in a series, let alone between rounds.
+
+To apply a profile change, restart the map (or end the match —
+the next map's `G_InitGame` re-evaluates the cvar):
+
+```
+\map oasis    // or whatever map the server is running
+```
+
+## Verifying the active profile
+
+Three places to check:
+
+1. Server console at map start:
+
+   ```
+   VG_Netcode: profile=cup
+   VG_Netcode: applying "cup" preset (sv_fps 40, g_antilag 1,
+   g_antiwarp 1)
+   VG_Netcode: applied sv_fps=40
+   VG_Netcode: applied g_antilag=1
+   VG_Netcode: applied g_antiwarp=1
+   ```
+
+2. From rcon:
+
+   ```
+   \rcon vanguard_netcode_profile
+   "vanguard_netcode_profile" is:"cup" default:"public"
+   ```
+
+3. From any connected client (via `serverinfo`):
+
+   ```
+   \serverinfo
+   ... vanguard_netcode_profile : cup ...
+   ```
+
+## Recommended cup configuration
+
+`etmain/configs/vanguard_competitive.cfg` already locks down the
+dev-mode visualisation and forces `sv_pure 1`. With v0.5.0 it
+reduces to one additional line:
+
+```
+set vanguard_netcode_profile "cup"
+```
+
+Running `\exec configs/vanguard_competitive.cfg` followed by a
+map restart applies the full cup posture.
+
+---
+
+**Copyright Notice**
+
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 VanguardMod Project Contributors
+
+Licensed under GPL-3.0-or-later. Part of VanguardMod project.
+Built on ETLegacy (https://www.etlegacy.com).
