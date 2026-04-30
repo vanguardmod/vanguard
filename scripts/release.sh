@@ -111,7 +111,7 @@ fi
 hdr "🔍 Pre-flight checks for ${VERSION}"
 
 # Version format: vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rcN / -dev / etc.
-if ! [[ "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9a-zA-Z.-]+)?$ ]]; then
+if ! [[ "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9a-zA-Z.-]+)?$ ]]; then
     fail "version \"${VERSION}\" doesn't match expected vMAJOR.MINOR.PATCH[-suffix]"
     exit 1
 fi
