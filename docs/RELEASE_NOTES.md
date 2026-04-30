@@ -3,6 +3,102 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.0 — 2026-04-30 — Cup-Mode Foundation
+
+First major release on the Cup-Mode track. Phase 7.2 (Netcode
+Tuning) ships the **netcode profile** cvar that lets a server flip
+between cup-grade and public-grade netcode tuning without editing
+`server.cfg`. Phase 7.3 (movement) and Phase 7.4 (UI) are scheduled
+for subsequent v0.5.x point releases.
+
+  - **`vanguard_netcode_profile`** — new cvar
+    (`CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO`,
+    default `"public"`). Three values:
+    * `public` (no-op, byte-identical to v0.4.x)
+    * `cup` (sv_fps 40, g_antilag 1, g_antiwarp 1)
+    * `custom` (admin owns server.cfg, profile flag advertises intent)
+  - **Cup preset is verified, not just set.** Each
+    `trap_Cvar_Set` call is followed by a
+    `trap_Cvar_VariableIntegerValue` read-back; mismatches log a
+    yellow `VG_Netcode: WARNING ...` line pointing the admin at
+    the documented escape hatch. Catches the Pterodactyl /
+    managed-host case where engine cvars are locked at the layer
+    above qagame.
+  - **`vanguard_competitive.cfg`** gains one line:
+    `set vanguard_netcode_profile "cup"`.
+  - **`docs/CUP_VS_PUBLIC.md`** documents what each profile does,
+    the lag-comp ⊃ multi-region finding from Phase A audit, the
+    `MAX_CLIENT_MARKERS=40` history-window math at sv_fps 40, the
+    Pterodactyl gotcha, and three ways for admins to verify which
+    profile is active.
+
+### Phase 7.2 Sub-Goal 1 — already correct (no code change)
+
+Phase A recon (`docs/notes/PHASE_7_2_AUDIT.md`) found that
+ETLegacy's lag-comp infrastructure (`G_StoreClientPosition` /
+`G_AdjustSingleClientPosition`) already rewinds the full
+torsoFrame and legsFrame state, not just origin/angles. The
+multi-region `mdx_hit_test` damage path therefore inherits
+correct lag-compensation without any change — `mdx_hit_test`
+reads from exactly the fields the antilag layer rewinds. The
+recon question was a worry rather than a bug; documented in
+`docs/CUP_VS_PUBLIC.md` so future maintainers don't repeat the
+trace.
+
+### Phase 7.2 Sub-Goal 3 — antiwarp via cup preset
+
+The cup preset re-asserts `g_antiwarp 1` (already default in
+v0.4.x, but a server-config drift could have turned it off).
+Per-client warp-incident diagnostic logging is deferred to a
+follow-up ticket — wait for a cup operator to actually need it
+before adding the infrastructure.
+
+### Release-helper script
+
+New `scripts/release.sh` automates the pre-flight portion of cutting
+a release: working-tree-clean check, branch check, repo-name auto-
+detect, tag-doesn't-exist-yet check, `VANGUARD_VERSION` write,
+`RELEASE_NOTES.md` editing reminder, and printing the exact `git
+add / commit / push / tag / push --tags` sequence the admin then
+runs by hand. **Does not auto-execute git commands** — the actual
+release decision stays a manual step.
+
+### Lag-comp history window — accepted limitation
+
+The cup preset bumps `sv_fps` from 20 to 40, which halves the
+lag-comp rewind history `MAX_CLIENT_MARKERS = 40` (`g_local.h:912`)
+covers — from 2 seconds at sv_fps 20 down to 1 second at sv_fps 40.
+
+This is **acknowledged and accepted for v0.5.0**, not deferred.
+Realistic cup pings (30–80 ms one-way) need at most ~80 ms of
+rewind history; even tournament-edge 200 ms pings need ~100 ms.
+The 1-second buffer leaves 10–25× headroom over the worst
+realistic case. Buffer would only clip at >500 ms ping, where the
+player is unplayable on its own merits.
+
+If a future cup live-test surfaces actual clipping (player
+reports their hits not registering despite visible aim), the fix
+is a one-line bump of `MAX_CLIENT_MARKERS` to 80 (= 2 s history
+at sv_fps 40), tracked under a hypothetical Phase 7.2.1 ticket.
+Not pre-emptively shipped because the constant is referenced by
+modular arithmetic across `g_antilag.c` and a change wants its
+own validation pass. v0.5.0 ships with the existing 40-marker
+ring.
+
+### No gameplay changes vs v0.4.4
+
+Out of the box, a v0.5.0 server with `vanguard_netcode_profile`
+unset (or set to `public`) behaves byte-identically to v0.4.4. The
+profile is opt-in.
+
+### What's NOT in this release
+
+Phase 7.3 (movement physics), Phase 7.4 (UI / HUD changes), and
+Phase 7.1 (sounds) all deferred to subsequent v0.5.x
+releases. Tight-hitbox capsule tuning (Phase 7.0, prep for
+v0.4.3's strict-mode) only kicks in if live-test surfaces gaps in
+the current `human_base.hit` coverage.
+
 ## v0.4.4 — 2026-04-30 — Build Infrastructure & Auto-Versioning
 
 ### CI/CD Automation
