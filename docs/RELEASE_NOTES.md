@@ -3,6 +3,108 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2-rc3 — 2026-04-30 — Diagnostic bone-lerp fix + Omni-bot all-platforms
+
+> **DIAGNOSTIC RELEASE — not for production cup play.** Third
+> release-candidate of v0.5.2 with two fixes on top of rc2:
+>
+> 1. The VG_DIAG_DUMP block emitted (0,0,0) for every bone position —
+>    the `_vg_*` interntag names couldn't be resolved through
+>    `trap_R_LerpTag`. Replaced with a new
+>    `mdx_diag_resolve_tag_world` helper that uses the same
+>    cachetag + `mdx_tag_orientation` path `mdx_hit_test` uses
+>    internally for capsule anchoring. Verified locally on a
+>    dedicated Linux test server: every bone now resolves to a real
+>    world-space coordinate (e.g. `_vg_head=(3084,6022,-642)`,
+>    `delta head-neck=10.57` units).
+> 2. Omni-bot now built into qagame on **all three platforms**
+>    (Linux x86_64, Win64, Win32) instead of Linux only. Required
+>    `-DFORCE_OMNIBOT=ON` to override `cmake_dependent_option`'s
+>    auto-disable for mingw cross-compiles.
+>
+> Plus a new manual-trigger cvar for multi-pose diagnostics.
+
+### Bone-lerp fix (CRITICAL — this is what makes the data usable)
+
+**Root cause.** `trap_R_LerpTag(orientation, refent, "_vg_head", 0)`
+always returned -1 without writing to the orientation. Why:
+`mdm_tag_lookup` returns interntag matches with the `TAG_INTERNAL`
+bit (`1 << 30`) set — `tagNum | TAG_INTERNAL` is a positive integer
+greater than `model->tag_count`, so `trap_R_LerpTagNumber`'s
+`tagNum >= model->tag_count` guard rejects it. The
+zero-initialised orientation_t passed straight back through to the
+log lines: `(0, 0, 0)` for every bone.
+
+**Fix.** New public function `mdx_diag_resolve_tag_world` in
+`g_mdx.c` (~50 LoC, gated on `BONE_HITTESTS`). Looks up the tag
+name in the global cachetag table (registers it on the fly if
+missing — needed for `_vg_*` interntags only declared but never
+referenced inside a HIT block), then calls `mdx_tag_orientation`
+with `recursion=0`, which fully transforms model-local
+coordinates to world space via `refent->origin` and
+`refent->axis`. Mirrors the exact path `mdx_hit_test` uses for
+capsule anchors at `hit->tag[0]` (g_mdx.c:2816).
+
+The diagnostic block in `g_combat.c` now uses
+`mdx_diag_resolve_tag_world` instead of `trap_R_LerpTag` and
+prints a `resolve_status` line so failed lookups (anything
+returning -1) are visible in the dump rather than silently
+becoming zeros.
+
+### Manual-trigger cvar `vanguard_diag_dump`
+
+New transient cvar parallel to the existing
+`vanguard_hitbox_debug 0->1` re-arm path. Use:
+
+  - `rcon set vanguard_diag_dump 1` — fires VG_DIAG_DUMP on the
+    next damage event regardless of debug state, then auto-resets
+    the cvar to 0. Issue between shots for multi-pose tests in a
+    single session (idle / crouch / strafe-mid).
+
+The existing 0->1 re-arm convenience path is unchanged. The dump
+now includes a `trigger=` line distinguishing manual from auto
+arm, and a `resolve_status` line listing per-tag lookup results
+so failed lookups stand out instead of silently becoming
+`(0, 0, 0)`.
+
+### Omni-bot on all three platforms
+
+rc2 had `FEATURE_OMNIBOT=ON` on Linux only (per the existing
+release.yml convention). rc3 enables it on all three:
+
+  - Linux x86_64 — Omni-bot symbols: 52 (was 52)
+  - Win64 — Omni-bot symbols: 46 (was 0)
+  - Win32 — Omni-bot symbols: 38 (was 0)
+
+The `cmake_dependent_option` in `CMakeLists.txt:102` silently
+auto-disables `FEATURE_OMNIBOT` for mingw cross-compiles unless
+`FORCE_OMNIBOT=ON` is also set — that's why the rc2 Windows
+`-DFEATURE_OMNIBOT=ON` flag had no effect. Both `release.yml`
+and `ci.yml` are updated to pass `FORCE_OMNIBOT=ON` for the
+Windows steps.
+
+The release-server ZIP now bundles the **Omni-bot runtime
+binaries** (Linux .so + Windows .dll + macOS) under
+`vanguard/omni-bot/`, so admins on any supported OS get a
+working bot setup out of the box without a separate download.
+
+### CI sanity check (prevents the rc1 build-flag-copy-paste regression)
+
+Both `release.yml` and `ci.yml` now run a `strings | grep -ic
+"omni"` symbol check on each qagame artifact and fail the build
+if the count is below 5 (real builds carry 30+ symbols). Catches
+any future `FEATURE_OMNIBOT` regression at PR-validation time
+instead of after a release-candidate ships.
+
+### Known limitations
+
+  - **Still diagnostic-only.** The capsule-offset bug isn't fixed
+    in rc3 — only made measurable. v0.5.2 final will use the
+    multi-pose data this rc3 collects to drive the empirical
+    capsule tuning.
+  - **Idle pose is the baseline.** Animation-driven offsets will
+    be measured separately via the manual trigger.
+
 ## v0.5.2-rc2 — 2026-04-30 — Diagnostic rc1 + Omni-bot build-flag fix
 
 > **DIAGNOSTIC RELEASE — not for production cup play.** Same as
