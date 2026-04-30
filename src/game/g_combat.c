@@ -1830,6 +1830,7 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			{
 				vec3_t o_head_pos,  o_neck_pos,  o_spine_mid_pos;
 				vec3_t o_pelvis_pos, o_clav_l_pos, o_clav_r_pos;
+				vec3_t head_axis[3];   /* world-frame bone axis for _vg_head */
 				vec3_t a_unused[3];
 				vec3_t delta_head_neck;
 				vec_t  delta_len;
@@ -1841,8 +1842,9 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 				VectorClear(o_pelvis_pos);
 				VectorClear(o_clav_l_pos);
 				VectorClear(o_clav_r_pos);
+				AxisClear(head_axis);
 
-				rh  = mdx_diag_resolve_tag_world(&refent, "_vg_head",      o_head_pos,      a_unused);
+				rh  = mdx_diag_resolve_tag_world(&refent, "_vg_head",      o_head_pos,      head_axis);
 				rn  = mdx_diag_resolve_tag_world(&refent, "_vg_neck",      o_neck_pos,      a_unused);
 				rs  = mdx_diag_resolve_tag_world(&refent, "_vg_spine_mid", o_spine_mid_pos, a_unused);
 				rp  = mdx_diag_resolve_tag_world(&refent, "_vg_pelvis",    o_pelvis_pos,    a_unused);
@@ -1886,6 +1888,30 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 				         (double)refent.axis[2][0],
 				         (double)refent.axis[2][1],
 				         (double)refent.axis[2][2]);
+
+				/* Head bone's WORLD-frame axis matrix — added in
+				 * v0.5.2.1 to make _vg_head offset tuning data-driven.
+				 * head_axis[0] is the direction `+X in tag->offset`
+				 * actually moves the capsule (= bone-local +X mapped
+				 * through tmpaxis * refent->axis to world). For
+				 * Bip01 Head this is "up the skull" — usually close
+				 * to world +Z because the bone stays vertical.
+				 * head_axis[1] / head_axis[2] are the two orthogonal
+				 * directions; if a future retune needs a forward or
+				 * sideways component, these tell us which world
+				 * direction each maps to. */
+				G_Printf("VG_DIAG_DUMP:   head_bone.axis[0] (bone-local +X = up-the-skull) = (%.4f, %.4f, %.4f)\n",
+				         (double)head_axis[0][0],
+				         (double)head_axis[0][1],
+				         (double)head_axis[0][2]);
+				G_Printf("VG_DIAG_DUMP:   head_bone.axis[1] (bone-local +Y)               = (%.4f, %.4f, %.4f)\n",
+				         (double)head_axis[1][0],
+				         (double)head_axis[1][1],
+				         (double)head_axis[1][2]);
+				G_Printf("VG_DIAG_DUMP:   head_bone.axis[2] (bone-local +Z)               = (%.4f, %.4f, %.4f)\n",
+				         (double)head_axis[2][0],
+				         (double)head_axis[2][1],
+				         (double)head_axis[2][2]);
 				G_Printf("VG_DIAG_DUMP:   refent.torsoFrameModel=%d torsoFrame=%d torsoOldFrame=%d torsoBacklerp=%.3f\n",
 				         (int)refent.torsoFrameModel, (int)refent.torsoFrame,
 				         (int)refent.oldTorsoFrame, (double)refent.torsoBacklerp);
