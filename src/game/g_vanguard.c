@@ -434,6 +434,61 @@ typedef struct
 
 static vg_netcode_state_t s_netcode;
 
+/**
+ * @brief Set an engine cvar and verify the host accepted the change.
+ *
+ *        On Pterodactyl-managed hosts the engine layer can mark
+ *        certain cvars (most commonly sv_cheats, occasionally
+ *        sv_fps) as read-only. trap_Cvar_Set() then silently no-ops
+ *        — no error, no return value, the cvar simply doesn't
+ *        change. We catch that by reading the cvar back via
+ *        trap_Cvar_VariableIntegerValue() and warning the admin
+ *        clearly when the apply didn't take. The cup preset still
+ *        finishes (other cvars may apply); the warning tells the
+ *        admin to set sv_fps in server.cfg directly and switch to
+ *        vanguard_netcode_profile "custom".
+ */
+static void vg_Netcode_ApplyAndVerifyCvar(const char *name,
+                                          const char *value,
+                                          int expected)
+{
+	int actual;
+
+	trap_Cvar_Set(name, value);
+	actual = trap_Cvar_VariableIntegerValue(name);
+
+	if (actual == expected)
+	{
+		G_Printf("VG_Netcode: applied %s=%s\n", name, value);
+	}
+	else
+	{
+		G_Printf(S_COLOR_YELLOW "VG_Netcode: WARNING %s set to %s "
+		         "but engine reports %d — host may lock the cvar. "
+		         "Set in server.cfg and switch profile to "
+		         "\"custom\" to avoid this warning.\n",
+		         name, value, actual);
+	}
+}
+
+static void vg_Netcode_ApplyCupProfile(void)
+{
+	G_Printf("VG_Netcode: applying \"cup\" preset (sv_fps 40, "
+	         "g_antilag 1, g_antiwarp 1)\n");
+
+	/* sv_fps doubled — half the hit-detection latency floor. The
+	 * MAX_CLIENT_MARKERS=40 ring then covers 1 s of rewind history
+	 * (vs 2 s at sv_fps=20); see docs/CUP_VS_PUBLIC.md for the
+	 * tradeoff. */
+	vg_Netcode_ApplyAndVerifyCvar("sv_fps", "40", 40);
+
+	/* Belt-and-suspenders. Both default 1 in g_cvars.c, but a cup
+	 * organiser may have shipped a server config that flipped them
+	 * off; the cup preset re-asserts. */
+	vg_Netcode_ApplyAndVerifyCvar("g_antilag",  "1", 1);
+	vg_Netcode_ApplyAndVerifyCvar("g_antiwarp", "1", 1);
+}
+
 void vg_Netcode_Init(void)
 {
 	memset(&s_netcode, 0, sizeof(s_netcode));
@@ -445,10 +500,13 @@ void vg_Netcode_Init(void)
 
 	G_Printf("VG_Netcode: profile=%s\n", s_netcode.profile.string);
 
-	/* Profile-apply (cvar overrides for "cup") lands in a follow-up
-	 * commit so this scaffold isolates the cvar lifecycle from the
-	 * actual sv_fps / antilag / antiwarp tweaks. Empty body for now —
-	 * "public" and "custom" profiles are no-ops by design. */
+	if (!Q_stricmp(s_netcode.profile.string, "cup"))
+	{
+		vg_Netcode_ApplyCupProfile();
+	}
+	/* "public" and "custom" are no-ops here. "public" leaves engine
+	 * defaults alone; "custom" hands the wheel to the admin's
+	 * server.cfg without any vanguard-side intervention. */
 }
 
 void vg_Netcode_Shutdown(void)
