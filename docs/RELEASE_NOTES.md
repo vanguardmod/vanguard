@@ -3,6 +3,122 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2 — 2026-04-30 — Phase 7.0.1 capsule alignment
+
+> **Production release.** Phase 7.0.1 capsule-offset bug closed.
+> The HEAD-region sphere now sits on the visible face/eye-level
+> zone instead of floating above the skull. The cgame wireframe
+> visualisation (`g_debugHitboxes 1`) tracks the actual server-
+> side hit geometry across all body poses including strafe-jump
+> and crouch-move. Strict-hitbox semantics from v0.5.1 unchanged
+> — shots that miss every capsule still get rejected.
+>
+> Carries forward the v0.5.2-rc3 diagnostic infrastructure
+> (`VG_DIAG_DUMP`, `vanguard_diag_dump` cvar) so future Phase
+> 7.0.x recons can reuse the same toolchain. Both are off by
+> default — no production impact.
+
+### Stage 2a — HEAD offset retuned from measured data
+
+The v0.4.2 `_vg_head` offset of `6.5 0 0` (in bone-local +X, the
+"up the skull" axis for `Bip01 Head`) placed the radius-6 head
+sphere's centre at the top of the cranium instead of face level
+— shots aimed at the visible nose missed the sphere entirely.
+v0.5.2-rc3's multi-pose `VG_DIAG_DUMP` measurements quantified
+the issue: across 5 samples (3 idle + 2 crouch), `delta head-
+neck Z = 10.85` was constant regardless of pose, because the
+head bone's projection onto world-Z stays vertical across
+animations.
+
+With base bone-distance Bip01 Neck → Bip01 Head ≈ 4.35 units
+(measured: 10.85 - 6.5 with full Z-projection), the offset to
+land the sphere centre at the anatomical face/eye-level target
+of `+6` over neck is `6.0 - 4.35 = 1.65`. Rounded to a clean
+**`offset 2.0 0 0`** for `~+6.35` over neck — the radius-6
+sphere then spans neck-base to top-of-head.
+
+**Live-test verification** on a dedicated Linux test server,
+multi-pose:
+
+  - dump #1 (active combat, torsoBacklerp=0.108):
+    `delta head-neck Z = 6.45` ✅
+  - dump #2 (animation transition, torsoBacklerp=-0.359):
+    `delta head-neck Z = 3.35`, `|delta| = 5.80` (pose-
+    distorted, expected during fast turn/look)
+  - dump #3 (active combat, torsoBacklerp=0.632):
+    `delta head-neck Z = 6.21` ✅
+
+Anatomical target (delta_z ∈ [5, 7]) hit on stable poses;
+animation-transition edge cases vary but |delta| stays in the
+6-unit ballpark.
+
+### Stage 3 — cgame `MatrixWeight` torso-axis fix
+
+The cgame visualisation function `vg_mdx_compute_bone_axis_local`
+in `cg_vanguard_mdx.c` was skipping the `MatrixWeight(torsoAxis,
+torso_weight)` step that qagame's `mdx_bone_orientation` performs
+on every bone with `torso_weight > 0` (spine, neck, head,
+clavicles, arms). The skip was correct in v0.4.1 — `refent->
+torsoAxis` was set manually to the player's WORLD-frame rotation
+back then, so blending it in would have produced a matrix in
+the wrong reference frame. Since v0.4.3 cgame reads
+`cent->pe.bodyRefEnt` directly, where `torsoAxis` is set by
+`CG_PlayerAngles` in the same MODEL-frame qagame uses — the
+v0.4.1 rationale stopped applying but the omission stayed.
+
+Visible symptom (live-test screenshots): pose-lag of the
+wireframe overlay against the rendered mesh during strafe-jump
+and crouch-move — capsules drifted away from the model
+whenever `torsoAxis ≠ legsAxis`.
+
+**Fix.** Direct port of `mdx_bone_orientation`'s torso-mix path:
+new static helper `vg_mdx_MatrixWeight` (8 lines, verbatim from
+`g_mdx.c:178-193`) plus a 5-line update at the end of
+`vg_mdx_compute_bone_axis_local` to compose the weighted torso
+rotation into the bone basis. Bones with `torso_weight = 0`
+(legs/pelvis) are unchanged because `MatrixWeight` with weight=0
+is identity.
+
+### Diagnostic infrastructure carried forward
+
+The `VG_DIAG_DUMP` block and `vanguard_diag_dump` cvar from
+rc3 stay in qagame for future Phase 7.0.x recons. Cvar-gated
+on `vanguard_hitbox_debug 1` (default 0) plus the explicit
+manual trigger; off by default, no production cost.
+
+### Files touched
+
+| File | Change |
+|------|--------|
+| `etmain/animations/human_base.hit` | `_vg_head` offset 6.5 → 2.0; comment block updated |
+| `src/cgame/cg_vanguard_dev.c` | `vg_hit_areas[]` HEAD offset 6.5 → 2.0; comment block updated |
+| `src/cgame/cg_vanguard_mdx.c` | new `vg_mdx_MatrixWeight` helper; `vg_mdx_compute_bone_axis_local` torso-mix step added |
+
+### Live-test path (6 tests from `docs/notes/PHASE_7_0_1_AUDIT.md` §H)
+
+  1. HEAD on visible nose → expect HIT impactpoint=1
+  2. HEAD-side displacement (8 units lateral) → expect REJECT
+  3. CHEST → expect HIT impactpoint=2
+  4. SHOULDER → expect HIT impactpoint=5/6
+  5. Pose variation (crouch) → tests 1+3+4 still hit
+  6. `vanguard_hitbox_strict 0` → falls through to legacy
+
+Pass criteria: 5 of 6 produce hits at the visible mesh, test 2
+rejects, test 6 falls through.
+
+### Known limitations
+
+  - **Capsule coverage gaps deferred to v0.5.3.** The Phase 6
+    `human_base.hit` capsule placement may still leave dead
+    zones (Hals/Kragen, knee/groin border) — those measurements
+    will use this rc3 diagnostic toolchain in a separate session.
+  - **Animation-transition pose distortion.** Dump #2 in the
+    validation showed a 3.35 delta_z during an animation
+    transition (negative torsoBacklerp). Expected — bone-axis
+    interpolation can briefly distort bone-local-X projection
+    onto world-Z. Settles back to the 5-7 band on the next
+    stable frame.
+
 ## v0.5.2-rc3 — 2026-04-30 — Diagnostic bone-lerp fix + Omni-bot all-platforms
 
 > **DIAGNOSTIC RELEASE — not for production cup play.** Third
