@@ -1895,6 +1895,10 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	/* VanguardMod: Phase 6.1 multi-box hitbox subsystem (registers
 	 * vanguard_hitbox_mode + 9 per-region + 1 default damage cvar). */
 	vg_Hitbox_Init();
+
+	/* VanguardMod: Phase 7.2 netcode profile (registers
+	 * vanguard_netcode_profile, applies cup/public/custom preset). */
+	vg_Netcode_Init();
 }
 
 /**
@@ -1985,6 +1989,9 @@ void G_ShutdownGame(int restart)
 
 	/* VanguardMod: Phase 6.1 multi-box hitbox subsystem teardown. */
 	vg_Hitbox_Shutdown();
+
+	/* VanguardMod: Phase 7.2 netcode profile teardown. */
+	vg_Netcode_Shutdown();
 }
 
 //===================================================================

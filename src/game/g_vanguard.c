@@ -418,6 +418,55 @@ const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint)
 	}
 }
 
+/* ================================================================== */
+/* Netcode profile (Phase 7.2)                                        */
+/* ================================================================== */
+
+typedef struct
+{
+	/* CVAR_LATCH so the value cannot drift mid-match — picked once
+	 * at G_InitGame, applied once, locked until the next map load.
+	 * CVAR_ARCHIVE so admin choice persists in etconfig_server.cfg.
+	 * CVAR_SERVERINFO so cgame / spectators can eventually surface
+	 * the active profile in HUD or disclaimer copy (Phase 7.4). */
+	vmCvar_t profile;
+} vg_netcode_state_t;
+
+static vg_netcode_state_t s_netcode;
+
+void vg_Netcode_Init(void)
+{
+	memset(&s_netcode, 0, sizeof(s_netcode));
+
+	trap_Cvar_Register(&s_netcode.profile,
+	                   "vanguard_netcode_profile",
+	                   "public",
+	                   CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO);
+
+	G_Printf("VG_Netcode: profile=%s\n", s_netcode.profile.string);
+
+	/* Profile-apply (cvar overrides for "cup") lands in a follow-up
+	 * commit so this scaffold isolates the cvar lifecycle from the
+	 * actual sv_fps / antilag / antiwarp tweaks. Empty body for now —
+	 * "public" and "custom" profiles are no-ops by design. */
+}
+
+void vg_Netcode_Shutdown(void)
+{
+	/* No-op; vmCvars are static. Function exists for symmetry with
+	 * vg_DevMode_Shutdown / vg_Hitbox_Shutdown and as a hook point
+	 * for any future teardown (e.g. restoring engine defaults if
+	 * the profile applied them). */
+	memset(&s_netcode, 0, sizeof(s_netcode));
+}
+
+const char *vg_Netcode_ProfileName(void)
+{
+	if (!Q_stricmp(s_netcode.profile.string, "cup"))    { return "cup";    }
+	if (!Q_stricmp(s_netcode.profile.string, "custom")) { return "custom"; }
+	return "public";
+}
+
 /* TODO Phase 6.1.x — LOUD-warning when human_base.hit is missing.
  *
  * HITS_FORMAT.md §6.1 documents that mdx_LoadHitsFile silently
