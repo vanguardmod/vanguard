@@ -54,8 +54,10 @@ jobs:
     name: Build Windows x86_64
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: Checkout (full history for git describe)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build deps
         run: |
@@ -94,8 +96,10 @@ jobs:
     name: Build Windows x86
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: Checkout (full history for git describe)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build deps
         run: |
@@ -142,8 +146,10 @@ jobs:
       contents: write   # required for softprops/action-gh-release
 
     steps:
-      - name: Checkout
+      - name: Checkout (full history for git describe)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build deps
         run: |

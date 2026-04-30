@@ -35,8 +35,10 @@ jobs:
     name: Build Linux x86_64
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: Checkout (full history for git describe)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build deps
         run: |
@@ -44,12 +46,17 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake pkg-config
 
+      # No CI_ETL_TAG passed: relies on the v0.4.4-prep auto-versioning
+      # in cmake/ETLVersion.cmake. With fetch-depth: 0 above, git
+      # describe finds the most recent tag (annotated or lightweight).
+      # The CI workflow validates that the auto-detect path actually
+      # works — if it ever silently regresses, this build will start
+      # producing pk3s named "vanguard_2.83-dirty.pk3" and stand out
+      # in the build log.
       - name: Configure
         run: |
           cmake -B build \
             -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
-            -DCI_ETL_TAG=ci-${GITHUB_SHA::8} \
-            -DCI_ETL_DESCRIBE=ci-${GITHUB_SHA::8} \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
             -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
             -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -66,8 +73,10 @@ jobs:
     name: Build Windows x86_64
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: Checkout (full history for git describe)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build deps
         run: |
@@ -75,13 +84,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake pkg-config mingw-w64
 
+      # Auto-version (no CI_ETL_TAG override) — same rationale as the
+      # Linux job above.
       - name: Configure
         run: |
           cmake -B build-windows \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
             -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
-            -DCI_ETL_TAG=ci-${GITHUB_SHA::8} \
-            -DCI_ETL_DESCRIBE=ci-${GITHUB_SHA::8} \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
             -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
             -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
