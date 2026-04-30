@@ -264,35 +264,34 @@ if [ "$SKIP_BUILD" -ne 0 ]; then
 
 To build later:
 
-    # Pass the version on EVERY configure (-D form is canonical, env form
-    # also works — see cmake/ETLVersion.cmake CI_ETL_TAG handling). The
-    # env-prefix shorthand "CI_ETL_TAG=v0.4.3 cmake ..." used to be enough
-    # but failed silently when re-running one platform manually in a fresh
-    # shell — Windows DLLs ended up with "2.83-dirty" while Linux had the
-    # right version. The -D form is bullet-proof.
-    VFLAGS=(-DCI_ETL_TAG=v0.4.3 -DCI_ETL_DESCRIBE=v0.4.3)
+    # Version is auto-derived: cmake/ETLVersion.cmake reads `git describe
+    # --tags` first, then VANGUARD_VERSION as fallback. No manual version
+    # flag is required for any of the three configures below. To override
+    # (e.g. dev-build with an explicit "vX.Y.Z-dev" name), set:
+    #   VFLAGS=(-DCI_ETL_TAG=vX.Y.Z -DCI_ETL_DESCRIBE=vX.Y.Z)
+    # and append "\${VFLAGS[@]}" to each cmake -B line.
 
     # Windows x86_64 (delivered to 64-bit clients) — must run before Linux
     # so the multi-arch pk3 picks up the cross-built DLLs at configure time.
     cmake -B build-windows \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \\
         -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \\
-        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
+        ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows -j
 
     # Windows x86 (delivered to 32-bit clients)
     cmake -B build-windows-32 \\
         -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \\
         -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \\
-        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
+        ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build-windows-32 -j
 
-    # Linux x86_64 + the multi-arch vanguard_v0.4.3.pk3 the server hands out.
+    # Linux x86_64 + the multi-arch vanguard_vX.Y.Z.pk3 the server hands out.
     # FEATURE_OMNIBOT=ON requires the runtime tarball to be present in
     # vendor/omnibot-runtime/extracted/omni-bot/ — the bootstrap fetches it.
     cmake -B build \\
         -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON \\
-        "\${VFLAGS[@]}" ${COMMON_CMAKE_FLAGS[*]}
+        ${COMMON_CMAKE_FLAGS[*]}
     cmake --build build -j
 
 HINT
@@ -303,12 +302,20 @@ fi
 # we burn ~minutes on Windows + Linux compiles.
 fetch_omnibot_runtime
 
-# Vanguard release version. Injected into upstream's git-describe-driven
-# ETLVersion.cmake so the resulting pk3 is named vanguard_v0.4.3.pk3 instead
-# of falling back to the imported ETLEGACY_VERSION (2.83.x).
-# See docs/RELEASE_PROCESS.md for the full bump checklist.
-export CI_ETL_TAG="${VANGUARD_VERSION:-v0.4.3}"
-export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
+# Vanguard release version. Auto-derived since v0.4.4-prep:
+# cmake/ETLVersion.cmake reads `git describe --tags` first, then falls
+# back to the VANGUARD_VERSION file at the repo root if that fails (no
+# git, tarball checkout, etc). No hardcoded version string is needed
+# here. To override at bootstrap time (e.g. building a dev tag without
+# checking it out), set VANGUARD_VERSION in the environment:
+#   VANGUARD_VERSION=v0.4.4-dev ./scripts/bootstrap.sh
+# When unset (the default), CI_ETL_TAG / CI_ETL_DESCRIBE stay unset
+# and cmake auto-detects.
+if [ -n "${VANGUARD_VERSION:-}" ]; then
+    export CI_ETL_TAG="${VANGUARD_VERSION}"
+    export CI_ETL_DESCRIBE="${CI_ETL_TAG}"
+    log "Using VANGUARD_VERSION override: ${CI_ETL_TAG}"
+fi
 
 # Order matters: Windows cross builds run *before* the Linux configure so the
 # Linux build's BUILD_MOD_PK3=ON target can pick up the cross-built DLLs and

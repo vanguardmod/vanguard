@@ -35,50 +35,86 @@ directory are silently ignored on a pure server. So:
   - Therefore: **every shipped code change requires a full
     multi-platform rebuild + pk3 repack + version bump**.
 
-## Six locations to bump
+## Versioning is auto-derived from git tags
 
-For now, version lives in six spots. They must all match, otherwise
-the runtime banner, the pk3 filename, and the docs disagree.
+Up to v0.4.3 the version was maintained at six hardcoded spots
+(`scripts/bootstrap.sh` ×4, `cmake/CMakeLists.scaffold.txt:4`,
+`docs/DEV_MODE.md`, `docs/BUILDING.md`). Each release required
+keeping all of them in sync, which was tedious and broke in
+predictable ways (a stale doc reference, a manual rebuild that
+forgot to set `CI_ETL_TAG`, …).
 
-| File                                | Purpose                                             |
-|-------------------------------------|-----------------------------------------------------|
-| `scripts/bootstrap.sh:272`          | comment in `--skip-build` HINT (cosmetic)           |
-| `scripts/bootstrap.sh:275`          | example invocation in HINT (cosmetic)               |
-| `scripts/bootstrap.sh:288`          | comment over the export (cosmetic)                  |
-| `scripts/bootstrap.sh:290`          | **`VANGUARD_VERSION` default — the build truth**    |
-| `cmake/CMakeLists.scaffold.txt:4`   | scaffold project version (kept in sync)             |
-| `docs/DEV_MODE.md:213`              | "vanguard_v0.1.X.pk3" prose reference               |
-| `docs/BUILDING.md:69`               | "vanguard_v0.1.X.pk3" prose reference               |
+Since v0.4.4 the version flows from a single source of truth:
+**`git describe --tags`**. To cut a release:
 
-(The line numbers drift; `grep -rn 'vanguard_v0\.' .` is the
-authoritative finder.)
+```bash
+# 1. Push the version-bump commit to main (RELEASE_NOTES section,
+#    optionally bump VANGUARD_VERSION to match).
+git push origin main
 
-The runtime version string is computed from `CI_ETL_TAG` /
-`CI_ETL_DESCRIBE` env vars by `cmake/ETLVersion.cmake`. Bootstrap
-exports them from `VANGUARD_VERSION`, so the bootstrap.sh export is
-the single source of truth at build time — the rest are
-documentation.
+# 2. Tag the commit and push the tag.
+git tag v0.4.4
+git push origin v0.4.4
+```
+
+The release workflow (`.github/workflows/release.yml`) builds, packages
+and publishes the GitHub Release based on the tag name. No further
+manual edits are required. See `docs/CI.md` for the workflow walkthrough.
+
+### What still needs editing per release
+
+  - **`docs/RELEASE_NOTES.md`** — prepend a `## vX.Y.Z — DATE — TITLE`
+    section. The release workflow extracts this section verbatim as
+    the GitHub Release body, so the format matters.
+  - **`VANGUARD_VERSION`** (optional) — only matters for non-git
+    builds (tarball downloads of the source). If you skip this, a
+    tarball rebuild lands on whatever was committed last, which is
+    almost always fine.
+
+### What does NOT need editing per release
+
+  - `scripts/bootstrap.sh` — auto-detects from git via cmake.
+  - `cmake/CMakeLists.scaffold.txt` — VERSION line removed
+    (was unused; the active root is upstream's CMakeLists.txt).
+  - `docs/BUILDING.md`, `docs/DEV_MODE.md`, `docs/INSTALL_*.md` —
+    use `vX.Y.Z` as a placeholder where they used to hardcode the
+    current version.
+
+### How auto-versioning resolves
+
+`cmake/ETLVersion.cmake` consults sources in this order, taking the
+first non-empty result:
+
+  1. `CI_ETL_TAG` / `CI_ETL_DESCRIBE` env var or cmake cache var
+     (override path — release.yml passes `${{ github.ref_name }}`,
+     manual builders can pass `-DCI_ETL_TAG=vX.Y.Z`).
+  2. `git describe --tags --abbrev=0` for the short tag and
+     `git describe --tags --abbrev=7` for the full version-including-
+     commits-since-tag string. Works with both annotated and
+     lightweight tags. Empty for tarball / non-git checkouts.
+  3. `VANGUARD_VERSION` file at the repo root. One line, format
+     `vX.Y.Z`. Final fallback for non-git builds.
+  4. `VERSION.txt` (upstream's, ETLegacy 2.83.x). If we get here
+     it's a bug — the resulting pk3 will identify as ETLegacy
+     rather than VanguardMod. Look for "VANGUARD_VERSION fallback"
+     in the cmake log to confirm whether step 3 fired.
 
 ## Build sequence
 
 Three platforms, in this exact order (the Linux build's `mod_pk3`
-target globs the Windows DLLs at configure time). Pass the version
-on **every** configure via `-DCI_ETL_TAG=...` and
-`-DCI_ETL_DESCRIBE=...` — the env-prefix shorthand
-(`CI_ETL_TAG=v0.X.Y cmake ...`) also works but is easy to forget on
-a manual single-platform rebuild, which silently produces binaries
-with the upstream `MAJOR.MINOR-dirty` fallback baked in. The `-D`
-form is bullet-proof.
+target globs the Windows DLLs at configure time). With v0.4.4-prep
+auto-versioning, no `-DCI_ETL_TAG=...` flag is required when you've
+tagged the commit you're building — cmake reads `git describe --tags`
+itself. Pass the override only when you need to force a different
+version (dev build off an untagged branch, or rebuilding a tarball
+without git history).
 
 ```bash
-VFLAGS=(-DCI_ETL_TAG=v0.1.X -DCI_ETL_DESCRIBE=v0.1.X)
-
 # 1. Windows x86_64
 rm -rf build-windows
 cmake -B build-windows \
     -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
     -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
-    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -90,7 +126,6 @@ rm -rf build-windows-32
 cmake -B build-windows-32 \
     -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \
     -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
-    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -101,12 +136,14 @@ cmake --build build-windows-32 -j
 rm -rf build
 cmake -B build \
     -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=ON -DFEATURE_OMNIBOT=ON \
-    "${VFLAGS[@]}" \
     -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
     -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
     -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
     -DINSTALL_EXTRA=OFF
 cmake --build build -j
+
+# Override example (dev build, untagged branch, force a name):
+#   cmake -B build -DCI_ETL_TAG=v0.4.4-dev -DCI_ETL_DESCRIBE=v0.4.4-dev ...
 ```
 
 Note: `bootstrap.sh` runs this exact sequence (plus the Omni-Bot
