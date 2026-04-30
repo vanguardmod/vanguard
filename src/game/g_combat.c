@@ -1755,6 +1755,144 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 		mdx_gentity_to_grefEntity(targ, &refent,
 		    targ->timeShiftTime ? targ->timeShiftTime : level.time);
 
+		/* VANGUARDMOD-DIAG-DUMP: Phase 7.0.1 capsule-offset recon
+		 * (v0.5.2-rc1). Live-test on v0.5.1 with
+		 * vanguard_hitbox_debug 1 confirmed the multi-region
+		 * capsules render systematically lateral-offset from the
+		 * visible mesh — chest/shoulder offsets too, so it can't be
+		 * the HEAD-only `offset 6.5 0 0` axis alone. To localise
+		 * the discrepancy between qagame's mdx_bone_orientation and
+		 * the engine's R_CalcBones, this block lerps a representative
+		 * set of internal tags (head with its 6.5,0,0 offset; neck
+		 * and chest with no offset; pelvis, both clavicles) and
+		 * dumps the resulting world-space positions plus the
+		 * grefEntity transform inputs that produced them.
+		 *
+		 * One-shot per session: fires on the first damage event
+		 * after vanguard_hitbox_debug transitions 0->1, then sets
+		 * s_diag_dump_done. To re-arm, toggle the cvar 0 then 1
+		 * again. This bounds the log spam to one block per recon
+		 * cycle — the regular VG_DIAG: line below still fires every
+		 * shot for the live-trace stream. The `VG_DIAG_DUMP:` prefix
+		 * is intentionally distinct so wahke can grep one or the
+		 * other when correlating server.log against the visual.
+		 *
+		 * Diagnostic-only — removed in v0.5.2 final once the
+		 * empirical fix lands. */
+		{
+			static qboolean s_diag_dump_done  = qfalse;
+			static qboolean s_diag_prev_debug = qfalse;
+			qboolean        debug_active      = vg_Hitbox_DebugActive();
+
+			if (debug_active && !s_diag_prev_debug)
+			{
+				s_diag_dump_done = qfalse;
+			}
+			s_diag_prev_debug = debug_active;
+
+			if (debug_active && !s_diag_dump_done && targ->client && attacker)
+			{
+				orientation_t o_head, o_neck, o_spine_mid, o_pelvis, o_clav_l, o_clav_r;
+				vec3_t        delta_head_neck;
+				vec_t         delta_len;
+
+				Com_Memset(&o_head, 0, sizeof(o_head));
+				Com_Memset(&o_neck, 0, sizeof(o_neck));
+				Com_Memset(&o_spine_mid, 0, sizeof(o_spine_mid));
+				Com_Memset(&o_pelvis, 0, sizeof(o_pelvis));
+				Com_Memset(&o_clav_l, 0, sizeof(o_clav_l));
+				Com_Memset(&o_clav_r, 0, sizeof(o_clav_r));
+
+				trap_R_LerpTag(&o_head,      &refent, "_vg_head",      0);
+				trap_R_LerpTag(&o_neck,      &refent, "_vg_neck",      0);
+				trap_R_LerpTag(&o_spine_mid, &refent, "_vg_spine_mid", 0);
+				trap_R_LerpTag(&o_pelvis,    &refent, "_vg_pelvis",    0);
+				trap_R_LerpTag(&o_clav_l,    &refent, "_vg_clav_l",    0);
+				trap_R_LerpTag(&o_clav_r,    &refent, "_vg_clav_r",    0);
+
+				VectorSubtract(o_head.origin, o_neck.origin, delta_head_neck);
+				delta_len = VectorLength(delta_head_neck);
+
+				G_Printf("VG_DIAG_DUMP: capsule diagnostic (Phase 7.0.1 recon, v0.5.2-rc1)\n");
+				G_Printf("VG_DIAG_DUMP:   attacker=%d target=%d weapon=%d mod=%d level.time=%d\n",
+				         (int)(attacker - g_entities), (int)(targ - g_entities),
+				         (int)attacker->s.weapon, (int)mod, level.time);
+				G_Printf("VG_DIAG_DUMP:   targ->r.currentOrigin = (%.2f, %.2f, %.2f)\n",
+				         (double)targ->r.currentOrigin[0],
+				         (double)targ->r.currentOrigin[1],
+				         (double)targ->r.currentOrigin[2]);
+				G_Printf("VG_DIAG_DUMP:   targ->client->ps.viewangles = (%.2f, %.2f, %.2f)\n",
+				         (double)targ->client->ps.viewangles[0],
+				         (double)targ->client->ps.viewangles[1],
+				         (double)targ->client->ps.viewangles[2]);
+				G_Printf("VG_DIAG_DUMP:   targ->timeShiftTime = %d (lagcomp %s)\n",
+				         targ->timeShiftTime,
+				         targ->timeShiftTime ? "ACTIVE" : "off");
+				G_Printf("VG_DIAG_DUMP:   refent.origin    = (%.2f, %.2f, %.2f)\n",
+				         (double)refent.origin[0],
+				         (double)refent.origin[1],
+				         (double)refent.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   refent.axis[0] (fwd)  = (%.4f, %.4f, %.4f)\n",
+				         (double)refent.axis[0][0],
+				         (double)refent.axis[0][1],
+				         (double)refent.axis[0][2]);
+				G_Printf("VG_DIAG_DUMP:   refent.axis[1] (left) = (%.4f, %.4f, %.4f)\n",
+				         (double)refent.axis[1][0],
+				         (double)refent.axis[1][1],
+				         (double)refent.axis[1][2]);
+				G_Printf("VG_DIAG_DUMP:   refent.axis[2] (up)   = (%.4f, %.4f, %.4f)\n",
+				         (double)refent.axis[2][0],
+				         (double)refent.axis[2][1],
+				         (double)refent.axis[2][2]);
+				G_Printf("VG_DIAG_DUMP:   refent.torsoFrameModel=%d torsoFrame=%d torsoOldFrame=%d torsoBacklerp=%.3f\n",
+				         (int)refent.torsoFrameModel, (int)refent.torsoFrame,
+				         (int)refent.oldTorsoFrame, (double)refent.torsoBacklerp);
+				G_Printf("VG_DIAG_DUMP:   refent.frameModel=%d frame=%d oldframe=%d backlerp=%.3f\n",
+				         (int)refent.frameModel, (int)refent.frame,
+				         (int)refent.oldframe, (double)refent.backlerp);
+				G_Printf("VG_DIAG_DUMP:   _vg_head      (Bip01 Head + 6.5,0,0) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_head.origin[0],
+				         (double)o_head.origin[1],
+				         (double)o_head.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_neck      (Bip01 Neck, no offset) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_neck.origin[0],
+				         (double)o_neck.origin[1],
+				         (double)o_neck.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_spine_mid (Bip01 Spine1, no offset) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_spine_mid.origin[0],
+				         (double)o_spine_mid.origin[1],
+				         (double)o_spine_mid.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_pelvis    (Bip01 Pelvis, no offset) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_pelvis.origin[0],
+				         (double)o_pelvis.origin[1],
+				         (double)o_pelvis.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_clav_l    (Bip01 L Clavicle, no offset) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_clav_l.origin[0],
+				         (double)o_clav_l.origin[1],
+				         (double)o_clav_l.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_clav_r    (Bip01 R Clavicle, no offset) = (%.2f, %.2f, %.2f)\n",
+				         (double)o_clav_r.origin[0],
+				         (double)o_clav_r.origin[1],
+				         (double)o_clav_r.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   delta head-neck = (%.2f, %.2f, %.2f) |delta|=%.2f\n",
+				         (double)delta_head_neck[0],
+				         (double)delta_head_neck[1],
+				         (double)delta_head_neck[2],
+				         (double)delta_len);
+				G_Printf("VG_DIAG_DUMP:   muzzleTrace = (%.2f, %.2f, %.2f)\n",
+				         (double)muzzleTrace[0],
+				         (double)muzzleTrace[1],
+				         (double)muzzleTrace[2]);
+				G_Printf("VG_DIAG_DUMP:   trace endpoint (point) = (%.2f, %.2f, %.2f)\n",
+				         (double)point[0],
+				         (double)point[1],
+				         (double)point[2]);
+				G_Printf("VG_DIAG_DUMP: end of dump (one-shot, re-arm via vanguard_hitbox_debug 0->1)\n");
+
+				s_diag_dump_done = qtrue;
+			}
+		}
+
 		if (mdx_hit_test(muzzleTrace, point, targ, &refent,
 		                 &mdx_hit_type, &mdx_fraction, &mdx_ip))
 		{
