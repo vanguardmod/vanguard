@@ -75,7 +75,7 @@
 // skeleton bone. mdx_bone_lookup is case-sensitive (strcmp),
 // so the bone-name spelling must match the .mdx exactly.
 //
-// _vg_head applies a `+6.5` offset along the head bone's local
+// _vg_head applies a `+2.0` offset along the head bone's local
 // X axis. The Bip01 Head bone-origin in the 3DS-Max biped
 // skeleton sits at the atlas / skull-base — a radius-6 sphere
 // centered there lands on the chin/upper-neck in the visible
@@ -93,15 +93,34 @@
 // is the world-up direction the offset has to follow. v0.4.1
 // shipped with `0 0 6.5` and produced a sphere that wandered to
 // the back of the head (top-down view: on the medic-pack
-// backpack); v0.4.2 switches to the correct axis. The matching
-// offset is hardcoded in cgame's vg_hit_areas[] HEAD entry so
-// the wireframe visualisation tracks the real trace position.
+// backpack); v0.4.2 switches to the correct axis.
+//
+// Magnitude tuned in v0.5.2 from the v0.5.2-rc3 multi-pose
+// VG_DIAG_DUMP measurements. Five samples (3 idle + 2 crouch)
+// returned a consistent `delta head-neck Z = 10.85` regardless
+// of pose — the bone projection stays vertical because the
+// engine's animations keep the head level across stances. With
+// the base bone-distance Bip01 Neck → Bip01 Head ≈ 4.35 units,
+// the previous `+6.5` placed the sphere CENTRE at the top of
+// the skull (chin-to-+12.5-above-neck), shifting hits upward
+// from the visible head. The anatomical target — radius-6
+// sphere covering from chin to crown — wants the centre at the
+// face/eye-level zone, around `+6` over neck. That requires
+// offset = 6.0 - 4.35 = 1.65 in bone-local X; rounded to 2.0
+// for a clean number, the centre lands at ~+6.35 over neck and
+// the sphere covers neck-base to top-of-head. Verified locally
+// on a dedicated linux test server before shipping; multi-pose
+// validation expected to confirm 5-7 over neck in idle + crouch.
 //
 // The 0.5 forward component that mdx_head_position also applies
 // is intentionally omitted — for an isotropic radius-6 sphere
 // it has no effect on the hit volume centre.
+//
+// NOTE: cgame's vg_hit_areas[] HEAD entry mirrors this offset
+// for the wireframe visualisation. Keep them in sync — every
+// .hit retune of _vg_head requires a matching cgame edit.
 
-TAG _vg_head      "Bip01 Head" offset 6.5 0 0
+TAG _vg_head      "Bip01 Head" offset 2.0 0 0
 TAG _vg_neck      "Bip01 Neck"
 TAG _vg_spine_lo  "Bip01 Spine"
 TAG _vg_spine_mid "Bip01 Spine1"
