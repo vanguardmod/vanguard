@@ -3,6 +3,94 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.1 — 2026-04-30 — Strict-hitbox actually rejects AABB-only hits
+
+### What this fixes
+
+v0.4.3 introduced `vanguard_hitbox_strict` (default 1) with the
+intent that shots landing in the engine's broad-phase player AABB
+but missing every multi-region capsule should be rejected
+entirely. Cup admins added `set vanguard_hitbox_strict 1` to
+their server configs and expected "shoot beside the model →
+no damage". Live-test on Pterodactyl with `g_debugHitboxes 1`
+showed the opposite: `MOD_GARAND` shots logging
+`hit_type=0 impactpoint=0` (= no capsule matched) were still
+killing bots, identically to non-strict v0.4.x.
+
+Root cause: the v0.4.3 strict-mode predicate was structurally
+wrong. `mdx_hit_test` (`g_mdx.c:2754-2953`) **always returns
+qtrue** in normal play; "no capsule matched" is communicated via
+`*impactpoint = IMPACTPOINT_UNUSED` (= 0), not via the boolean
+return. The reject block at `g_combat.c:1830` sat in the dead
+`else` of `if (mdx_hit_test(...))` and never fired. Every
+AABB-edge hit fell through to the multiplier path, picked up
+`vanguard_dmg_default` (= 1.0), and applied normal damage.
+
+The fix is structural and small:
+
+  - **Reject inside the success branch.** New check
+    `if (mdx_ip == IMPACTPOINT_UNUSED && vg_Hitbox_StrictMode())`
+    at the top of the hit-resolved block. Catches the AABB-but-
+    no-capsule case correctly. `VG_DIAG: strict-hitbox reject
+    (AABB hit but no capsule)` log line if
+    `vanguard_hitbox_debug 1`.
+  - **Dead reject block removed.** The unreachable
+    `if (vg_Hitbox_StrictMode()) return` after the
+    `if (mdx_hit_test...)` is gone. A short comment in its place
+    explains the qfalse-only-in-startup-error rationale so
+    future readers don't add it back.
+  - **`isHeadshot` gate dropped.** Mounted / mobile MGs
+    (`MOD_MACHINEGUN`, `MOD_BROWNING`, `MOD_MG42`,
+    `MOD_MOBILE_MG42`, `MOD_MOBILE_BROWNING`) now also go through
+    the multi-region narrow-phase. v0.4.x bypassed the gate via
+    `isHeadshot=qfalse` and applied damage on AABB hit; with
+    v0.5.1 they get the same strict-mode treatment as
+    rifles/SMGs. Splash-damage MODs (`isExplosive=qtrue`) take a
+    completely different code path via `radius_damage` and stay
+    unaffected — grenades, panzers, mortars still apply on
+    radius regardless of capsule, which is correct.
+
+### Behaviour change for cup admins
+
+Cup servers running with default `vanguard_hitbox_strict 1` will
+see fewer "phantom kills" — players hit beside the visible mesh
+no longer take damage. This is what cup admins were asking for
+in the v0.4.3 strict-mode discussion, finally actually
+delivered. Mounted MGs now also benefit from the rejection
+(previously bypassed via the `isHeadshot` gate).
+
+For anyone who needs byte-identical legacy behaviour:
+`set vanguard_hitbox_strict 0` falls through to the multiplier
+path with `dmg_default = 1.0` for AABB-only hits — that's
+v0.4.x behaviour preserved as an opt-out. The `isHeadshot`
+gate drop is permanent for v0.5.1+; if you specifically need
+old mounted-MG semantics, set `dmg_default 0.0` to make
+AABB-only hits from any weapon do zero damage even without
+strict mode (alternative way to express the same intent).
+
+### Bullet-trace AABB tightening (Phase 7.0)
+
+The fix above IS the AABB tightening for practical purposes.
+The original Phase 7.0 plan envisioned a custom bullet-trace
+layer that operated only against the multi-region capsules. The
+recon (docs/notes/PHASE_7_0_AUDIT.md) found that approach would
+be ~10× more expensive on the hot path AND functionally
+equivalent to AABB-broad-phase + capsule-narrow-phase rejection
+— if the rejection was wired up correctly. v0.5.1 wires up the
+rejection. No custom trace layer needed.
+
+### What's NOT in this release
+
+  - Capsule-gap tuning (Phase 7.0.1 candidate). With strict-mode
+    actually rejecting now, the live-test may surface "I clearly
+    hit the model but no damage" cases where the trace endpoint
+    falls in a gap between two adjacent capsules (e.g. between
+    Bip01 L Thigh and Bip01 Pelvis). If that happens,
+    Phase 7.0.1 = `human_base.hit` capsule overlap tuning,
+    separate v0.5.2.
+  - Phase 7.3 (movement physics), Phase 7.4 (UI), Phase 7.1
+    (sounds) — still scheduled for subsequent v0.5.x releases.
+
 ## v0.5.0 — 2026-04-30 — Cup-Mode Foundation
 
 First major release on the Cup-Mode track. Phase 7.2 (Netcode
