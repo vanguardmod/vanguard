@@ -1756,26 +1756,47 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 		    targ->timeShiftTime ? targ->timeShiftTime : level.time);
 
 		/* VANGUARDMOD-DIAG-DUMP: Phase 7.0.1 capsule-offset recon
-		 * (v0.5.2-rc1). Live-test on v0.5.1 with
-		 * vanguard_hitbox_debug 1 confirmed the multi-region
-		 * capsules render systematically lateral-offset from the
-		 * visible mesh — chest/shoulder offsets too, so it can't be
-		 * the HEAD-only `offset 6.5 0 0` axis alone. To localise
-		 * the discrepancy between qagame's mdx_bone_orientation and
-		 * the engine's R_CalcBones, this block lerps a representative
-		 * set of internal tags (head with its 6.5,0,0 offset; neck
-		 * and chest with no offset; pelvis, both clavicles) and
-		 * dumps the resulting world-space positions plus the
-		 * grefEntity transform inputs that produced them.
+		 * (v0.5.2-rc1 first shipped, v0.5.2-rc3 fixed bone-lookup).
+		 * Live-test on v0.5.1 with vanguard_hitbox_debug 1 confirmed
+		 * Phase 6 multi-region capsules sit systematically lateral-
+		 * offset from the rendered player mesh — chest and shoulder
+		 * capsules drift too, ruling out the v0.4.2 HEAD-only
+		 * `offset 6.5 0 0` axis as the sole cause. The leading
+		 * hypothesis is a divergence between qagame's
+		 * mdx_bone_orientation (anchors capsules) and the engine's
+		 * R_CalcBones (renders the mesh).
 		 *
-		 * One-shot per session: fires on the first damage event
-		 * after vanguard_hitbox_debug transitions 0->1, then sets
-		 * s_diag_dump_done. To re-arm, toggle the cvar 0 then 1
-		 * again. This bounds the log spam to one block per recon
-		 * cycle — the regular VG_DIAG: line below still fires every
-		 * shot for the live-trace stream. The `VG_DIAG_DUMP:` prefix
-		 * is intentionally distinct so wahke can grep one or the
-		 * other when correlating server.log against the visual.
+		 * To localise the discrepancy without guessing, this block
+		 * resolves a representative set of .hit interntags (_vg_head
+		 * with its 6.5,0,0 offset; _vg_neck, _vg_spine_mid,
+		 * _vg_pelvis, _vg_clav_l, _vg_clav_r with no offset) to
+		 * world-space coordinates via mdx_diag_resolve_tag_world —
+		 * the same cachetag + mdx_tag_orientation path mdx_hit_test
+		 * uses for capsule anchors at hit->tag[0]. Output is the
+		 * world-space anchor position for each tag plus the
+		 * grefEntity_t transform inputs (origin, axis[0..2],
+		 * frame state) so the v0.5.2 final fix targets actual
+		 * numbers instead of more guesswork.
+		 *
+		 * v0.5.2-rc2 used trap_R_LerpTag for the resolution, which
+		 * silently returns -1 for interntags (TAG_INTERNAL bit
+		 * triggers tagNum >= model->tag_count guard at g_mdx.c:1801)
+		 * and leaves the orientation_t at zeros. rc3 calls the
+		 * new mdx_diag_resolve_tag_world wrapper which routes
+		 * through the cachetag table mdx_tag_orientation expects.
+		 *
+		 * Trigger paths:
+		 *   1. vanguard_hitbox_debug 0->1 transition: dump fires
+		 *      once on the next damage event, latched until next
+		 *      0->1 toggle. Convenient for a single armed shot.
+		 *   2. rcon set vanguard_diag_dump 1: dump fires on next
+		 *      damage event regardless of debug state, cvar
+		 *      auto-resets. Use this for multi-pose tests in a
+		 *      single session — issue between each shot.
+		 *
+		 * The per-shot VG_DIAG: line below still fires every shot
+		 * when vanguard_hitbox_debug 1; VG_DIAG_DUMP: is the
+		 * once-per-arm block. Distinct prefix so logs grep cleanly.
 		 *
 		 * Diagnostic-only — removed in v0.5.2 final once the
 		 * empirical fix lands. */
@@ -1783,6 +1804,9 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			static qboolean s_diag_dump_done  = qfalse;
 			static qboolean s_diag_prev_debug = qfalse;
 			qboolean        debug_active      = vg_Hitbox_DebugActive();
+			qboolean        manual_request    = vg_Hitbox_ConsumeDiagDumpRequest();
+			qboolean        should_dump       = qfalse;
+			const char     *trigger_label     = "(none)";
 
 			if (debug_active && !s_diag_prev_debug)
 			{
@@ -1790,30 +1814,48 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			}
 			s_diag_prev_debug = debug_active;
 
-			if (debug_active && !s_diag_dump_done && targ->client && attacker)
+			if (manual_request)
 			{
-				orientation_t o_head, o_neck, o_spine_mid, o_pelvis, o_clav_l, o_clav_r;
-				vec3_t        delta_head_neck;
-				vec_t         delta_len;
+				should_dump   = qtrue;
+				trigger_label = "manual (vanguard_diag_dump 1)";
+			}
+			else if (debug_active && !s_diag_dump_done)
+			{
+				should_dump      = qtrue;
+				trigger_label    = "auto (vanguard_hitbox_debug 0->1 re-arm)";
+				s_diag_dump_done = qtrue;
+			}
 
-				Com_Memset(&o_head, 0, sizeof(o_head));
-				Com_Memset(&o_neck, 0, sizeof(o_neck));
-				Com_Memset(&o_spine_mid, 0, sizeof(o_spine_mid));
-				Com_Memset(&o_pelvis, 0, sizeof(o_pelvis));
-				Com_Memset(&o_clav_l, 0, sizeof(o_clav_l));
-				Com_Memset(&o_clav_r, 0, sizeof(o_clav_r));
+			if (should_dump && targ->client && attacker)
+			{
+				vec3_t o_head_pos,  o_neck_pos,  o_spine_mid_pos;
+				vec3_t o_pelvis_pos, o_clav_l_pos, o_clav_r_pos;
+				vec3_t a_unused[3];
+				vec3_t delta_head_neck;
+				vec_t  delta_len;
+				int    rh, rn, rs, rp, rcl, rcr;
 
-				trap_R_LerpTag(&o_head,      &refent, "_vg_head",      0);
-				trap_R_LerpTag(&o_neck,      &refent, "_vg_neck",      0);
-				trap_R_LerpTag(&o_spine_mid, &refent, "_vg_spine_mid", 0);
-				trap_R_LerpTag(&o_pelvis,    &refent, "_vg_pelvis",    0);
-				trap_R_LerpTag(&o_clav_l,    &refent, "_vg_clav_l",    0);
-				trap_R_LerpTag(&o_clav_r,    &refent, "_vg_clav_r",    0);
+				VectorClear(o_head_pos);
+				VectorClear(o_neck_pos);
+				VectorClear(o_spine_mid_pos);
+				VectorClear(o_pelvis_pos);
+				VectorClear(o_clav_l_pos);
+				VectorClear(o_clav_r_pos);
 
-				VectorSubtract(o_head.origin, o_neck.origin, delta_head_neck);
+				rh  = mdx_diag_resolve_tag_world(&refent, "_vg_head",      o_head_pos,      a_unused);
+				rn  = mdx_diag_resolve_tag_world(&refent, "_vg_neck",      o_neck_pos,      a_unused);
+				rs  = mdx_diag_resolve_tag_world(&refent, "_vg_spine_mid", o_spine_mid_pos, a_unused);
+				rp  = mdx_diag_resolve_tag_world(&refent, "_vg_pelvis",    o_pelvis_pos,    a_unused);
+				rcl = mdx_diag_resolve_tag_world(&refent, "_vg_clav_l",    o_clav_l_pos,    a_unused);
+				rcr = mdx_diag_resolve_tag_world(&refent, "_vg_clav_r",    o_clav_r_pos,    a_unused);
+
+				VectorSubtract(o_head_pos, o_neck_pos, delta_head_neck);
 				delta_len = VectorLength(delta_head_neck);
 
-				G_Printf("VG_DIAG_DUMP: capsule diagnostic (Phase 7.0.1 recon, v0.5.2-rc1)\n");
+				G_Printf("VG_DIAG_DUMP: capsule diagnostic (Phase 7.0.1 recon)\n");
+				G_Printf("VG_DIAG_DUMP:   trigger=%s\n", trigger_label);
+				G_Printf("VG_DIAG_DUMP:   resolve_status head=%d neck=%d spine_mid=%d pelvis=%d clav_l=%d clav_r=%d (0=ok, -1=tag not in model)\n",
+				         rh, rn, rs, rp, rcl, rcr);
 				G_Printf("VG_DIAG_DUMP:   attacker=%d target=%d weapon=%d mod=%d level.time=%d\n",
 				         (int)(attacker - g_entities), (int)(targ - g_entities),
 				         (int)attacker->s.weapon, (int)mod, level.time);
@@ -1850,30 +1892,30 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 				G_Printf("VG_DIAG_DUMP:   refent.frameModel=%d frame=%d oldframe=%d backlerp=%.3f\n",
 				         (int)refent.frameModel, (int)refent.frame,
 				         (int)refent.oldframe, (double)refent.backlerp);
-				G_Printf("VG_DIAG_DUMP:   _vg_head      (Bip01 Head + 6.5,0,0) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_head.origin[0],
-				         (double)o_head.origin[1],
-				         (double)o_head.origin[2]);
-				G_Printf("VG_DIAG_DUMP:   _vg_neck      (Bip01 Neck, no offset) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_neck.origin[0],
-				         (double)o_neck.origin[1],
-				         (double)o_neck.origin[2]);
-				G_Printf("VG_DIAG_DUMP:   _vg_spine_mid (Bip01 Spine1, no offset) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_spine_mid.origin[0],
-				         (double)o_spine_mid.origin[1],
-				         (double)o_spine_mid.origin[2]);
-				G_Printf("VG_DIAG_DUMP:   _vg_pelvis    (Bip01 Pelvis, no offset) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_pelvis.origin[0],
-				         (double)o_pelvis.origin[1],
-				         (double)o_pelvis.origin[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_head      (Bip01 Head + 6.5,0,0)        = (%.2f, %.2f, %.2f)\n",
+				         (double)o_head_pos[0],
+				         (double)o_head_pos[1],
+				         (double)o_head_pos[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_neck      (Bip01 Neck, no offset)       = (%.2f, %.2f, %.2f)\n",
+				         (double)o_neck_pos[0],
+				         (double)o_neck_pos[1],
+				         (double)o_neck_pos[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_spine_mid (Bip01 Spine1, no offset)     = (%.2f, %.2f, %.2f)\n",
+				         (double)o_spine_mid_pos[0],
+				         (double)o_spine_mid_pos[1],
+				         (double)o_spine_mid_pos[2]);
+				G_Printf("VG_DIAG_DUMP:   _vg_pelvis    (Bip01 Pelvis, no offset)     = (%.2f, %.2f, %.2f)\n",
+				         (double)o_pelvis_pos[0],
+				         (double)o_pelvis_pos[1],
+				         (double)o_pelvis_pos[2]);
 				G_Printf("VG_DIAG_DUMP:   _vg_clav_l    (Bip01 L Clavicle, no offset) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_clav_l.origin[0],
-				         (double)o_clav_l.origin[1],
-				         (double)o_clav_l.origin[2]);
+				         (double)o_clav_l_pos[0],
+				         (double)o_clav_l_pos[1],
+				         (double)o_clav_l_pos[2]);
 				G_Printf("VG_DIAG_DUMP:   _vg_clav_r    (Bip01 R Clavicle, no offset) = (%.2f, %.2f, %.2f)\n",
-				         (double)o_clav_r.origin[0],
-				         (double)o_clav_r.origin[1],
-				         (double)o_clav_r.origin[2]);
+				         (double)o_clav_r_pos[0],
+				         (double)o_clav_r_pos[1],
+				         (double)o_clav_r_pos[2]);
 				G_Printf("VG_DIAG_DUMP:   delta head-neck = (%.2f, %.2f, %.2f) |delta|=%.2f\n",
 				         (double)delta_head_neck[0],
 				         (double)delta_head_neck[1],
@@ -1887,9 +1929,7 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 				         (double)point[0],
 				         (double)point[1],
 				         (double)point[2]);
-				G_Printf("VG_DIAG_DUMP: end of dump (one-shot, re-arm via vanguard_hitbox_debug 0->1)\n");
-
-				s_diag_dump_done = qtrue;
+				G_Printf("VG_DIAG_DUMP: end of dump (re-arm: vanguard_hitbox_debug 0->1, OR set vanguard_diag_dump 1)\n");
 			}
 		}
 

@@ -280,6 +280,14 @@ typedef struct
 	 * choice persists; not LATCH so cup organisers can flip live for
 	 * the casual portion of an event. */
 	vmCvar_t strict;
+
+	/* VG_DIAG_DUMP manual-trigger (Phase 7.0.1, v0.5.2-rc3+). Set to
+	 * 1 by an rcon admin to fire the diagnostic dump on the NEXT
+	 * damage event regardless of vanguard_hitbox_debug state; the
+	 * server-side handler auto-resets the cvar to 0 after consuming
+	 * the request. Not ARCHIVE — transient control cvar, doesn't
+	 * persist across map changes (would defeat the "fire once" UX). */
+	vmCvar_t diag_dump;
 } vg_hitbox_state_t;
 
 static vg_hitbox_state_t s_hitbox;
@@ -319,6 +327,9 @@ void vg_Hitbox_Init(void)
 	 * CVAR_ARCHIVE so admin choice persists across map changes. */
 	trap_Cvar_Register(&s_hitbox.strict,         "vanguard_hitbox_strict",  "1",   CVAR_ARCHIVE);
 
+	/* VG_DIAG_DUMP manual-trigger — transient, not ARCHIVE. */
+	trap_Cvar_Register(&s_hitbox.diag_dump,      "vanguard_diag_dump",      "0",   0);
+
 	G_Printf("VG_Hitbox: initialized (mode=%d, strict=%d)\n",
 	         s_hitbox.mode.integer, s_hitbox.strict.integer);
 }
@@ -350,6 +361,25 @@ qboolean vg_Hitbox_StrictMode(void)
 {
 	trap_Cvar_Update(&s_hitbox.strict);
 	return (s_hitbox.strict.integer != 0) ? qtrue : qfalse;
+}
+
+qboolean vg_Hitbox_ConsumeDiagDumpRequest(void)
+{
+	/* Atomic test-and-clear pattern for the manual VG_DIAG_DUMP
+	 * trigger (Phase 7.0.1). Reading the cvar fresh and immediately
+	 * resetting via trap_Cvar_Set means an admin who runs
+	 * "rcon set vanguard_diag_dump 1" gets exactly one dump on the
+	 * next damage event, even if multiple shots are fired in the
+	 * same frame — the cvar is back to 0 by the time the second
+	 * shot's G_Damage runs. */
+	trap_Cvar_Update(&s_hitbox.diag_dump);
+	if (s_hitbox.diag_dump.integer != 0)
+	{
+		trap_Cvar_Set("vanguard_diag_dump", "0");
+		s_hitbox.diag_dump.integer = 0;
+		return qtrue;
+	}
+	return qfalse;
 }
 
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
