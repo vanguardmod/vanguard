@@ -1743,10 +1743,45 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 	 * passes `point` (the bullet impact position) for hitscan
 	 * weapons and a NULL/zero point for indirect damage; the
 	 * mdx_hit_test trace from muzzleTrace to point only makes
-	 * sense for the former. The gate's vg_Hitbox_IsActive +
-	 * client + alive checks already exclude the indirect
-	 * scenarios. */
-	if (vg_Hitbox_IsActive() && targ->client && targ->health > 0)
+	 * sense for the former.
+	 *
+	 * Phase 8.0 v0.5.2.2 fix: the original gate was just
+	 * `vg_Hitbox_IsActive() && targ->client && targ->health > 0`
+	 * — based on the assumption that "indirect damage" couldn't
+	 * reach this branch. v0.5.1's strict-mode-fix made the
+	 * branch reachable for ANY G_Damage call, including
+	 * MOD_FALLING / MOD_SLIME / MOD_LAVA / MOD_CRUSH (g_active.c
+	 * line 170/174/191/1014, plus a dozen call sites in
+	 * g_props.c / g_mover.c) which all pass `point=NULL`. With
+	 * point=NULL the mdx_hit_test → mdx_hit_warp call dereferences
+	 * a NULL pointer → SIGSEGV. Pterodactyl recorded a server
+	 * crash on a falldamage event; signal 11.
+	 *
+	 * Defense-in-depth fix:
+	 *   - `attacker && attacker->client`: real player attacker
+	 *     (rules out the NULL-attacker self-damage paths and any
+	 *     bot/AI/turret pseudo-attackers that lack a client).
+	 *   - `point`: a real impact point exists. Required for the
+	 *     trace; this alone prevents the SIGSEGV.
+	 *   - `!vg_Hitbox_IsSelfDamageMod(mod)`: explicit blacklist
+	 *     for MOD_FALLING / MOD_SLIME / MOD_LAVA / MOD_CRUSH /
+	 *     MOD_TELEFRAG / MOD_SUICIDE / MOD_TRIGGER_HURT /
+	 *     MOD_WATER / MOD_CRUSH_CONSTRUCTION{,DEATH,_NOATTACKER}.
+	 *     Documents intent ("capsule semantics don't apply to
+	 *     self-damage") and catches edge cases where these MODs
+	 *     somehow have a non-NULL placeholder point.
+	 *
+	 * Either of the first two gates would prevent the crash; the
+	 * MOD blacklist is correctness, not crash prevention. All
+	 * three together = defense-in-depth.
+	 *
+	 * Mode=0 path: vg_Hitbox_IsActive() returns qfalse, gate
+	 * short-circuits on the first conjunct, control flows
+	 * straight into the legacy chain — byte-identical to vanilla. */
+	if (vg_Hitbox_IsActive() && targ->client && targ->health > 0
+	    && attacker && attacker->client
+	    && point
+	    && !vg_Hitbox_IsSelfDamageMod(mod))
 	{
 		int                     mdx_hit_type;
 		vec_t                   mdx_fraction;

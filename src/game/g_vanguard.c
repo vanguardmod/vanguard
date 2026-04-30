@@ -382,6 +382,43 @@ qboolean vg_Hitbox_ConsumeDiagDumpRequest(void)
 	return qfalse;
 }
 
+qboolean vg_Hitbox_IsSelfDamageMod(meansOfDeath_t mod)
+{
+	/* MODs that environment / gameplay-system inflict on a player
+	 * (or where the inflictor is a non-client construction entity)
+	 * — the call sites pass point=NULL to G_Damage. Order is
+	 * MOD_* enum order from bg_public.h:1101+ for grep-readability.
+	 *
+	 * Not in the list and intentionally so:
+	 *   - MOD_FLAMETHROWER (g_active.c:210) — has a real player
+	 *     attacker; multi-region trace makes sense for direct fire.
+	 *   - MOD_DYNAMITE / MOD_LANDMINE / MOD_AIRSTRIKE / etc. —
+	 *     splash MODs that take the radius_damage path; G_Damage
+	 *     point is the radius origin, valid for tracing. The
+	 *     splash-damage branch's `isExplosive` filter already
+	 *     diverts those before they hit the multi-region path
+	 *     anyway, but listing them here would be wrong-doctrine
+	 *     (capsule-region multipliers DO apply to direct splash
+	 *     hits in some MOD configs). */
+	switch (mod)
+	{
+	case MOD_WATER:
+	case MOD_SLIME:
+	case MOD_LAVA:
+	case MOD_CRUSH:
+	case MOD_TELEFRAG:
+	case MOD_FALLING:
+	case MOD_SUICIDE:
+	case MOD_TRIGGER_HURT:
+	case MOD_CRUSH_CONSTRUCTION:
+	case MOD_CRUSH_CONSTRUCTIONDEATH:
+	case MOD_CRUSH_CONSTRUCTIONDEATH_NOATTACKER:
+		return qtrue;
+	default:
+		return qfalse;
+	}
+}
+
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
 {
 	switch (impactpoint)
