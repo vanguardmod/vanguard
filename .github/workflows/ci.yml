@@ -5,10 +5,13 @@
 # CI workflow — build validation on push to main and on every PR.
 #
 # Lighter than release.yml: only Linux and Windows x86_64 are built
-# (skipping Win32 keeps CI under ~5 minutes), no Omni-Bot fetch
-# (FEATURE_OMNIBOT=OFF), no pk3 packaging, no artifact uploads, no
-# release. Pure compilation gate — fails the commit/PR if the C code
-# stops building on either tier-1 platform.
+# (skipping Win32 keeps CI under ~5 minutes), no Omni-Bot runtime
+# fetch (FEATURE_OMNIBOT=ON only requires the headers shipped in
+# vendor/Omnibot/Common/, the runtime is dlopened at game-start),
+# no pk3 packaging, no artifact uploads, no release. Compilation
+# gate — fails the commit/PR if the C/C++ code stops building on
+# either tier-1 platform, AND fails if FEATURE_OMNIBOT silently
+# drops out of any qagame artifact (the v0.5.2-rc1 regression).
 #
 # Triggers from any push to main and any PR targeting main. The two
 # jobs run in parallel.
@@ -27,9 +30,10 @@ defaults:
 
 jobs:
   # -------------------------------------------------------------------
-  # build-linux — quick Linux compile. FEATURE_OMNIBOT=OFF skips the
-  # ~20 MB tarball fetch (we don't need the runtime to validate the
-  # mod compiles), BUILD_MOD_PK3=OFF skips the multi-arch packaging.
+  # build-linux — quick Linux compile. FEATURE_OMNIBOT=ON compiles in
+  # the bot-init dlopen() hooks (no runtime fetch needed — only headers
+  # in vendor/Omnibot/Common/), BUILD_MOD_PK3=OFF skips the multi-arch
+  # packaging.
   # -------------------------------------------------------------------
   build-linux:
     name: Build Linux x86_64
@@ -56,7 +60,7 @@ jobs:
       - name: Configure
         run: |
           cmake -B build \
-            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=ON \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
             -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
             -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -64,6 +68,21 @@ jobs:
 
       - name: Build
         run: cmake --build build -j
+
+      - name: Verify Omni-bot symbols in qagame Linux SO
+        run: |
+          # Catches the v0.5.2-rc1 regression: a wrong build flag would
+          # silently elide every #ifdef FEATURE_OMNIBOT block from the
+          # binary. If this fails, check the Configure step's flags.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -ic "omni")
+          echo "Omni-bot symbol count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::FEATURE_OMNIBOT not in Linux qagame — only ${COUNT} omni symbols (expect 30+)"
+            exit 1
+          fi
 
   # -------------------------------------------------------------------
   # build-windows-x64 — Windows x86_64 cross via mingw-w64. Same
@@ -85,12 +104,16 @@ jobs:
             build-essential cmake pkg-config mingw-w64
 
       # Auto-version (no CI_ETL_TAG override) — same rationale as the
-      # Linux job above.
+      # Linux job above. FORCE_OMNIBOT=ON: cmake_dependent_option in
+      # CMakeLists.txt:102 auto-disables FEATURE_OMNIBOT on mingw cross
+      # despite the user setting; the override puts it back. See
+      # release.yml for the matching production setup.
       - name: Configure
         run: |
           cmake -B build-windows \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
-            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF \
+            -DFEATURE_OMNIBOT=ON -DFORCE_OMNIBOT=ON \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
             -DBUNDLED_LIBS=OFF -DFEATURE_LUA=OFF \
             -DFEATURE_DBMS=OFF -DFEATURE_RATING=OFF -DFEATURE_PRESTIGE=OFF \
@@ -98,3 +121,15 @@ jobs:
 
       - name: Build
         run: cmake --build build-windows -j
+
+      - name: Verify Omni-bot symbols in qagame Win64 DLL
+        run: |
+          set -euo pipefail
+          BIN=$(find build-windows -name 'qagame_mp_*.dll' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -ic "omni")
+          echo "Omni-bot symbol count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::FEATURE_OMNIBOT not in Win64 qagame — only ${COUNT} omni symbols (expect 30+)"
+            exit 1
+          fi
