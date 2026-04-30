@@ -1728,9 +1728,25 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 	 *
 	 * Mode=0 path: gate evaluates false on the first conjunct,
 	 * control flows straight into the legacy chain - byte-
-	 * identical to vanilla. */
-	if (vg_Hitbox_IsActive() && targ->client && targ->health > 0
-	    && GetMODTableData(mod)->isHeadshot)
+	 * identical to vanilla.
+	 *
+	 * v0.5.1: dropped the `isHeadshot` requirement from the gate.
+	 * Mounted / mobile MGs (MOD_MACHINEGUN, MOD_BROWNING, MOD_MG42,
+	 * MOD_MOBILE_MG42, MOD_MOBILE_BROWNING) are bullet-firing and
+	 * benefit from the same capsule-narrow-phase + strict-mode
+	 * rejection as rifles/SMGs. Splash-damage MODs
+	 * (isExplosive=qtrue) take a different code path via
+	 * radius_damage and aren't affected; those still apply on
+	 * radius regardless of capsule, which is correct.
+	 *
+	 * The bullet-firing filter is implicit: G_Damage's caller
+	 * passes `point` (the bullet impact position) for hitscan
+	 * weapons and a NULL/zero point for indirect damage; the
+	 * mdx_hit_test trace from muzzleTrace to point only makes
+	 * sense for the former. The gate's vg_Hitbox_IsActive +
+	 * client + alive checks already exclude the indirect
+	 * scenarios. */
+	if (vg_Hitbox_IsActive() && targ->client && targ->health > 0)
 	{
 		int                     mdx_hit_type;
 		vec_t                   mdx_fraction;
@@ -1762,6 +1778,38 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 				         "impactpoint=%d fraction=%.3f mod=%d\n",
 				         mdx_hit_type, (int)mdx_ip,
 				         (double)mdx_fraction, (int)mod);
+			}
+
+			/* v0.5.1: actual strict-hitbox reject. mdx_hit_test
+			 * always returns qtrue with `*impactpoint =
+			 * IMPACTPOINT_UNUSED` when no capsule matched the
+			 * trace endpoint (g_mdx.c:2790, written as the
+			 * sentinel and never overwritten if the capsule loop
+			 * exits without a match). The v0.4.3 strict-mode
+			 * reject sat in the dead `else` branch of `if
+			 * (mdx_hit_test...)` and never fired in normal play
+			 * — every AABB-edge hit got dmg_default applied.
+			 *
+			 * This check catches the AABB-but-no-capsule case
+			 * correctly. When strict-mode is on (default), the
+			 * damage is rejected entirely — what v0.4.3
+			 * promised but never delivered. With strict-mode
+			 * off, control falls through to the multiplier
+			 * logic and applies dmg_default — the legacy v0.4.x
+			 * behaviour is preserved as an opt-out for cup
+			 * admins who need byte-identical fallback. */
+			if (mdx_ip == IMPACTPOINT_UNUSED && vg_Hitbox_StrictMode())
+			{
+				if (vg_Hitbox_DebugActive())
+				{
+					G_Printf("VG_DIAG: strict-hitbox reject "
+					         "(AABB hit but no capsule) "
+					         "attacker=%d target=%d weapon=%d mod=%d\n",
+					         (int)(attacker - g_entities),
+					         (int)(targ - g_entities),
+					         (int)attacker->s.weapon, (int)mod);
+				}
+				return;
 			}
 
 			mult      = vg_Hitbox_DamageMultiplierFor(mdx_ip);
@@ -1815,30 +1863,17 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 
 			goto vg_skip_legacy_hit_chain;
 		}
-		/* mdx_hit_test miss. v0.4.3: when vanguard_hitbox_strict is
-		 * non-zero (the default), reject the hit entirely — the
-		 * engine's broad-phase player-AABB trace can be ~6 units
-		 * wider than the visible mesh in some poses, and turning
-		 * that tolerance into full body-shot damage on the legacy
-		 * fallback chain is what produced the "shot beside the
-		 * player still registered" behaviour competitive players
-		 * complained about. The cvar lets cup organisers keep the
-		 * old behaviour byte-identical when they need it (`set
-		 * vanguard_hitbox_strict 0`). Diagnostic note printed
-		 * under vanguard_hitbox_debug so admins can audit the
-		 * rejection rate during a tuning session. */
-		if (vg_Hitbox_StrictMode())
-		{
-			if (vg_Hitbox_DebugActive())
-			{
-				G_Printf("VG_DIAG: strict-hitbox reject "
-				         "attacker=%d target=%d weapon=%d mod=%d\n",
-				         (int)(attacker - g_entities),
-				         (int)(targ - g_entities),
-				         (int)attacker->s.weapon, (int)mod);
-			}
-			return;
-		}
+		/* mdx_hit_test returning qfalse only happens in startup-
+		 * error edge cases (g_mdx.c:2782, no hit_t pool entry
+		 * matches the character's animModelInfo — typically a
+		 * missing or unloaded human_base.hit). The v0.4.3 reject
+		 * block that lived here was structurally unreachable in
+		 * normal play; removed in v0.5.1 once the actual reject
+		 * logic moved into the success branch above. If a future
+		 * change makes mdx_hit_test legitimately return qfalse
+		 * for live play, the legacy chain below picks up by
+		 * default — that's the same behaviour as
+		 * vg_Hitbox_IsActive=0 and is the safe fallback. */
 	}
 	/* END VANGUARDMOD */
 
