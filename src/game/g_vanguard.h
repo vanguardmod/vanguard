@@ -167,4 +167,37 @@ hitRegion_t vg_Hitbox_RegionFor(animScriptImpactPoint_t impactpoint);
  */
 const char *vg_Hitbox_RegionName(animScriptImpactPoint_t impactpoint);
 
+/* ------------------------------------------------------------------ */
+/* Netcode profile — cup-vs-public preset surface.                    */
+/*                                                                    */
+/* Phase 7.2: introduces vanguard_netcode_profile, a CVAR_LATCH cvar  */
+/* whose value at G_InitGame time decides whether to apply a "cup"    */
+/* preset (bumps sv_fps to 40, asserts g_antilag/g_antiwarp on),      */
+/* leave engine defaults alone ("public"), or hand the wheel back     */
+/* entirely to the admin's server.cfg ("custom").                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Register the vanguard_netcode_profile cvar and apply the
+ *        chosen profile's overrides exactly once per map. Call from
+ *        G_InitGame, after the engine has finished its own cvar
+ *        registration so trap_Cvar_Set on sv_fps actually takes
+ *        effect on hosts that allow it.
+ */
+void vg_Netcode_Init(void);
+
+/**
+ * @brief Tear down for symmetry with Init. No-op currently —
+ *        vmCvars are static. Call from G_ShutdownGame.
+ */
+void vg_Netcode_Shutdown(void);
+
+/**
+ * @brief Returns the active profile name as a literal string:
+ *        "cup", "public", or "custom". Used by the server-info
+ *        path so cgame can eventually surface the active profile
+ *        in HUD / disclaimer (Phase 7.4 territory).
+ */
+const char *vg_Netcode_ProfileName(void);
+
 #endif /* VANGUARD_G_VANGUARD_H */
