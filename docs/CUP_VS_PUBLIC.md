@@ -88,14 +88,31 @@ buffer of historical client states. The buffer covers
   - At `sv_fps = 20` (public default): **2 seconds** of history.
   - At `sv_fps = 40` (cup): **1 second** of history.
 
-For typical cup pings (40-100 ms one-way → ≤200 ms `serverTime`
-deficit), 1 second is comfortable. For pings approaching 500 ms
-total (≥250 ms one-way), the buffer can clip and the antilag falls
-back to current-time hits for the worst-case players.
+For typical cup pings (30–80 ms one-way → 60–160 ms round-trip,
+i.e. ≤80 ms server-time deficit), 1 second of history is 12–33×
+the rewind distance the antilag actually requests. Even tournament-
+edge 200 ms pings (rare on cup servers, but accepted) need ~100 ms
+of history — still 10× margin. The buffer would only **clip** at
+roughly 500 ms ping, where the player is unplayable on networking
+merits regardless of antilag.
 
-If a future cup ever needs `sv_fps = 60` AND admits players with
-≥200 ms pings, the constant would need bumping. Today both
-constraints are unlikely; the buffer size stays at 40.
+This is an **explicitly accepted limitation in v0.5.0**, not a
+deferred concern. No realistic cup-play scenario exercises the
+clip. If a future live-test ever surfaces clipping symptoms (a
+player reports hits visibly on-target but not registering), the
+fix is a one-line bump of `MAX_CLIENT_MARKERS` to 80 (= 2 s
+history at sv_fps 40):
+
+```diff
+-#define MAX_CLIENT_MARKERS 40
++#define MAX_CLIENT_MARKERS 80
+```
+
+The constant feeds modular arithmetic across `g_antilag.c`
+(circular ring traversal in `G_AdjustSingleClientPosition`,
+`G_StoreClientPosition`'s `topMarker` advance), so the change
+wants its own validation pass — would land under a Phase 7.2.1
+follow-up ticket if needed, not pre-emptively in v0.5.0.
 
 ### Animation timing comment in bg_pmove
 
