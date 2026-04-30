@@ -3,7 +3,104 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.5.2 — 2026-04-30 — Phase 7.0.1 capsule alignment
+## v0.5.2.1 — 2026-04-30 — Revert HEAD offset, keep cgame fix, expand diagnostic
+
+> **Hot-fix release.** v0.5.2 was tagged but never deployed: the
+> 6-test live-test path failed because the v0.5.2 Stage 2a HEAD
+> offset retune (6.5 → 2.0) overshot in the wrong direction.
+> Live-test screenshots showed the head sphere sitting at neck/
+> shoulder level instead of on the visible helmet. Root cause:
+> the v0.5.2 retune assumed the original Phase 7.0.1
+> "lateral-versetzt" bug had a vertical-position component;
+> in fact it was 100% the cgame `MatrixWeight` skip (Stage 3
+> in v0.5.2). With Stage 3 fixed, the original `+6.5` magnitude
+> was already correct — the perceived displacement was the
+> broken visualisation drifting away from the (correctly-placed)
+> server-side capsule. The magnitude reduction wasn't needed.
+>
+> v0.5.2.1 reverts the HEAD offset back to 6.5 in both
+> `human_base.hit` and `cg_vanguard_dev.c`. Stage 3 (cgame
+> `MatrixWeight`) and the diagnostic infrastructure stay —
+> those were independently correct.
+
+### Changes
+
+  - `etmain/animations/human_base.hit`: `_vg_head` offset
+    `2.0 0 0` → `6.5 0 0`. Comment block updated to document
+    the v0.4.2-v0.5.1-v0.5.2-v0.5.2.1 magnitude history and
+    why the v0.5.2 retune was wrong.
+  - `src/cgame/cg_vanguard_dev.c`: `vg_hit_areas[]` HEAD entry
+    `{ 2.0f, 0, 0 }` → `{ 6.5f, 0, 0 }`. Same comment update.
+  - `src/game/g_combat.c`: `VG_DIAG_DUMP` block extended with
+    three new `head_bone.axis[k] (bone-local +X/+Y/+Z)` lines
+    showing the head bone's WORLD-frame axis matrix. Makes any
+    future offset tuning data-driven: bone-local +X is verified
+    to be world-up (~96-97% projection in test data); +Y/+Z
+    span the horizontal plane and rotate with the head's yaw —
+    so offsets in those axes shift forward/lateral relative to
+    the head's facing direction, not the player's. Useful for
+    e.g. shifting the capsule centre forward of the bone if a
+    future mesh measurement shows skull-centre is forward of
+    Bip01 Head.
+
+### Why the v0.5.2 retune was wrong
+
+Phase 7.0.1's original bug report described capsules as
+"systematisch LATERAL versetzt" (sideways, not vertical). That
+was the cgame `MatrixWeight` skip — `cg_vanguard_mdx.c::vg_mdx_compute_bone_axis_local`
+omitted the torso-axis blend that `mdx_bone_orientation` does
+on the server. With the skip, the cgame wireframe rendered the
+capsule in the wrong frame whenever `torsoAxis ≠ legsAxis`
+(strafe-jumps, crouch-moves, head-turns), making it look
+laterally displaced even when the actual hit position was
+correct.
+
+v0.5.2's Stage 3 fixed that — the wireframe now renders at the
+true capsule position. Once Stage 3 was in, Stage 2a's
+`6.5 → 2.0` magnitude change was based on an incorrect
+inference: that `delta head-neck Z = 10.85` was anatomically
+"too high". In fact `+10.85` was the correct face/forehead-zone
+position; the radius-6 sphere centred there spans chin (+4.85)
+to top of helmet (+16.85), covering the visible head perfectly.
+v0.5.2's `+6.35` (with offset 2.0) shifted the sphere centre
+down to chin level, leaving the sphere covering upper-neck to
+eye-level — missing the upper half of the head, exactly what
+the live-test screenshots showed.
+
+### Verification
+
+Local rebuild + diagnostic test on a dedicated Linux server:
+
+  - `human_base.hit` shipped in pk3: `offset 6.5 0 0` ✓
+  - 4 of 4 manual `vanguard_diag_dump 1` triggers fired
+    correctly across active combat
+  - `delta head-neck Z` measurements: 9.40, 9.49, 9.72, 10.78
+    (previously ~10.85; small variance from animation pose
+    relative to bone-rest pose)
+  - `head_bone.axis[0]` (bone-local +X) consistently projects
+    ~(small_x, small_y, +0.96-0.97) onto world — confirms the
+    +X axis is the up-the-skull / vertical direction across all
+    sampled poses, validating the v0.4.2 axis decision.
+  - `head_bone.axis[1]` (bone-local +Y) tracks the head's
+    looking-forward direction (matches `refent.axis[0]` when
+    head and body align; differs by head-yaw when looking
+    around).
+
+### Live-test path (unchanged from v0.5.2)
+
+  1. HEAD on visible nose → expect HIT impactpoint=1
+  2. HEAD-side displacement (8 units lateral) → expect REJECT
+  3. CHEST → expect HIT impactpoint=2
+  4. SHOULDER → expect HIT impactpoint=5/6
+  5. Pose variation (crouch) → tests 1+3+4 still hit
+  6. `vanguard_hitbox_strict 0` → falls through to legacy
+
+If 6/6 green, tag v0.5.2.1. If the head sphere is still off, the
+`head_bone.axis[k]` lines in the dump now show exactly which
+world direction each bone-local axis maps to — pin down the
+required offset combo precisely.
+
+## v0.5.2 — 2026-04-30 — Phase 7.0.1 capsule alignment (UNTAGGED, superseded by v0.5.2.1)
 
 > **Production release.** Phase 7.0.1 capsule-offset bug closed.
 > The HEAD-region sphere now sits on the visible face/eye-level
