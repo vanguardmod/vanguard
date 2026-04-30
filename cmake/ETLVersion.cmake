@@ -9,8 +9,9 @@
 # Vanguard-specific additions: CI_ETL_TAG / CI_ETL_DESCRIBE accepted as
 # cmake cache variables (line ~100), ETL_CMAKE_VERSION_INT leading-
 # zero stripping (octal-literal fix for any patch >= 8) added in v0.4.3,
-# and `git describe --tags` so lightweight tags drive auto-versioning
-# (added in v0.4.4 prep).
+# `git describe --tags` so lightweight tags drive auto-versioning, and
+# VANGUARD_VERSION file fallback for non-git builds (both added during
+# v0.4.4 prep).
 
 #-----------------------------------------------------------------
 # Version
@@ -154,6 +155,32 @@ else()
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 		OUTPUT_VARIABLE GIT_DESCRIBE_TAG
 		ERROR_QUIET)
+endif()
+
+# VANGUARD: VANGUARD_VERSION file fallback for non-git checkouts.
+#
+# When neither CI_ETL_TAG nor `git describe --tags` produces
+# anything (typical for tarball / zip downloads of a release
+# artifact, where there's no .git/ directory), read the project's
+# own VANGUARD_VERSION file at the repo root. Keeps tarball
+# rebuilds producing a Vanguard-named pk3 instead of falling all
+# the way through to the imported ETLegacy 2.83.x identity.
+#
+# This file is small (one line, e.g. `v0.4.3`) and is the single
+# source of truth for non-git builds. Tagged builds (the normal
+# case) still take the git describe path above; the fallback only
+# fires when both env-var override AND git describe come back
+# empty.
+if(NOT GIT_DESCRIBE AND NOT GIT_DESCRIBE_TAG)
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/VANGUARD_VERSION")
+		file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VANGUARD_VERSION" VANGUARD_VERSION_CONTENT)
+		string(STRIP "${VANGUARD_VERSION_CONTENT}" VANGUARD_VERSION_CONTENT)
+		if(VANGUARD_VERSION_CONTENT)
+			message(STATUS "VANGUARD: using VANGUARD_VERSION fallback: ${VANGUARD_VERSION_CONTENT}")
+			set(GIT_DESCRIBE     "${VANGUARD_VERSION_CONTENT}")
+			set(GIT_DESCRIBE_TAG "${VANGUARD_VERSION_CONTENT}")
+		endif()
+	endif()
 endif()
 
 if(GIT_DESCRIBE)
