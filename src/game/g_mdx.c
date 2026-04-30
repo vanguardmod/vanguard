@@ -1780,6 +1780,77 @@ static void mdx_tag_orientation(/*const*/ grefEntity_t *refent, int idx, vec3_t 
 		AxisCopy(tmpaxis, axis);
 	}
 }
+
+/**
+ * @brief mdx_diag_resolve_tag_world
+ * @param[in,out] refent — must already be filled by mdx_gentity_to_grefEntity
+ * @param[in]     tagName — MDM tag name OR Vanguard interntag (e.g. "_vg_head")
+ * @param[out]    origin  — world-space anchor position
+ * @param[out]    axis    — world-space tag axes (rotation matrix)
+ * @return 0 on success, -1 if tagName does not resolve in this model
+ *
+ * Public diagnostic accessor for Phase 7.0.1 capsule-offset recon
+ * (VG_DIAG_DUMP in g_combat.c, v0.5.2-rc3+). Mirrors the path
+ * mdx_hit_test (line ~2816) uses to anchor capsules at hit->tag[0]:
+ * cachetag-index lookup -> mdx_tag_orientation with recursion=0,
+ * which fully transforms model-local coordinates to world space
+ * via refent->origin and refent->axis.
+ *
+ * Why this wrapper exists instead of trap_R_LerpTag: the public
+ * tag-lookup API is designed for MDM model tags only. mdm_tag_lookup
+ * returns Vanguard interntag matches with the TAG_INTERNAL bit
+ * (1<<30) set, which trap_R_LerpTagNumber's `tagNum >= model->tag_count`
+ * guard at line 1801 silently rejects with -1 — leaving the
+ * orientation_t at its zero-initialised state. That was the
+ * v0.5.2-rc2 diagnostic bug: every _vg_* lookup returned (0,0,0).
+ * The cachetag/mdx_tag_orientation path correctly handles both
+ * MDM tags and interntags via model->cachetags[].
+ *
+ * On-demand registration: most _vg_* names are pre-cached because
+ * they're referenced inside .hit HIT blocks (hit_parse_hit:1159
+ * calls cachetag_cache); but a bare TAG declaration that's never
+ * referenced wouldn't be cached. Registering on the fly via
+ * cachetag_cache + cachetag_resize keeps the diagnostic robust
+ * for any name in the .hit file.
+ */
+int mdx_diag_resolve_tag_world(/*const*/ grefEntity_t *refent,
+                               const char *tagName,
+                               vec3_t origin,
+                               vec3_t axis[3])
+{
+	mdm_t *model;
+	int    cacheIdx;
+	int    oldcount;
+
+	model = &mdm_models[QHANDLETOINDEX(refent->hModel)];
+
+	/* mdm_tag_lookup serves as the hard "name resolves in this
+	 * model?" check. Doing it before cachetag_cache means a typo
+	 * doesn't pollute the global cachetag table with a permanent
+	 * never-resolves entry. */
+	if (mdm_tag_lookup(model, tagName) < 0)
+	{
+		return -1;
+	}
+
+	for (cacheIdx = 0; cacheIdx < cachetag_count; cacheIdx++)
+	{
+		if (!Q_stricmp(cachetag_names[cacheIdx], tagName))
+		{
+			break;
+		}
+	}
+	if (cacheIdx >= cachetag_count)
+	{
+		oldcount = cachetag_count;
+		cacheIdx = cachetag_cache(tagName);
+		cachetag_resize(oldcount);
+	}
+
+	mdx_calculate_bones(refent);
+	mdx_tag_orientation(refent, cacheIdx, origin, axis, qfalse, 0);
+	return 0;
+}
 #endif // BONE_HITTESTS
 
 /**

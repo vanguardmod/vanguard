@@ -408,6 +408,16 @@ enum
 
 extern qhandle_t mdx_RegisterHits(animModelInfo_t *animModelInfo, const char *filename);
 extern qboolean mdx_hit_test(const vec3_t start, const vec3_t end, /*const*/ gentity_t *ent, /*const*/ grefEntity_t *refent, int *hit_type, vec_t *fraction, animScriptImpactPoint_t *impactpoint);
+
+/* VANGUARDMOD: Phase 7.0.1 diagnostic accessor — resolve an MDM tag
+ * or .hit interntag (e.g. "_vg_head") to world-space origin/axis
+ * using the same cachetag+mdx_tag_orientation path mdx_hit_test
+ * uses for capsule anchors. Returns 0 on success, -1 if tagName
+ * doesn't resolve. Used only from VG_DIAG_DUMP in g_combat.c. */
+extern int mdx_diag_resolve_tag_world(/*const*/ grefEntity_t *refent,
+                                      const char *tagName,
+                                      vec3_t origin,
+                                      vec3_t axis[3]);
 #endif
 
 #endif // INCLUDE_G_MDX_H

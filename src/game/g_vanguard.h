@@ -127,6 +127,21 @@ qboolean vg_Hitbox_DebugActive(void);
 qboolean vg_Hitbox_StrictMode(void);
 
 /**
+ * @brief Test-and-clear the manual VG_DIAG_DUMP trigger cvar
+ *        (vanguard_diag_dump). Returns qtrue exactly once after an
+ *        admin sets the cvar to 1; subsequent calls return qfalse
+ *        until the cvar is set again. Phase 7.0.1 capsule recon
+ *        (v0.5.2-rc3+); supplements the existing
+ *        vanguard_hitbox_debug 0->1 transition re-arm path.
+ *
+ *        Implementation: reads cvar, returns qtrue + writes "0"
+ *        back via trap_Cvar_Set if non-zero; qfalse otherwise. The
+ *        write is fast and the cvar isn't ARCHIVE, so no map.cfg
+ *        churn either. Safe to call from the damage hot path.
+ */
+qboolean vg_Hitbox_ConsumeDiagDumpRequest(void);
+
+/**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.
  *        Call once per map from G_ShutdownGame for symmetry / hook
  *        point for any future teardown.
