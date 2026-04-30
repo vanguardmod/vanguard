@@ -3,7 +3,34 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.5.2-rc1 — 2026-04-29 — Phase 7.0.1 capsule-offset diagnostic
+## v0.5.2-rc2 — 2026-04-30 — Diagnostic rc1 + Omni-bot build-flag fix
+
+> **DIAGNOSTIC RELEASE — not for production cup play.** Same as
+> rc1 with one build-pipeline fix: the local rc1 build had
+> `-DFEATURE_OMNIBOT=OFF` for the Linux qagame (copy-paste from
+> the Windows-step flags), which compiled out every Omni-bot init
+> hook in `g_main.c` (`#ifdef FEATURE_OMNIBOT` at lines 37, 167,
+> 173, 213, 1950, 3334). On Pterodactyl: server started cleanly,
+> Vanguard mod loaded, but `bot help` / `bot testbot` did nothing
+> and zero Omni-bot lines appeared in the log. rc1 was never
+> tagged or pushed — the broken artifact was only on the local
+> test server.
+>
+> Fix: rebuild all three platforms with the same flags the
+> release.yml CI pipeline already uses — Linux with
+> `FEATURE_OMNIBOT=ON` (uses the runtime cached at
+> `vendor/omnibot-runtime/extracted/`), Win64 / Win32 with
+> `FEATURE_OMNIBOT=OFF` (Windows isn't a supported Omni-bot
+> platform). No code change versus rc1; the diagnostic block
+> stays as-is. Bumped version to rc2 so the deployed pk3 file
+> name is unambiguous.
+>
+> Verification: `strings qagame.mp.x86_64.so | grep -i omni` —
+> rc1 returned 0, rc2 returns >0 (the Omni-bot init / shutdown
+> log strings are now in the binary). Same `VG_DIAG_DUMP` block,
+> 21 literals across all three qagame binaries.
+
+## v0.5.2-rc1 — 2026-04-29 — Phase 7.0.1 capsule-offset diagnostic (superseded by rc2)
 
 > **DIAGNOSTIC RELEASE — not for production cup play.** This `-rc1`
 > exists only to gather one-shot per-session telemetry from a live
@@ -11,6 +38,10 @@ mechanics, see `docs/RELEASE_PROCESS.md`.
 > Cups should stay on v0.5.1. The only behaviour change versus v0.5.1
 > is one additional log block per session when
 > `vanguard_hitbox_debug 1` — no gameplay code changed.
+>
+> **Superseded by rc2** — rc1's local build had
+> `FEATURE_OMNIBOT=OFF` and broke `bot` rcon commands. Use rc2
+> instead.
 
 ### Why this exists
 
