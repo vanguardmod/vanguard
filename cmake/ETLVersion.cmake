@@ -7,8 +7,10 @@
 # Modifications licensed under GPL-3.0-or-later (consistent with original).
 #
 # Vanguard-specific additions: CI_ETL_TAG / CI_ETL_DESCRIBE accepted as
-# cmake cache variables (line ~100), and ETL_CMAKE_VERSION_INT leading-
-# zero stripping (octal-literal fix for any patch >= 8) added in v0.4.3.
+# cmake cache variables (line ~100), ETL_CMAKE_VERSION_INT leading-
+# zero stripping (octal-literal fix for any patch >= 8) added in v0.4.3,
+# and `git describe --tags` so lightweight tags drive auto-versioning
+# (added in v0.4.4 prep).
 
 #-----------------------------------------------------------------
 # Version
@@ -128,10 +130,16 @@ endif()
 if(CI_ETL_DESCRIBE)
 	set(GIT_DESCRIBE "${CI_ETL_DESCRIBE}")
 else()
-	execute_process(COMMAND git describe --abbrev=7
+	# VANGUARD: --tags accepts lightweight tags. Upstream's flagless
+	# `git describe` only walks annotated tags and silently falls
+	# through to VERSION.txt (i.e. the imported ETLegacy 2.83.x
+	# string) when only lightweight tags exist — exactly the
+	# behaviour we want to avoid for the auto-versioning pipeline.
+	execute_process(COMMAND git describe --tags --abbrev=7
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		OUTPUT_STRIP_TRAILING_WHITESPACE
-		OUTPUT_VARIABLE GIT_DESCRIBE)
+		OUTPUT_VARIABLE GIT_DESCRIBE
+		ERROR_QUIET)
 endif()
 
 if(NOT CI_ETL_TAG AND DEFINED ENV{CI_ETL_TAG})
@@ -140,10 +148,12 @@ endif()
 if(CI_ETL_TAG)
 	set(GIT_DESCRIBE_TAG "${CI_ETL_TAG}")
 else()
-	execute_process(COMMAND git describe --abbrev=0
+	# VANGUARD: --tags as above (lightweight-tag support).
+	execute_process(COMMAND git describe --tags --abbrev=0
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		OUTPUT_STRIP_TRAILING_WHITESPACE
-		OUTPUT_VARIABLE GIT_DESCRIBE_TAG)
+		OUTPUT_VARIABLE GIT_DESCRIBE_TAG
+		ERROR_QUIET)
 endif()
 
 if(GIT_DESCRIBE)
