@@ -3,6 +3,47 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.4.4 — 2026-04-30 — Build Infrastructure & Auto-Versioning
+
+### CI/CD Automation
+
+- **GitHub Actions Release Workflow** — Tag-triggered automatic builds for all 3 platforms (Linux x86_64, Windows x64, Windows x86), produces server + client ZIPs, creates GitHub Releases automatically
+- **GitHub Actions CI Workflow** — Build validation on every push/PR, prevents broken commits from landing
+- **Documentation** — `docs/CI.md` (workflow + release walkthrough), `docs/INSTALL_SERVER.md`, `docs/INSTALL_CLIENT.md`
+
+### Auto-Versioning
+
+- Version is now derived **from the git tag** via cmake — no more six-spot bump
+- Resolution chain: `CI_ETL_TAG` env var → `git describe --tags` → `VANGUARD_VERSION` file fallback
+- New `VANGUARD_VERSION` file at repo root for tarball downloads (non-git scenarios)
+- `bootstrap.sh` cleanup: hardcoded version strings replaced with placeholders
+- `RELEASE_PROCESS.md` rewritten — `git tag vX.Y.Z && git push origin vX.Y.Z` is now the entire release procedure
+
+### No Gameplay Changes
+
+- pk3 contents are **identical** to v0.4.3 — no bytes-on-disk gameplay differences
+- All hitbox + strict-mode + cgame fixes from v0.4.3 carry forward unchanged
+- This release is purely about build infrastructure and automation
+
+### Internal
+
+- 4 commits since v0.4.3 CI/CD setup (auto-versioning implementation)
+- Validated with 4 build-test scenarios:
+  - Tagged-exact (v0.4.99 dummy tag → vanguard_v0.4.99.pk3)
+  - Tagged-with-commits-since (HEAD past tag → dev-build identifier)
+  - No-git fallback (VANGUARD_VERSION file)
+  - Explicit override (CI_ETL_TAG=v0.5.0-rc1)
+
+### For Server Admins
+
+- No action required — same gameplay, same configuration as v0.4.3
+- Optional: switch to v0.4.4 for first auto-versioned download experience
+
+### For Developers
+
+- New release workflow: edit `RELEASE_NOTES.md`, optionally bump `VANGUARD_VERSION`, then `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`
+- See `docs/CI.md` and `docs/RELEASE_PROCESS.md` for details
+
 ## v0.4.3 — 2026-04-29 — Strict hitbox + cgame position-lag fix + SPDX
 
 Three changes shipped together:
@@ -654,7 +695,7 @@ that was caught during the same release cycle.
     build (Pterodactyl, our own `build-server/etlded.x86_64`),
     that engine version is `"2.83-dirty"`, producing the
     confusing `vanguard 2.83-dirty` line on the loading screen.
-    
+
     Fix in `src/cgame/cg_loadpanel.c:350`: split the rendering
     into two lines and pin the mod-version line to
     `ETL_BUILD_VERSION` — a literal-string `#define` from
@@ -942,7 +983,7 @@ VanguardMod main-menu theming pass — three layers, one release.
 
 **Copyright Notice**
 
-Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)  
+Copyright (c) 2026 wahke <info@wahke.lu> (https://wahke.lu)
 Copyright (c) 2026 VanguardMod Project Contributors
 
 Licensed under GPL-3.0-or-later. Part of VanguardMod project.
