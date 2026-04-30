@@ -3,6 +3,79 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2-rc1 — 2026-04-29 — Phase 7.0.1 capsule-offset diagnostic
+
+> **DIAGNOSTIC RELEASE — not for production cup play.** This `-rc1`
+> exists only to gather one-shot per-session telemetry from a live
+> server so the v0.5.2 final fix can be tuned against real numbers.
+> Cups should stay on v0.5.1. The only behaviour change versus v0.5.1
+> is one additional log block per session when
+> `vanguard_hitbox_debug 1` — no gameplay code changed.
+
+### Why this exists
+
+Live-test on v0.5.1 (with strict-hitbox finally working as
+advertised) confirmed Phase 6 multi-region capsules sit
+**systematically lateral-offset** from the rendered player mesh.
+Chest and shoulder capsules drift too — not just the head sphere —
+which rules out the v0.4.2 HEAD-only `offset 6.5 0 0` axis as the
+sole cause. The leading hypothesis is a divergence between qagame's
+`mdx_bone_orientation` (server-side, used to anchor capsules) and
+the engine's `R_CalcBones` (client-side, used to render the mesh).
+See `docs/notes/PHASE_7_0_1_AUDIT.md` for the full bone-math
+diagnosis.
+
+To localise the discrepancy without guessing, v0.5.2-rc1 ships a
+one-shot diagnostic dump that fires on the first damage event after
+`vanguard_hitbox_debug` flips 0→1, lerps a representative set of
+internal tags (`_vg_head` with its 6.5,0,0 offset; `_vg_neck`,
+`_vg_spine_mid`, `_vg_pelvis`, `_vg_clav_l`, `_vg_clav_r` with no
+offset), and prints the resulting world-space positions plus the
+`grefEntity_t` transform inputs that produced them. With those
+numbers in hand the v0.5.2 final fix targets the actual offset
+instead of more guesswork.
+
+### What changed
+
+  - **`VG_DIAG_DUMP:` block** in `g_combat.c` between
+    `mdx_gentity_to_grefEntity` and `mdx_hit_test`. ~120 LoC,
+    diagnostic-only, removed in v0.5.2 final.
+  - **One-shot per session.** Triggered by the first damage event
+    after `vanguard_hitbox_debug` transitions 0→1. Re-arm by
+    toggling the cvar 0 then 1 again. The existing per-shot
+    `VG_DIAG:` line still fires every shot — the new block is
+    `VG_DIAG_DUMP:` so logs grep cleanly.
+  - **No gameplay change.** Strict-mode, multi-region capsules,
+    damage multipliers, helmet/EF_HEADSHOT logic — all
+    byte-identical to v0.5.1.
+
+### How to deploy and report back
+
+  1. Drop `vanguard_v0.5.2-rc1.pk3` into the server's `vanguard/`
+     mod directory (replacing v0.5.1's pk3 for the test session).
+  2. Set `vanguard_hitbox_debug 0` then `vanguard_hitbox_debug 1`
+     to arm the dump. Confirm `vanguard_hitbox_strict 1` is set.
+  3. Get a frontal **idle** pose (target standing, facing the
+     attacker, no movement, no jumping, no animation in progress).
+     This is the empirical baseline — moving / leaning / crouching
+     poses come in a later test cycle.
+  4. Fire **one shot** at the target. The dump fires on the first
+     damage event of that cycle.
+  5. `grep "VG_DIAG_DUMP:" server.log` and send the block back.
+     Roughly 20 lines per dump.
+  6. Repeat for any additional poses you want to characterise by
+     toggling the cvar 0→1 between shots.
+
+### Known limitations
+
+  - **Dump is not a fix.** v0.5.2-rc1 still has the lateral-offset
+    bug; it just makes the bug measurable.
+  - **One-shot per arm cycle only.** The static `s_diag_dump_done`
+    is per-process and per-arm cycle. A server restart re-arms; a
+    cvar toggle re-arms; in between, only one dump per session.
+  - **Idle pose only for the baseline.** Animation-driven poses
+    will be characterised in v0.5.3.
+
 ## v0.5.1 — 2026-04-30 — Strict-hitbox actually rejects AABB-only hits
 
 ### What this fixes
