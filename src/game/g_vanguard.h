@@ -142,6 +142,25 @@ qboolean vg_Hitbox_StrictMode(void);
 qboolean vg_Hitbox_ConsumeDiagDumpRequest(void);
 
 /**
+ * @brief Returns qtrue if the given means-of-death is a self / non-
+ *        bullet damage source — falldamage, drowning, lava, crush,
+ *        suicide, trigger_hurt, telefrag. These callers pass
+ *        `point=NULL` to G_Damage (g_active.c:170/191/1014, lots of
+ *        g_props.c / g_mover.c sites), and the multi-region capsule
+ *        trace has no meaningful "impact point" for them anyway.
+ *        Phase 8.0 v0.5.2.2 SIGSEGV fix.
+ *
+ *        Used by the multi-region branch entry gate in g_combat.c
+ *        as defense-in-depth alongside an explicit `point != NULL &&
+ *        attacker != NULL && attacker->client != NULL` check. The
+ *        explicit pointer checks alone prevent the crash; this
+ *        predicate documents the intent ("multi-region semantics
+ *        don't apply to self-damage") and catches future call sites
+ *        that might pass non-NULL placeholder points for these MODs.
+ */
+qboolean vg_Hitbox_IsSelfDamageMod(meansOfDeath_t mod);
+
+/**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.
  *        Call once per map from G_ShutdownGame for symmetry / hook
  *        point for any future teardown.
