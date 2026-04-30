@@ -67,9 +67,17 @@ jobs:
 
       - name: Configure
         run: |
+          # FORCE_OMNIBOT=ON bypasses the cmake_dependent_option in
+          # CMakeLists.txt:102 that silently disables FEATURE_OMNIBOT for
+          # mingw cross-compiles (the dep expression is
+          # `(NOT MINGW AND WIN32) OR FORCE_OMNIBOT OR ... Linux`, so
+          # mingw-x64 falls through unless we force it). Without this
+          # override the qagame DLL ships without the dlopen() hooks
+          # for omnibot_et_x64.dll and Windows admins can't run bots.
           cmake -B build-windows \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-x64-linux.cmake \
-            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCROSS_COMPILE32=OFF -DBUILD_MOD_PK3=OFF \
+            -DFEATURE_OMNIBOT=ON -DFORCE_OMNIBOT=ON \
             -DCI_ETL_TAG=${{ github.ref_name }} \
             -DCI_ETL_DESCRIBE=${{ github.ref_name }} \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
@@ -79,6 +87,20 @@ jobs:
 
       - name: Build
         run: cmake --build build-windows -j
+
+      - name: Verify Omni-bot symbols in qagame Win64 DLL
+        run: |
+          # Sanity check that prevents the v0.5.2-rc1 regression where a
+          # bad build flag silently elided every #ifdef FEATURE_OMNIBOT
+          # block in g_main.c. If this fails, check the FORCE_OMNIBOT
+          # flag in the Configure step above.
+          set -euo pipefail
+          COUNT=$(strings -a build-windows/vanguard/qagame_mp_x64.dll | grep -ic "omni")
+          echo "Omni-bot symbol count in qagame_mp_x64.dll: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::FEATURE_OMNIBOT not in Win64 qagame — only ${COUNT} omni symbols (expect 30+)"
+            exit 1
+          fi
 
       - name: Upload Win64 DLLs
         uses: actions/upload-artifact@v4
@@ -109,9 +131,12 @@ jobs:
 
       - name: Configure
         run: |
+          # FORCE_OMNIBOT=ON: same rationale as the Win64 step — without
+          # it, mingw cross-compiles silently drop FEATURE_OMNIBOT.
           cmake -B build-windows-32 \
             -DCMAKE_TOOLCHAIN_FILE=cmake/Toolchain-cross-mingw-linux.cmake \
-            -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF -DFEATURE_OMNIBOT=OFF \
+            -DCROSS_COMPILE32=ON -DBUILD_MOD_PK3=OFF \
+            -DFEATURE_OMNIBOT=ON -DFORCE_OMNIBOT=ON \
             -DCI_ETL_TAG=${{ github.ref_name }} \
             -DCI_ETL_DESCRIBE=${{ github.ref_name }} \
             -DBUILD_CLIENT=OFF -DBUILD_SERVER=OFF -DBUILD_MOD=ON \
@@ -121,6 +146,16 @@ jobs:
 
       - name: Build
         run: cmake --build build-windows-32 -j
+
+      - name: Verify Omni-bot symbols in qagame Win32 DLL
+        run: |
+          set -euo pipefail
+          COUNT=$(strings -a build-windows-32/vanguard/qagame_mp_x86.dll | grep -ic "omni")
+          echo "Omni-bot symbol count in qagame_mp_x86.dll: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::FEATURE_OMNIBOT not in Win32 qagame — only ${COUNT} omni symbols (expect 30+)"
+            exit 1
+          fi
 
       - name: Upload Win32 DLLs
         uses: actions/upload-artifact@v4
@@ -206,6 +241,20 @@ jobs:
       - name: Build Linux + generate pk3
         run: cmake --build build -j
 
+      - name: Verify Omni-bot symbols in qagame Linux SO
+        run: |
+          # Sanity check that prevents the v0.5.2-rc1 regression where a
+          # bad build flag silently elided every #ifdef FEATURE_OMNIBOT
+          # block in g_main.c. If this fails, check the FEATURE_OMNIBOT
+          # flag in the Configure Linux step above.
+          set -euo pipefail
+          COUNT=$(strings -a build/vanguard/qagame.mp.x86_64.so | grep -ic "omni")
+          echo "Omni-bot symbol count in qagame.mp.x86_64.so: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::FEATURE_OMNIBOT not in Linux qagame — only ${COUNT} omni symbols (expect 30+)"
+            exit 1
+          fi
+
       - name: Extract version
         id: version
         run: |
@@ -284,6 +333,17 @@ jobs:
 
           # Multi-arch pk3
           cp "build/vanguard/vanguard_${TAG}.pk3" "${STAGING}/vanguard/"
+
+          # Omni-bot runtime — every supported server platform. The
+          # qagame .so/.dll dlopen() these at runtime; without them
+          # `bot help` and `bot addbot` are no-ops. Path-relative to
+          # fs_game/ via the omnibot_path cvar (default "omni-bot").
+          # Linux x86_64 is what the Pterodactyl egg expects; the
+          # Windows DLLs let LAN/practice hosts on Windows run bots
+          # without a separate download. See INSTALL.md for placement.
+          mkdir -p "${STAGING}/vanguard/omni-bot"
+          cp -r vendor/omnibot-runtime/extracted/omni-bot/. \
+                "${STAGING}/vanguard/omni-bot/"
 
           # Legal + install metadata
           cp LICENSE COPYRIGHT NOTICE            "${STAGING}/"

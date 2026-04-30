@@ -61,10 +61,39 @@ on 32-bit builds) directly via `dlopen`/`LoadLibrary`. The
 |------|---------|
 | `vanguard/*.so`, `vanguard/*.dll` | Loose module binaries — the server `dlopen`s these |
 | `vanguard/vanguard_vX.Y.Z.pk3` | Multi-arch redistributable — clients download this on connect |
+| `vanguard/omni-bot/` | Omni-bot runtime (Linux .so, Windows .dll, macOS .so) |
 | `LICENSE` | GPL-3.0-or-later license summary |
 | `COPYRIGHT` | Copyright holders |
 | `NOTICE` | Third-party attributions (ETLegacy, Wolfenstein:ET, Quake III, cJSON, MDX bone math) |
 | `INSTALL.md` | This file |
+
+## Bots (Omni-bot)
+
+The archive ships the Omni-bot runtime under `vanguard/omni-bot/`
+for every supported server platform — Linux x86_64
+(`omnibot_et.x86_64.so`), 32-bit Linux (`omnibot_et.so`),
+Windows x64 (`omnibot_et_x64.dll`), Windows x86
+(`omnibot_et.dll`), and macOS (`omnibot_et_mac.so`). qagame
+`dlopen`s the matching binary on map start; nothing else needs
+to be downloaded.
+
+To enable bots, add to your `server.cfg`:
+
+```
+set bot_enable     "1"
+set omnibot_enable "1"
+set omnibot_path   "omni-bot"      // relative to fs_game/
+```
+
+Then `rcon bot addbot <axis|allies> <skill>` to spawn one (skills
+1=easy through 5=very hard). `bot help` from the server console
+lists the rest.
+
+If `bot help` is silent, the server log will say either
+`Looking for omni-bot/omnibot_et... found` (working) or
+`Failed to load Omni-bot` (typically a mismatched
+`omnibot_path` or a missing runtime DLL — verify the
+`vanguard/omni-bot/` directory survived the unzip).
 
 ## Pure-server requirement
 
