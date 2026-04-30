@@ -3,6 +3,91 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2.2 — 2026-04-30 — Phase 8.0 emergency hot-fix: SIGSEGV on self-damage
+
+> **Critical hot-fix.** Pterodactyl recorded a server crash
+> (signal 11 — SIGSEGV) on a `MOD_FALLING` damage event. Root
+> cause: the v0.5.1 strict-hitbox fix made the multi-region
+> branch in `G_Damage` reachable for ANY damage call (not just
+> bullets), and several call sites — `g_active.c:170/174/191/1014`
+> for `MOD_SLIME` / `MOD_WATER` / `MOD_LAVA` / `MOD_FALLING` plus
+> a dozen `g_props.c` / `g_mover.c` sites for `MOD_CRUSH` —
+> pass `point=NULL` to `G_Damage`. The branch handed the NULL
+> pointer to `mdx_hit_test → mdx_hit_warp` which dereferenced it.
+>
+> Defense-in-depth fix: the multi-region branch now requires a
+> real `attacker->client`, a non-NULL `point`, and a
+> non-self-damage `mod`. Either of the first two would prevent
+> the crash; the MOD blacklist documents intent and catches edge
+> cases. Self-damage falls through to the legacy chain
+> (vanilla-correct, never crashed).
+
+### What changed
+
+  - `src/game/g_combat.c`: multi-region branch entry gate
+    extended from `vg_Hitbox_IsActive() && targ->client &&
+    targ->health > 0` to add `attacker && attacker->client &&
+    point && !vg_Hitbox_IsSelfDamageMod(mod)`. Comment block
+    updated with the Phase 8.0 rationale.
+  - `src/game/g_vanguard.c` + `g_vanguard.h`: new
+    `vg_Hitbox_IsSelfDamageMod(mod)` predicate. Returns qtrue
+    for `MOD_WATER`, `MOD_SLIME`, `MOD_LAVA`, `MOD_CRUSH`,
+    `MOD_TELEFRAG`, `MOD_FALLING`, `MOD_SUICIDE`,
+    `MOD_TRIGGER_HURT`, `MOD_CRUSH_CONSTRUCTION{,DEATH,_NOATTACKER}`.
+
+### Why both NULL-checks AND MOD blacklist?
+
+The NULL-pointer checks are the actual crash prevention — the
+branch can't fire without them. The MOD blacklist is correctness:
+even if a future call site somehow passed a non-NULL placeholder
+`point` for a `MOD_FALLING` event, multi-region capsule semantics
+("which body part got hit at this trace endpoint?") have no
+meaning for a fall. Falling damage just deducts HP; there's no
+trace, no aim, no shooter. The blacklist documents this and
+prevents accidental future regressions.
+
+### Verification
+
+Local validation on a dedicated Linux test server:
+
+  - Used the existing `die <name>` rcon command, which calls
+    `G_Damage(victim, NULL, NULL, NULL, NULL, health, 0,
+    MOD_UNKNOWN)` — exact same NULL-point pattern as the
+    `MOD_FALLING` crash.
+  - Issued `die BotA1`, `die BotX1`, then `die -1` (kills all
+    players in one frame).
+  - Result: `<world> killed BotA1 by MOD_UNKNOWN` Kill: events
+    in the log; **server stayed alive throughout**; zero SIGSEGV.
+  - Plus a separate 180s combat-only run with 8 bots showed
+    bullet damage still going through the multi-region branch
+    correctly (multiple `MOD_MP40` / `MOD_THOMPSON` / `MOD_KAR98`
+    / `MOD_STEN` Kill: events).
+
+### Live-test plan (4 tests)
+
+  1. Falldamage minor (32-64 unit fall) → player takes damage,
+     no crash.
+  2. Falldamage lethal (>200 unit fall) → player dies, body
+     gibs (gibs is fine, separate concern), server stays alive.
+  3. Multi-player simultaneous falldamage (2-3 players jump
+     off a cliff together) → no crash.
+  4. Regression — repeat the v0.5.2.1 6-test path. Multi-region
+     hit-detection unchanged for normal bullets.
+
+If 4 of 4 green, tag v0.5.2.2.
+
+### What stays unchanged
+
+  - Stage 3 cgame `MatrixWeight` torso-axis fix (v0.5.2)
+    preserved — independently correct.
+  - HEAD offset 6.5 (v0.5.2.1 revert) preserved — was always
+    correct, only the visualisation was wrong.
+  - VG_DIAG_DUMP block + manual `vanguard_diag_dump` cvar +
+    bone-axis world-frame output (v0.5.2.1) preserved — off
+    by default, no production cost.
+  - Strict-hitbox semantics from v0.5.1 unchanged for bullet
+    damage.
+
 ## v0.5.2.1 — 2026-04-30 — Revert HEAD offset, keep cgame fix, expand diagnostic
 
 > **Hot-fix release.** v0.5.2 was tagged but never deployed: the
