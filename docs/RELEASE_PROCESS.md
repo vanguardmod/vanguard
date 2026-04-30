@@ -35,6 +35,32 @@ directory are silently ignored on a pure server. So:
   - Therefore: **every shipped code change requires a full
     multi-platform rebuild + pk3 repack + version bump**.
 
+## Release helper script
+
+Use `scripts/release.sh` to automate the pre-flight portion:
+
+    ./scripts/release.sh v0.X.Y[-rcN]
+
+It validates the working state (correct branch, clean tree, tag
+doesn't already exist locally or on `origin`, version format
+matches `vMAJOR.MINOR.PATCH[-suffix]`), writes the new version
+to `VANGUARD_VERSION`, prompts you to add a section to
+`docs/RELEASE_NOTES.md` if missing, then prints the exact `git`
+commands to commit, push, tag, and push the tag.
+
+The script does **NOT** auto-execute any git commands — the
+actual release decision stays a manual step. It's a pre-flight
+checklist that catches the common typos and "wait did I push
+main yet" mistakes.
+
+`--dry-run` skips the file modification:
+
+    ./scripts/release.sh --dry-run v0.X.Y
+
+Useful for reviewing what the script would do before running it
+for real (or for piping the printed git commands into an
+external tool).
+
 ## Versioning is auto-derived from git tags
 
 Up to v0.4.3 the version was maintained at six hardcoded spots
