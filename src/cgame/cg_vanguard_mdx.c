@@ -536,19 +536,55 @@ static int vg_mdx_find_bone(const vg_mdx_model_t *mdx, const char *name)
 	return -1;
 }
 
+/* Direct port of qagame's MatrixWeight (g_mdx.c:178-193). Blends a
+ * 3x3 rotation matrix toward the identity by `1 - weight`: result =
+ * weight * m + (1 - weight) * I. Used inside vg_mdx_compute_bone_axis_local
+ * to mix the player's torso rotation into bones with non-zero
+ * torso_weight, the same way mdx_bone_orientation does on the server
+ * side. Static-helper-shaped to mirror the qagame symbol. */
+static void vg_mdx_MatrixWeight(/*const*/ vec3_t m[3], float weight, vec3_t mout[3])
+{
+	float one = 1.0f - weight;
+
+	mout[0][0] = m[0][0] * weight + one;
+	mout[0][1] = m[0][1] * weight;
+	mout[0][2] = m[0][2] * weight;
+
+	mout[1][0] = m[1][0] * weight;
+	mout[1][1] = m[1][1] * weight + one;
+	mout[1][2] = m[1][2] * weight;
+
+	mout[2][0] = m[2][0] * weight;
+	mout[2][1] = m[2][1] * weight;
+	mout[2][2] = m[2][2] * weight + one;
+}
+
 /* ============================================================= */
 /* Bone-local axis matrix (model-frame)                           */
 /*                                                                */
 /* Direct port of mdx_bone_orientation's axis-only path           */
-/* (g_mdx.c:1644-1673), simplified for cgame: the qagame torso-   */
-/* axis mixing via MatrixWeight is omitted because cgame's        */
-/* refent->torsoAxis is set to body->axis (the player's WORLD-    */
-/* frame rotation), not the qagame in-MODEL torsoAxis. With that  */
-/* mismatch, MatrixWeight would produce a matrix in the wrong     */
-/* frame and rotate the offset incorrectly. Skipping it lands us  */
-/* on transpose(AnglesToAxis(lerpedAnglesF)), which is the bone's */
-/* MODEL-LOCAL orientation — the right basis for offsets that     */
-/* should rotate with the bone (e.g. _vg_head's +6.5 Z).          */
+/* (g_mdx.c:1644-1689), now including the MatrixWeight torso      */
+/* mix that v0.4.1 deliberately skipped.                          */
+/*                                                                */
+/* The original v0.4.1 comment claimed the omission was correct   */
+/* because cgame's refent->torsoAxis was set to body->axis (the   */
+/* player's WORLD-frame rotation), not the qagame in-MODEL        */
+/* torsoAxis — so MatrixWeight would have produced a matrix in    */
+/* the wrong frame. That premise went stale in v0.4.3 when        */
+/* vg_BuildBodyRefent stopped manually constructing refent and    */
+/* started reading cent->pe.bodyRefEnt directly, where torsoAxis  */
+/* IS set by CG_PlayerAngles in the same frame qagame's           */
+/* mdx_PlayerAngles uses. Phase 7.0.1 audit confirmed:            */
+/* visible pose-lag in strafe-jump and crouch-move screenshots    */
+/* (capsules drift away from the model when torsoAxis ≠           */
+/* legsAxis, which is bones with torso_weight > 0).               */
+/*                                                                */
+/* Now matches qagame line-for-line: AnglesToAxis -> Transpose    */
+/* -> MatrixMultiply with MatrixWeight(torsoAxis, torso_weight).  */
+/* For bones with torso_weight = 0 the MatrixWeight identity      */
+/* fallback is a no-op, so the output is unchanged from the v0.4  */
+/* path for legs-only bones — only torso/spine/head/arm bones     */
+/* see the corrective rotation.                                   */
 /* ============================================================= */
 
 static void vg_mdx_compute_bone_axis_local(vg_mdx_model_t *legsModel,
@@ -567,7 +603,10 @@ static void vg_mdx_compute_bone_axis_local(vg_mdx_model_t *legsModel,
 	const vg_mdx_frame_bone_t *frameBone;
 	const vg_mdx_frame_bone_t *oldFrameBone;
 	vec3_t                     angles;
-	vec3_t                     pre;
+	vec3_t                     intrinsic[3];
+	vec3_t                     weighted[3];
+	vec3_t                     mixed[3];
+	float                      torsoWeight;
 
 	if (legsModel->bones[i].torso_weight != 0.0f)
 	{
@@ -597,8 +636,20 @@ static void vg_mdx_compute_bone_axis_local(vg_mdx_model_t *legsModel,
 	VectorScale(oldFrameBone->anglesF, backlerp, angles);
 	VectorMA(angles, 1.0f - backlerp, frameBone->anglesF, angles);
 
-	AnglesToAxis(angles, pre);
-	TransposeMatrix(pre, outAxis);
+	AnglesToAxis(angles, intrinsic);
+	TransposeMatrix(intrinsic, outAxis);
+
+	/* MatrixWeight(refent->torsoAxis, bone->torso_weight) blended into
+	 * the bone-local axis. For torso_weight == 0 (most legs / pelvis
+	 * bones), this is identity * outAxis — no change. For non-zero
+	 * weights (spine, neck, head, clavicles, arms), it composes the
+	 * player torso rotation into the bone basis so the resolved
+	 * world-space position tracks the rendered torso pose. Mirrors
+	 * mdx_bone_orientation:1683-1689 verbatim. */
+	torsoWeight = (float)legsModel->bones[i].torso_weight;
+	vg_mdx_MatrixWeight(((refEntity_t *)body)->torsoAxis, torsoWeight, weighted);
+	MatrixMultiply(outAxis, weighted, mixed);
+	AxisCopy(mixed, outAxis);
 }
 
 qboolean vg_mdx_compute_bone_world(const refEntity_t *body,
