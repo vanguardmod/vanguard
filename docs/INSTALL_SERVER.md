@@ -20,16 +20,16 @@ architecture.
 ```bash
 # 1. Unpack the server archive next to your ETLegacy install
 cd /path/to/etlegacy-server
-unzip /tmp/vanguard-v0.4.3-server.zip
+unzip /tmp/vanguard-vX.Y.Z-server.zip
 
 # 2. The unzip places a vanguard/ directory containing 12 module
-#    binaries plus the multi-arch vanguard_v0.4.3.pk3 — verify:
+#    binaries plus the multi-arch vanguard_vX.Y.Z.pk3 — verify:
 ls vanguard/
 #   cgame.mp.x86_64.so   qagame.mp.x86_64.so   tvgame.mp.x86_64.so
 #   ui.mp.x86_64.so      cgame_mp_x64.dll      qagame_mp_x64.dll
 #   tvgame_mp_x64.dll    ui_mp_x64.dll         cgame_mp_x86.dll
 #   qagame_mp_x86.dll    tvgame_mp_x86.dll     ui_mp_x86.dll
-#   vanguard_v0.4.3.pk3
+#   vanguard_vX.Y.Z.pk3
 
 # 3. Launch the server with +set fs_game vanguard
 ./etlded.x86_64 +set fs_game vanguard +exec server.cfg
@@ -46,7 +46,7 @@ etlegacy-server\
 ├── etmain\
 └── vanguard\
     ├── (12 module binaries)
-    └── vanguard_v0.4.3.pk3
+    └── vanguard_vX.Y.Z.pk3
 ```
 
 Launch with `etlded.exe +set fs_game vanguard +exec server.cfg`.

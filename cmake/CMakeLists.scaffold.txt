@@ -9,7 +9,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(VanguardMod
-    VERSION 0.4.3
+    # VERSION intentionally omitted — VanguardMod's runtime version
+    # is derived from `git describe --tags` (with VANGUARD_VERSION
+    # file fallback) by cmake/ETLVersion.cmake. Keeping a hardcoded
+    # value here would have to be re-bumped on every release and
+    # would silently drift out of sync. See docs/CI.md for the full
+    # auto-versioning flow.
     DESCRIPTION "Wolfenstein: Enemy Territory competitive mod for ETLegacy"
     LANGUAGES C
 )

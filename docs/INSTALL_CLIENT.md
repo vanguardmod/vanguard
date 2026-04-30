@@ -22,7 +22,7 @@ warming up.
 
    ```
    vanguard/
-   └── vanguard_v0.4.3.pk3
+   └── vanguard_vX.Y.Z.pk3
    ```
 
 3. Copy the `vanguard/` directory into your ETLegacy game folder:
