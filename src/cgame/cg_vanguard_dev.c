@@ -128,7 +128,7 @@ typedef struct
  * from .hit at build time, drift between client and server here is
  * the cost of a quick visualisation. */
 static const vg_hit_area_t vg_hit_areas[] = {
-	/* HEAD — sphere radius 6 on Bip01 Head, +6.5 along the head bone's
+	/* HEAD — sphere radius 7 on Bip01 Head, +6.5 along the head bone's
 	 * local X (the parent-to-child / bone-direction axis in the 3DS-Max
 	 * biped convention; for Bip01 Head this is "up the skull" in the
 	 * bind pose). The axis is +X per mdx_calculate_bone (g_mdx.c:1402);
@@ -137,25 +137,41 @@ static const vg_hit_area_t vg_hit_areas[] = {
 	 * axis[2] — bone-local conventions differ. v0.4.2 switched to the
 	 * correct axis.
 	 *
-	 * Magnitude history: v0.4.2-v0.5.1 used 6.5; v0.5.2 retuned to 2.0
+	 * Offset history: v0.4.2-v0.5.1 used 6.5; v0.5.2 retuned to 2.0
 	 * based on measured delta-Z without realising the perceived
 	 * displacement was the cgame MatrixWeight bug (Stage 3, fixed in
-	 * v0.5.2 alongside the magnitude change). v0.5.2.1 reverts to 6.5
-	 * — live-test screenshots confirmed the v0.5.2 sphere sat at
-	 * neck/shoulder level (sphere centre at +6.35 above neck-bone is
-	 * below the visible chin in this character model). The 6.5 value
-	 * places the sphere centre at ~+10.85 above neck-bone (face /
-	 * forehead zone) with the radius-6 sphere covering chin to top of
-	 * helmet — the original v0.4.2-v0.5.1 placement was correct, only
-	 * the visualisation was wrong.
+	 * v0.5.2 alongside the offset change). v0.5.2.1 reverted to 6.5
+	 * — live-test confirmed the v0.5.2 sphere sat at neck/shoulder.
+	 * The 6.5 value places the sphere centre at ~+10.85 above neck-
+	 * bone (face / forehead zone).
 	 *
-	 * Mirror of `offset 6.5 0 0` on the _vg_head TAG line in
+	 * Radius history: v0.4.2-v0.5.2.2 used radius 6 (legacy
+	 * g_realHead inheritance, g_combat.c:988-989). v0.5.2.3 bumps to 7
+	 * — Alphaloki cup-test feedback "headshots almost impossible"
+	 * indicated the visible helmet's ~7-8 unit half-width was outside
+	 * the radius-6 sphere; r=7 covers the lateral edge. See
+	 * docs/notes/PHASE_7_0_2_AUDIT.md §G.1.
+	 *
+	 * Mirror of `radius 7` on the HIT head line in
 	 * etmain/animations/human_base.hit. Both must be kept in sync —
 	 * any retune touches both files. */
 	{ "Bip01 Head",       NULL,                VG_SHAPE_SPHERE,
-	  { 6, 6, 6 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
+	  { 7, 7, 7 }, { 0, 0, 0 }, IMPACTPOINT_HEAD,
 	  { 1.0f, 0.2f, 0.2f },                                  /* red */
 	  { 6.5f, 0, 0 }, { 0, 0, 0 } },
+
+	/* NECK — sphere radius 4 on Bip01 Neck (no offset). v0.5.2.3
+	 * fills the throat/collar gap between the HEAD sphere bottom
+	 * (~+3.85 above neck-bone with the new r=7 sphere) and the
+	 * CHEST box top (anchored AT Bip01 Neck origin).
+	 * Tagged as IMPACTPOINT_CHEST so neck shots get the chest
+	 * damage multiplier — no headshot multiplier for a throat hit.
+	 * Mirror of `HIT body _vg_neck radius 4 impactpoint chest` in
+	 * etmain/animations/human_base.hit. PHASE_7_0_2_AUDIT.md §G.4b. */
+	{ "Bip01 Neck",       NULL,                VG_SHAPE_SPHERE,
+	  { 4, 4, 4 }, { 0, 0, 0 }, IMPACTPOINT_CHEST,
+	  { 1.0f, 0.5f, 0.2f },                                  /* amber */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* CHEST — box2 Spine1 -> Neck */
 	{ "Bip01 Spine1",     "Bip01 Neck",        VG_SHAPE_BOX2,
@@ -185,6 +201,38 @@ static const vg_hit_area_t vg_hit_areas[] = {
 	{ "Bip01 R Clavicle", "Bip01 R UpperArm",  VG_SHAPE_CYLINDER,
 	  { 5, 5, 5 }, { 5, 5, 5 }, IMPACTPOINT_SHOULDER_RIGHT,
 	  { 0.4f, 0.6f, 1.0f },                                  /* blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
+
+	/* LEFT UPPER ARM — cylinder UpperArm -> Forearm. v0.5.2.3 added
+	 * per PHASE_7_0_2_AUDIT.md §G.5; covers the bicep / outer upper-
+	 * arm gap between the SHOULDER cylinder (which ends at UpperArm)
+	 * and the elbow. Reuses IMPACTPOINT_SHOULDER_LEFT so existing
+	 * 0.8x damage multiplier applies. radius 4 ≈ visible bicep
+	 * half-width on the soldier mesh. */
+	{ "Bip01 L UpperArm", "Bip01 L Forearm",   VG_SHAPE_CYLINDER,
+	  { 4, 4, 4 }, { 4, 4, 4 }, IMPACTPOINT_SHOULDER_LEFT,
+	  { 0.4f, 0.7f, 0.9f },                                  /* light blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
+
+	/* RIGHT UPPER ARM — mirror of left. */
+	{ "Bip01 R UpperArm", "Bip01 R Forearm",   VG_SHAPE_CYLINDER,
+	  { 4, 4, 4 }, { 4, 4, 4 }, IMPACTPOINT_SHOULDER_RIGHT,
+	  { 0.4f, 0.7f, 0.9f },                                  /* light blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
+
+	/* LEFT FOREARM + HAND — cylinder Forearm -> Hand. v0.5.2.3
+	 * added; covers the lower arm and (approximately) the hand.
+	 * Same impactpoint as upper-arm — the entire arm is one
+	 * continuous shoulder_left region for damage purposes. */
+	{ "Bip01 L Forearm",  "Bip01 L Hand",      VG_SHAPE_CYLINDER,
+	  { 4, 4, 4 }, { 4, 4, 4 }, IMPACTPOINT_SHOULDER_LEFT,
+	  { 0.4f, 0.7f, 0.9f },                                  /* light blue */
+	  { 0, 0, 0 }, { 0, 0, 0 } },
+
+	/* RIGHT FOREARM + HAND — mirror of left. */
+	{ "Bip01 R Forearm",  "Bip01 R Hand",      VG_SHAPE_CYLINDER,
+	  { 4, 4, 4 }, { 4, 4, 4 }, IMPACTPOINT_SHOULDER_RIGHT,
+	  { 0.4f, 0.7f, 0.9f },                                  /* light blue */
 	  { 0, 0, 0 }, { 0, 0, 0 } },
 
 	/* LEFT KNEE — cylinder Thigh -> Calf */

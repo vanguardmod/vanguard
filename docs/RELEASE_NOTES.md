@@ -3,6 +3,137 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2.3 — 2026-04-30 — Branding + hitbox quick-wins (HEAD r=7, NECK gap, ARM cylinders)
+
+> Bundled release: one branding fix and three hitbox geometry
+> tunes from the `PHASE_7_0_2_AUDIT.md` quick-win list. Shipped
+> together because the head/shoulder/arm geometry will likely
+> get another tuning pass after the next cup-tester session
+> anyway — one release now beats three serial micro-releases.
+> Acknowledged risk: if cup feedback in 1-2 weeks says "HEAD
+> too easy" or flags a coverage gap between the new arm
+> cylinders and the existing shoulder cylinder, a v0.5.2.4 /
+> v0.5.3 tuning release will follow.
+
+### What changed
+
+  - **Branding (Item A)** — `misc/description.txt` now reads
+    `^8Vanguard^7Mod` (16 bytes incl. LF, well under the
+    48-byte engine cap). Color codes: `^8` = cyan/turquoise,
+    `^7` = white. Replaces the placeholder
+    `^1ET^7: LEGACY^1 -^7 legacy mod` carried over from the
+    upstream `etmain/description.txt`.
+    `cmake/ETLBuildMod.cmake` extended to stage the file via
+    `copy_if_different` next to the .pk3 (loose, NOT inside —
+    see comment block at line 360-364: `FS_GetModList` reads
+    the brand string with `FS_SV_FOpenFileRead`, never opens
+    pk3s for it). `scripts/testserver/run.sh` also copies it
+    into `$HOMEPATH/vanguard/` as a safety net for local tests
+    (fs_homepath wins the search order).
+  - **NECK gap fix (Item B, audit §G.4b)** —
+    `etmain/animations/human_base.hit` adds
+    `HIT body _vg_neck radius 4 impactpoint chest`. Closes the
+    ~4-5 unit no-damage band at the throat between the HEAD
+    sphere bottom (post-G.1: ~+3.85 above neck-bone) and the
+    CHEST box top (anchored AT the neck bone). Tagged as
+    `chest` impactpoint — neck shots take chest damage, no
+    headshot multiplier for a throat hit.
+  - **HEAD radius 6 → 7 (Item C, audit §G.1)** — `human_base.hit`
+    HEAD line bumped from `radius 6` to `radius 7`. Cup tester
+    Alphaloki reported headshots "almost impossible" on
+    v0.5.2.1; the visible helmet half-width on the soldier
+    mesh is ~7-8 units, so r=6 left a ~1-2 unit lateral gap
+    on each side. r=7 covers the typical helmet width while
+    staying anatomically inside the visible head model.
+  - **ARM cylinders (Item D, audit §G.5)** — four new HIT
+    blocks in `human_base.hit`: cylinders for L+R Upper Arm
+    (UpperArm → Forearm) and L+R Forearm + Hand (Forearm →
+    Hand). Each radius 4, matching the visible bicep / lower-
+    arm half-width. All four reuse `IMPACTPOINT_SHOULDER_LEFT`
+    or `_RIGHT` so the existing 0.8x limb-damage multiplier
+    applies — entire arm clavicle-to-fingers is one continuous
+    region for damage purposes. Without these, upper-arm /
+    forearm shots fell through to the AABB broadphase and
+    rejected under strict-hitbox mode (v0.5.1+). Adds 4 new
+    `TAG _vg_{u,f}arm_{l,r}` and `TAG _vg_hand_{l,r}` bridges
+    to satisfy the parser's tag→bone lookup path.
+  - **cgame mirror (`src/cgame/cg_vanguard_dev.c`)** — the
+    `vg_hit_areas[]` table mirrors all three geometry changes
+    (HEAD radius 6 → 7, new NECK sphere, four new ARM
+    cylinders) so the `g_debugHitboxes 1` wireframe overlay
+    matches the server's hit volumes. Hit-area count grew
+    from 10 to 15.
+
+### Verification (local)
+
+  - **Build** — green on all three platforms; multi-platform
+    `.pk3` bundles all 7 native modules (Linux x64 .so x3 +
+    Win64 .dll x4 + Win32 .dll x4 = 11 binaries) plus the
+    updated `animations/human_base.hit` asset (10363 bytes).
+  - **Symbol gates** — all Phase 8.0 + multi-region symbols
+    present on Linux x64 / Win64 / Win32:
+    `vg_Hitbox_IsActive`, `vg_Hitbox_IsSelfDamageMod` (qagame),
+    `CG_VanguardDev_DrawHitboxes`, `vg_DrawPlayerMultibox`,
+    `vg_hit_areas`, plus the three `cg_vanguardDev*` cvars
+    (cgame). Omni-bot symbol count = 12 in qagame — same as
+    v0.5.2.2 (no regression from the FEATURE_OMNIBOT build
+    flag fix in v0.5.2-rc2).
+  - **Branding staging** — `build/vanguard/description.txt`
+    contains `^8Vanguard^7Mod`, sits next to
+    `vanguard_v0.5.2.3.pk3`, and is correctly NOT inside the
+    .pk3 (verified via `unzip -l` — `FS_GetModList` reads it
+    loose).
+  - **Phase 8.0 regression check (static)** — the multi-region
+    branch entry gate at `g_combat.c:1784` still requires
+    `attacker && attacker->client && point &&
+    !vg_Hitbox_IsSelfDamageMod(mod)`. None of the v0.5.2.3
+    changes touched the entry gate, so the SIGSEGV-on-fall
+    fix from v0.5.2.2 is preserved.
+
+### Live-test plan (wahke runs after deploy)
+
+  1. **Headshot direct on helmet centre** → impactpoint=1
+     (head), hit registers (was reliable on v0.5.2.x; verifies
+     no regression from the radius bump).
+  2. **Shot at neck/collar** → impactpoint=2 (chest), hit
+     registers. Was an AABB-broadphase reject under strict
+     mode in v0.5.2.x.
+  3. **Shot at upper arm (bicep)** → impactpoint=8
+     (shoulder_left/right), hit registers. Same — was
+     rejecting before.
+  4. **Shot at forearm / hand** → impactpoint=8, hit registers.
+  5. **Regression — chest, shoulder, gut, knees, calves** →
+     all previously-working hits unchanged.
+  6. **Falldamage / suicide / drowning** → no crash, server
+     stays alive (Phase 8.0 NULL-guard regression).
+
+### Known risks (acknowledged)
+
+  - **Cup-balance** — the HEAD radius bump (6→7) makes
+    headshots ~17% more likely by lateral cross-section
+    (π·7² / π·6² ≈ 1.36, but only the lateral edge gap
+    closes — the actual hit-rate increase is closer to the
+    ~1-2 unit gap on each side, ~5-15% in practice). If cup
+    feedback says "too easy", a v0.5.2.4 / v0.5.3 will tune
+    back toward 6.5.
+  - **ARM coverage seam** — the new UpperArm cylinder starts
+    at the UpperArm bone (where the existing Shoulder
+    cylinder ends). If the visible mesh has a small gap
+    between bone-anchored cylinders at the shoulder/upper-arm
+    joint, shots at that exact seam may still reject. Cup
+    feedback will tell.
+
+### What's NOT in this release (deferred)
+
+  - 18-region empirical hit-rate test — needs cup-tester
+    session; likely v0.5.3.
+  - Cross-mod hitbox comparison (NoQuarter / Silent / ETPro)
+    — WebSearch blocker; deferred.
+  - Falldamage redesign — Phase 7.3 movement work.
+  - Phase 7.1 hit-region sounds (groinhit.wav etc.) —
+    separate phase.
+  - `VG_DIAG_DUMP` label update — cosmetic backlog.
+
 ## v0.5.2.2 — 2026-04-30 — Phase 8.0 emergency hot-fix: SIGSEGV on self-damage
 
 > **Critical hot-fix.** Pterodactyl recorded a server crash
