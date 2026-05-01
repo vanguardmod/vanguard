@@ -50,8 +50,10 @@
 // ETLegacy classes (Soldier/Medic/Engineer/FieldOps/Cvops
 // × Allies/Axis).
 //
-// 9 distinct impact-points, 10 hit-areas (LEGS has 2:
-// left + right calf-foot cylinders).
+// 9 distinct impact-points, 15 hit-areas (LEGS has 2:
+// left + right calf-foot cylinders; ARM coverage is split across
+// shoulder + upper-arm + forearm cylinders per side, all three
+// reusing shoulder_left/right for damage-multiplier purposes).
 //
 // Bone names: 3DS-Max Biped naming with "Bip01" prefix.
 // Quoted because they contain spaces.
@@ -128,8 +130,12 @@ TAG _vg_spine_top "Bip01 Spine3"
 TAG _vg_pelvis    "Bip01 Pelvis"
 TAG _vg_clav_l    "Bip01 L Clavicle"
 TAG _vg_uarm_l    "Bip01 L UpperArm"
+TAG _vg_farm_l    "Bip01 L Forearm"
+TAG _vg_hand_l    "Bip01 L Hand"
 TAG _vg_clav_r    "Bip01 R Clavicle"
 TAG _vg_uarm_r    "Bip01 R UpperArm"
+TAG _vg_farm_r    "Bip01 R Forearm"
+TAG _vg_hand_r    "Bip01 R Hand"
 TAG _vg_thigh_l   "Bip01 L Thigh"
 TAG _vg_calf_l    "Bip01 L Calf"
 TAG _vg_foot_l    "Bip01 L Foot"
@@ -145,7 +151,28 @@ TAG _vg_foot_r    "Bip01 R Foot"
 // table; hit_type is the coarser pain-animation category.
 
 // Head — sphere on the head bone (1 tag, no box → sphere).
-HIT head _vg_head radius 6 impactpoint head
+//
+// v0.5.2.3: radius 6 → 7. Cup tester cup tester reported headshots
+// "almost impossible" on v0.5.2.1; the visible helmet half-width on
+// the soldier mesh is ~7-8 units, so r=6 left a ~1-2 unit gap on
+// each lateral side. r=7 covers the typical helmet width. Vertical
+// reach grows from chin..top-of-helmet (4.85..16.85 over neck-bone)
+// to ~3.85..17.85, still anatomically inside the visible head.
+// See docs/notes/PHASE_7_0_2_AUDIT.md §G.1.
+HIT head _vg_head radius 7 impactpoint head
+
+// Neck / collar — sphere at the neck bone, fills the gap between
+// the HEAD sphere bottom (4.85 over neck-bone, post-G.1: ~3.85) and
+// the CHEST box top (anchored AT the neck bone). v0.5.2.3 added per
+// docs/notes/PHASE_7_0_2_AUDIT.md §G.4b. Tagged as `chest`
+// impactpoint so neck shots get the chest damage multiplier (no
+// headshot multiplier for a throat hit — those are body shots).
+// Sphere centre at the bone, radius 4 covers the throat and front
+// of collar without overlapping the HEAD sphere (centre-to-centre
+// distance ~10.85 units, sum of radii 4+7=11 → just barely
+// overlaps, intentional sliver of redundant coverage at the
+// chin/throat boundary).
+HIT body _vg_neck radius 4 impactpoint chest
 
 // Chest — box Spine1 → Neck (Z ≈ 16.58 units), upper torso.
 HIT body _vg_spine_mid _vg_neck scale 9 7 5 scale 9 7 5 impactpoint chest box
@@ -161,6 +188,24 @@ HIT arm_L _vg_clav_l _vg_uarm_l radius 5 radius 5 impactpoint shoulder_left
 
 // Right Shoulder — mirror of left.
 HIT arm_R _vg_clav_r _vg_uarm_r radius 5 radius 5 impactpoint shoulder_right
+
+// Left Upper Arm — cylinder UpperArm → Forearm (the bicep / outer
+// upper-arm). v0.5.2.3 added per audit §G.5. Tagged as
+// shoulder_left so the existing 0.8x multiplier applies — limb
+// hits at 0.8x match the cup-mod convention. Without this,
+// upper-arm shots fall through to the AABB broadphase and reject
+// under strict mode. radius 4 ≈ visible bicep half-width.
+HIT arm_L _vg_uarm_l _vg_farm_l radius 4 radius 4 impactpoint shoulder_left
+
+// Right Upper Arm — mirror of left.
+HIT arm_R _vg_uarm_r _vg_farm_r radius 4 radius 4 impactpoint shoulder_right
+
+// Left Forearm + Hand — cylinder Forearm → Hand. Same impactpoint
+// as upper-arm; one continuous arm region from clavicle to fingers.
+HIT arm_L _vg_farm_l _vg_hand_l radius 4 radius 4 impactpoint shoulder_left
+
+// Right Forearm + Hand — mirror of left.
+HIT arm_R _vg_farm_r _vg_hand_r radius 4 radius 4 impactpoint shoulder_right
 
 // Left Knee — cylinder Thigh → Calf; mid-region = knee joint.
 HIT leg_L _vg_thigh_l _vg_calf_l radius 6 radius 6 impactpoint knee_left

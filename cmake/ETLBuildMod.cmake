@@ -357,11 +357,17 @@ if(BUILD_MOD_PK3)
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/etmain ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}
 		# Version header is generated in the build tree and staged into ui/ for menu includes.
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/ui/version_generated.h
+		# Vanguard: stage misc/description.txt to the mod root so FS_GetModList
+		# (qcommon/files.c:3413) can read it via FS_SV_FOpenFileRead and surface
+		# it in the engine's mod-selection menu (UI feeder, ui/ui_main.c:8077).
+		# That code reads a loose file off disk and never opens pk3s, so the
+		# brand string has to live next to the .pk3, not inside it. v0.5.2.3.
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/misc/description.txt ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/description.txt
 		# Vanguard: stage Windows DLLs (no-op if VANGUARD_WIN_DLL_FILES is empty).
 		${VANGUARD_WIN_DLL_STAGE_CMD}
 		# Vanguard: tar list extended with qagame/tvgame and Windows DLL basenames.
 		COMMAND ${CMAKE_COMMAND} -E tar c ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/${MODNAME}_${ETL_CMAKE_VERSION_SHORT}.pk3 --format=zip $<TARGET_FILE_NAME:cgame> $<TARGET_FILE_NAME:ui> ${VANGUARD_SERVER_MOD_FILES} ${VANGUARD_WIN_DLL_NAMES} ${ETMAIN_FILES_SHALLOW_REL} ui/version_generated.h
-		DEPENDS cgame ui ${VANGUARD_SERVER_MOD_TARGETS} ${VANGUARD_WIN_DLL_FILES} ${ETMAIN_FILES} ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h remove_old_pk3_files "${ETMAIN_STAGE_STAMP}"
+		DEPENDS cgame ui ${VANGUARD_SERVER_MOD_TARGETS} ${VANGUARD_WIN_DLL_FILES} ${ETMAIN_FILES} ${CMAKE_CURRENT_BINARY_DIR}/etmain/ui/version_generated.h ${CMAKE_CURRENT_SOURCE_DIR}/misc/description.txt remove_old_pk3_files "${ETMAIN_STAGE_STAMP}"
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${MODNAME}/
 		VERBATIM
 	)

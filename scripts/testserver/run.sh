@@ -42,6 +42,13 @@ mkdir -p "$HOMEPATH/vanguard"
 # Source of truth stays in scripts/testserver/server.cfg; this is just delivery.
 cp "$SCRIPT_DIR/server.cfg" "$HOMEPATH/vanguard/server.cfg"
 
+# Stage misc/description.txt into fs_homepath as a safety net so the
+# engine's FS_GetModList (qcommon/files.c:3413) finds the brand string
+# regardless of how fs_basepath resolves at run-time. The .pk3 build
+# also stages it under build/<MODNAME>/, but fs_homepath wins the
+# search order and this guarantees a hit during local tests. v0.5.2.3.
+cp "$REPO_ROOT/misc/description.txt" "$HOMEPATH/vanguard/description.txt"
+
 echo ">> VanguardMod test server"
 echo "   binary       : $ETLDED"
 echo "   fs_basepath  : $REPO_ROOT"
