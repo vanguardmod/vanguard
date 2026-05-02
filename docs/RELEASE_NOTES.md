@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.6.0 — WolfGuard Foundation (TBD)
+## v0.6.0 — WolfGuard Foundation (2026-05-02)
 
 ### Features
 - feat(wolfguard): add stub interface, startup banner, and dual-mode build support
