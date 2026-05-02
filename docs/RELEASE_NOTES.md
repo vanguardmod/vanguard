@@ -3,6 +3,17 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.6.0 — WolfGuard Foundation (TBD)
+
+### Features
+- feat(wolfguard): add stub interface, startup banner, and dual-mode build support
+- feat(wolfguard): add `wg_status` admin command
+- feat(ci): add community-build sanity gate (banner string presence check)
+
+### Build
+- New CMake option `FEATURE_WOLFGUARD` (default OFF) to switch between community and protected builds
+- Community builds compile and run identically — no functional difference yet, foundation only
+
 ## v0.5.2.4 — 2026-05-02 — Release-pipeline hotfix: ship description.txt in ZIPs
 
 > **Deployment hotfix, no code changes.** v0.5.2.3 correctly built

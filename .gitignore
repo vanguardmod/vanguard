@@ -71,8 +71,12 @@ etmain/pak1.pk3
 etmain/pak2.pk3
 etmain/mp_bin.pk3
 
-# Closed-source WolfGuard implementation (only on trusted core devs' machines)
+# Closed-source WolfGuard implementation (only on trusted core devs' machines).
+# v0.6.0 moved the integration into src/game/wolfguard/ alongside the public
+# stub. The orphan top-level wolfguard/private/ entry is kept until that
+# top-level scaffold is removed in a separate cleanup PR.
 wolfguard/private/
+src/game/wolfguard/private/
 
 # Omni-Bot runtime cache (tarball + extracted tree). Downloaded by
 # scripts/bootstrap.sh from mirror.etlegacy.com on first build with

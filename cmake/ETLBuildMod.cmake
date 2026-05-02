@@ -113,6 +113,43 @@ if(BUILD_SERVER_MOD)
 	target_compile_definitions(qagame PRIVATE BONE_HITTESTS=1)
 	# END VANGUARDMOD
 
+	# VANGUARDMOD v0.6.0: WolfGuard plugin layer.
+	# wg_interface.h + wg_banner.{c,h} live in src/game/wolfguard/ and
+	# are NOT picked up by ETLSources.cmake's QAGAME_SRC glob (which is
+	# `src/game/*.c`, non-recursive). Add them via target_sources so the
+	# qagame target carries the banner unconditionally and either the
+	# stub or the real provider depending on FEATURE_WOLFGUARD. The
+	# orphan top-level wolfguard/ + cmake/WolfGuard.cmake from earlier
+	# scaffolding are deliberately untouched in this PR — separate
+	# cleanup.
+	target_sources(qagame PRIVATE
+		"${CMAKE_SOURCE_DIR}/src/game/wolfguard/wg_interface.h"
+		"${CMAKE_SOURCE_DIR}/src/game/wolfguard/wg_banner.h"
+		"${CMAKE_SOURCE_DIR}/src/game/wolfguard/wg_banner.c"
+	)
+
+	if(FEATURE_WOLFGUARD)
+		# Protected build path. Refuses to configure unless the private
+		# WolfGuard sources are present so a misconfigured CI doesn't
+		# silently produce a community binary while claiming protected.
+		if(NOT EXISTS "${CMAKE_SOURCE_DIR}/src/game/wolfguard/private/CMakeLists.txt")
+			message(FATAL_ERROR
+				"FEATURE_WOLFGUARD=ON requires the private WolfGuard sources at\n"
+				"src/game/wolfguard/private/. Clone vanguardmod/wolfguard into that\n"
+				"path, or build with -DFEATURE_WOLFGUARD=OFF for a community build.")
+		endif()
+		add_subdirectory("${CMAKE_SOURCE_DIR}/src/game/wolfguard/private")
+		target_compile_definitions(qagame PRIVATE WG_ENABLED=1)
+	else()
+		# Community build path. wg_stub.c provides the no-op dispatch
+		# table + WG_IsAvailable=qfalse + WG_Version="n/a" so the
+		# banner emits the [ NOT INCLUDED ] variant.
+		target_sources(qagame PRIVATE
+			"${CMAKE_SOURCE_DIR}/src/game/wolfguard/wg_stub.c"
+		)
+	endif()
+	# END VANGUARDMOD v0.6.0
+
 	set_target_properties(qagame
 		PROPERTIES
 		PREFIX ""

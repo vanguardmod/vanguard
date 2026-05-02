@@ -92,6 +92,17 @@ option(FORCE_STATIC_VCRT		"Force static MSVC runtime linking"						ON)
 option(ENABLE_SSE				"Enable Streaming SIMD Extensions"						OFF)
 option(FEATURE_AUTH				"Enable central authentication support"					ON)
 option(FEATURE_LUAJIT			"Build with LuaJIT instead of PUC Lua"					OFF)
+option(FEATURE_WOLFGUARD		"Build with WolfGuard anti-cheat (requires private repo)"	OFF)
+
+# v0.6.0: WolfGuard build-mode banner. Surfaces the choice at configure
+# time so a misclick in a CI / Pterodactyl panel doesn't ship a silent
+# protected-vs-community swap. The qagame target picks up wg_stub.c
+# OR src/game/wolfguard/private/ in cmake/ETLBuildMod.cmake.
+if(FEATURE_WOLFGUARD)
+	message(STATUS "VanguardMod: WolfGuard ENABLED (protected build)")
+else()
+	message(STATUS "VanguardMod: WolfGuard DISABLED (community build)")
+endif()
 
 cmake_dependent_option(FEATURE_WINDOWS_CONSOLE	"Build win32 executables with Windows console"	ON "WIN32" OFF)
 

@@ -49,7 +49,8 @@
 #define Q_OSS_STR_INC
 #include "../qcommon/q_oss.h"
 
-#include "wolfguard.h"
+#include "wolfguard/wg_interface.h"
+#include "wolfguard/wg_banner.h"
 #include "g_vanguard.h"
 
 #include "json.h"
@@ -1883,13 +1884,19 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	G_spawnPrintf(DP_MVSPAWN, level.time + 2000, NULL);
 #endif
 
-	/* VanguardMod: bring up the WolfGuard layer for this map. */
-	WG_Init(level.rawmapname, NULL);
-	G_Printf("VanguardMod: WolfGuard %s provider active\n", WG_GetInfo()->provider_name);
+	/* VanguardMod: print the WolfGuard startup banner and bring up the
+	 * provider. v0.6.0 replaced the earlier WG_Init/WG_GetInfo scaffold
+	 * with a function-pointer dispatch (wolfguard/wg_interface.h); the
+	 * banner choice between [ ACTIVE ] and [ NOT INCLUDED ] reads
+	 * WG_IsAvailable. WG_Active is always non-NULL — wg_stub.c provides
+	 * a no-op dispatch table in community builds. */
+	WG_PrintStartupBanner();
+	WG_Active->init();
 
 	/* VanguardMod: dev mode subsystem (vanguard_dev cvar + debug
-	 * visualisation gating). Must run after WG_Init so the dev banner
-	 * appears below the WolfGuard line in chronological log order. */
+	 * visualisation gating). Must run after WG_Active->init() so the
+	 * dev banner appears below the WolfGuard line in chronological
+	 * log order. */
 	vg_DevMode_Init();
 
 	/* VanguardMod: Phase 6.1 multi-box hitbox subsystem (registers
@@ -1982,7 +1989,7 @@ void G_ShutdownGame(int restart)
 	G_WriteSessionData(restart);
 
 	/* VanguardMod: tear down the WolfGuard layer. Idempotent. */
-	WG_Shutdown();
+	WG_Active->shutdown();
 
 	/* VanguardMod: tear down dev mode (restores debug cvars if active). */
 	vg_DevMode_Shutdown();
@@ -4621,7 +4628,7 @@ void G_RunFrame(int levelTime)
 	level.frameTime    = level.time - level.previousTime;
 
 	/* VanguardMod: per-frame WolfGuard tick. */
-	WG_OnFrame(level.time);
+	WG_Active->frame(level.time);
 
 	/* VanguardMod: per-frame dev mode tick (cvar transitions, periodic
 	 * admin reminder). Cheap; runs every server frame. */

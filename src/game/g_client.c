@@ -49,7 +49,7 @@
 #include "g_mdx.h"
 #endif
 
-#include "wolfguard.h"
+#include "wolfguard/wg_interface.h"
 
 /* VANGUARD: tighter XY footprint for competitive play.
  * Reduces phantom hits from overly generous bounding boxes.
@@ -2647,8 +2647,14 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 	// count current clients and rank for scoreboard
 	CalculateRanks();
 
-	/* VanguardMod: notify WolfGuard about the successful connect. */
-	WG_OnClientConnect(clientNum, cs_guid, cs_ip);
+	/* VanguardMod: notify WolfGuard about the successful connect.
+	 * v0.6.0: returning non-zero from the hook rejects the client;
+	 * the message string is what the engine shows the kicked user.
+	 * Stub always returns 0 — gate is dormant in community builds. */
+	if (WG_Active->client_connect(clientNum, userinfo) != 0)
+	{
+		return "WolfGuard: connection rejected";
+	}
 
 	return NULL;
 }
@@ -3568,7 +3574,7 @@ void ClientDisconnect(int clientNum)
 	}
 
 	/* VanguardMod: notify WolfGuard before any per-feature teardown runs. */
-	WG_OnClientDisconnect(clientNum);
+	WG_Active->client_disconnect(clientNum);
 
 #ifdef FEATURE_RATING
 	// rating already recorded before intermission
