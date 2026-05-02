@@ -1,0 +1,360 @@
+       0 VG_BONEDIST: model='animations/human/base/body.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.431[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=5.854[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.591[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/mortar.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.275[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.084[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.894[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/akimbo.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.275[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.430[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=5.529[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.865[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/prone_pistol.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/prone_rifle.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/prone_dual_pistols.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/prone_mortar.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/binocs.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.894[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/no_juice.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.085[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.223[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.164[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.302[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST: model='animations/human/base/swim.mdx' bone_count=53[0m
+       0 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+       0 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+       0 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+       0 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+       0 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.430[0m
+       0 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+       0 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+       0 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+       0 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+       0 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+       0 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+       0 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+       0 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+       0 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/body.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.431[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=5.854[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.591[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/mortar.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.275[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.084[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.894[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/akimbo.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.275[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.430[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=5.529[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.865[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/prone_pistol.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/prone_rifle.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/prone_dual_pistols.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/prone_mortar.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/binocs.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=1.633[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.221[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.894[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=7.364[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=4.845[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/no_juice.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.085[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.223[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.429[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.164[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.302[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST: model='animations/human/base/swim.mdx' bone_count=53[0m
+   30450 VG_BONEDIST:   [ 6] 'Bip01 Head' parent=5/'Bip01 Neck' parent_dist=4.557[0m
+   30450 VG_BONEDIST:   [ 5] 'Bip01 Neck' parent=4/'Bip01 Spine3' parent_dist=6.274[0m
+   30450 VG_BONEDIST:   [ 4] 'Bip01 Spine3' parent=3/'Bip01 Spine2' parent_dist=5.083[0m
+   30450 VG_BONEDIST:   [ 3] 'Bip01 Spine2' parent=2/'Bip01 Spine1' parent_dist=5.222[0m
+   30450 VG_BONEDIST:   [ 2] 'Bip01 Spine1' parent=1/'Bip01 Spine' parent_dist=0.430[0m
+   30450 VG_BONEDIST:   [ 1] 'Bip01 Spine' parent=0/'Bip01 Pelvis' parent_dist=4.876[0m
+   30450 VG_BONEDIST:   [ 0] 'Bip01 Pelvis' parent=-1/'(root)' parent_dist=7.479[0m
+   30450 VG_BONEDIST:   [ 7] 'Bip01 L Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [ 8] 'Bip01 L UpperArm' parent=7/'Bip01 L Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [26] 'Bip01 R Clavicle' parent=5/'Bip01 Neck' parent_dist=1.893[0m
+   30450 VG_BONEDIST:   [27] 'Bip01 R UpperArm' parent=26/'Bip01 R Clavicle' parent_dist=5.986[0m
+   30450 VG_BONEDIST:   [45] 'Bip01 L Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+   30450 VG_BONEDIST:   [46] 'Bip01 L Calf' parent=45/'Bip01 L Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [47] 'Bip01 L Foot' parent=46/'Bip01 L Calf' parent_dist=15.916[0m
+   30450 VG_BONEDIST:   [49] 'Bip01 R Thigh' parent=1/'Bip01 Spine' parent_dist=6.233[0m
+   30450 VG_BONEDIST:   [50] 'Bip01 R Calf' parent=49/'Bip01 R Thigh' parent_dist=16.531[0m
+   30450 VG_BONEDIST:   [51] 'Bip01 R Foot' parent=50/'Bip01 R Calf' parent_dist=15.916[0m

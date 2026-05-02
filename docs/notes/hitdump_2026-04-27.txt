@@ -1,0 +1,154 @@
+       0 VG_BONELOOKUP: query='Bip01 Head' (len=10) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) MATCH[0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 Spine' (len=11) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) MATCH[0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 Spine1' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) MATCH[0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 Spine2' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) MATCH[0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 Spine3' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) MATCH[0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 Pelvis' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) MATCH[0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP: query='Bip01 L Clavicle' (len=16) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 L UpperArm' (len=16) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[8]='Bip01 L UpperArm' (len=16) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 R Clavicle' (len=16) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[26]='Bip01 R Clavicle' (len=16) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 R UpperArm' (len=16) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[27]='Bip01 R UpperArm' (len=16) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 L Thigh' (len=13) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[45]='Bip01 L Thigh' (len=13) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 L Calf' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[46]='Bip01 L Calf' (len=12) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 L Foot' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[47]='Bip01 L Foot' (len=12) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 R Thigh' (len=13) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[49]='Bip01 R Thigh' (len=13) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 R Calf' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[50]='Bip01 R Calf' (len=12) MATCH[0m
+       0 VG_BONELOOKUP: query='Bip01 R Foot' (len=12) in mdx 'animations/human/base/mortar.mdx' (bone_count=53)[0m
+       0 VG_BONELOOKUP:   bone[0]='Bip01 Pelvis' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[1]='Bip01 Spine' (len=11) [0m
+       0 VG_BONELOOKUP:   bone[2]='Bip01 Spine1' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[3]='Bip01 Spine2' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[4]='Bip01 Spine3' (len=12) [0m
+       0 VG_BONELOOKUP:   bone[5]='Bip01 Neck' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[6]='Bip01 Head' (len=10) [0m
+       0 VG_BONELOOKUP:   bone[7]='Bip01 L Clavicle' (len=16) [0m
+       0 VG_BONELOOKUP:   bone[51]='Bip01 R Foot' (len=12) MATCH[0m
+       0 VG_HITDUMP: registered 10 hit-areas from 'animations/human_base.hit'[0m
