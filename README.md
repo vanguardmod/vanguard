@@ -22,6 +22,35 @@ exclusive, closed-source anti-cheat with a centralized global ban database.
 Early bootstrap — no gameplay code yet. See `BOOTSTRAP.md` for the next steps
 to bring in the ETLegacy Mod SDK source tree and produce the first build.
 
+## Build Modes
+
+VanguardMod exposes a single CMake flag, `FEATURE_WOLFGUARD`, that switches
+between the two flavours described above. The community build is the default
+and produces a fully functional binary that any server operator can run.
+
+### Community build (default)
+
+    cmake -B build
+    cmake --build build
+
+Produces a binary without anti-cheat. Suitable for any server. The startup
+banner prints `WolfGuard:    [ NOT INCLUDED ]`. The mod runs identically
+to the protected build minus the WolfGuard hook execution.
+
+### Protected build (requires WolfGuard access)
+
+    git clone git@github.com:vanguardmod/wolfguard.git src/game/wolfguard/private
+    cmake -B build -DFEATURE_WOLFGUARD=ON
+    cmake --build build
+
+Restricted to servers registered at https://vanguardmod.com. The
+`src/game/wolfguard/private/` directory is in `.gitignore` and is only
+populated on trusted build hosts. Configuring with `FEATURE_WOLFGUARD=ON`
+without that directory present fails fast with a helpful error.
+
+The `wg_status` server console command re-prints the WolfGuard banner at
+any time so admins can re-check the build mode of a running server.
+
 ## Layout
 
     .

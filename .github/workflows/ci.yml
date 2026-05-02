@@ -84,6 +84,28 @@ jobs:
             exit 1
           fi
 
+      - name: Verify community WolfGuard banner string in qagame Linux SO
+        run: |
+          # v0.6.0 sanity gate. The community build must include
+          # wg_stub.c + wg_banner.c with the [ NOT INCLUDED ] banner
+          # variant. If this gate ever fires, the most likely cause is
+          # FEATURE_WOLFGUARD got accidentally enabled (CI default is
+          # OFF) or wg_banner.c was dropped from the qagame target
+          # (cmake/ETLBuildMod.cmake). Phase 7.0 lesson #2 — build-flag
+          # mismatches cascade subtly; a binary-string check catches
+          # what symbol greps would miss.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "NOT INCLUDED")
+          echo "Community banner string count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 1 ]; then
+            echo "::error::CI gate FAILED: community banner string not found in qagame binary."
+            echo "::error::This usually means FEATURE_WOLFGUARD got accidentally enabled,"
+            echo "::error::or wg_banner.c was not compiled."
+            exit 1
+          fi
+
   # -------------------------------------------------------------------
   # build-windows-x64 — Windows x86_64 cross via mingw-w64. Same
   # flags as the release workflow, just no upload.
