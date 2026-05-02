@@ -334,6 +334,18 @@ jobs:
           # Multi-arch pk3
           cp "build/vanguard/vanguard_${TAG}.pk3" "${STAGING}/vanguard/"
 
+          # Brand string — must live LOOSE next to the pk3 (not inside).
+          # FS_GetModList in qcommon/files.c:3413 reads description.txt
+          # via FS_SV_FOpenFileRead, which never opens pk3s for it. Without
+          # this copy, the engine's mod-selection menu falls back to the
+          # raw fs_game name (`vanguard`) instead of `^8Vanguard^7Mod`.
+          # cmake/ETLBuildMod.cmake stages it under build/vanguard/ during
+          # the Linux build; we just have to forward it to the ZIP. Added
+          # in v0.5.2.4 — v0.5.2.3 staged it locally but the ZIP step
+          # didn't pick it up, so wahke had to copy it by hand on the
+          # test PC.
+          cp build/vanguard/description.txt      "${STAGING}/vanguard/"
+
           # Omni-bot runtime — every supported server platform. The
           # qagame .so/.dll dlopen() these at runtime; without them
           # `bot help` and `bot addbot` are no-ops. Path-relative to
@@ -360,6 +372,11 @@ jobs:
 
           mkdir -p "${STAGING}/vanguard"
           cp "build/vanguard/vanguard_${TAG}.pk3" "${STAGING}/vanguard/"
+          # See server-ZIP step for the description.txt rationale —
+          # loose-file constraint of FS_GetModList. Same reason here:
+          # the brand string only surfaces in the engine UI when this
+          # file sits next to the pk3 in fs_game/. Added v0.5.2.4.
+          cp build/vanguard/description.txt      "${STAGING}/vanguard/"
           cp LICENSE                              "${STAGING}/"
           cp docs/INSTALL_CLIENT.md               "${STAGING}/INSTALL.md"
 

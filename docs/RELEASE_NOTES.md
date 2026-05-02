@@ -3,6 +3,89 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.5.2.4 — 2026-05-02 — Release-pipeline hotfix: ship description.txt in ZIPs
+
+> **Deployment hotfix, no code changes.** v0.5.2.3 correctly built
+> `description.txt` next to the pk3 in `build/vanguard/` (per the
+> `cmake/ETLBuildMod.cmake` staging clause), but the GitHub Actions
+> release workflow's ZIP-assembly steps only copied the pk3 + omni-bot
+> + legal files into the staging directory before zipping. The brand
+> string never made it onto end users' disks, forcing wahke to copy
+> `description.txt` by hand on the test PC just to see
+> `^8Vanguard^7Mod` in the engine's mod selector.
+
+### What changed
+
+  - `.github/workflows/release.yml` — both `Assemble server ZIP` and
+    `Assemble client ZIP` steps now `cp build/vanguard/description.txt
+    "${STAGING}/vanguard/"` before invoking `zip`. Comment block
+    cross-references the cmake staging clause and the
+    `FS_GetModList` loose-file constraint (qcommon/files.c:3413,
+    documented in v0.5.2.3 release notes) so future maintainers
+    don't accidentally drop the file on a re-sync.
+
+### What did NOT change
+
+  - **NECK capsule** — already shipped correctly in v0.5.2.3.
+    `etmain/animations/human_base.hit:175` carries
+    `HIT body _vg_neck radius 4 impactpoint chest` and
+    `src/cgame/cg_vanguard_dev.c:171` carries the matching
+    `vg_hit_areas[]` entry. Verified by extracting
+    `vanguard-v0.5.2.3-client.zip` from the published GitHub release
+    and grepping the bundled `vanguard_v0.5.2.3.pk3` for `_vg_neck` —
+    line 125 (TAG bridge) and line 175 (HIT block) are both present.
+    If a test PC still misses the NECK sphere visually under
+    `g_debugHitboxes 1`, the cause is local pak loading (an older
+    `vanguard_v0.5.2.x.pk3` shadowing the new one) — see
+    "Verifying the deployed pk3" below. **No source change in
+    v0.5.2.4.**
+  - **HEAD radius 7** — still `radius 7` on line 162 of the shipped
+    `human_base.hit`. Verified the same way.
+  - **ARM cylinders** — TAG bridges + 4 HIT blocks all present in the
+    shipped pk3.
+
+### Verifying the deployed pk3 on a test PC
+
+If `g_debugHitboxes 1` shows HEAD/CHEST/GUT/SHOULDER but no NECK
+sphere — and the running build is supposedly v0.5.2.4+ — the local
+pk3 is likely stale or shadowed:
+
+  1. `dir/vanguard/` — confirm only ONE `vanguard_v*.pk3` is present.
+     If both `vanguard_v0.5.2.2.pk3` and `vanguard_v0.5.2.4.pk3`
+     coexist, the engine loads both and a future filename collision
+     (e.g. a hand-rolled `vanguard.pk3`) could shadow the new one.
+  2. In-game: `\fs_referencedPakNames` lists every pk3 the renderer
+     loaded. The newest `vanguard_v*` should appear; if it does not,
+     the file is in the wrong directory.
+  3. Server-side: `\sv_referencedPakNames` mirrors what the server
+     pushed to the client.
+  4. As a one-shot sanity check, `unzip -p vanguard/vanguard_v*.pk3
+     animations/human_base.hit | grep _vg_neck` from the OS shell
+     should print at least three lines (TAG + HIT + the spine box's
+     bone reference).
+
+### Why this is a single-purpose release
+
+Phase 7.0 lesson #3 (`docs/notes/PHASE_7_0_2_AUDIT.md` and
+`PHASE_7_3_AUDIT.md` §7): crash-bugs vs. tuning-bugs vs. deployment
+bugs each ship in their own release. v0.5.2.4 is *only* the
+deployment fix. No source code is touched, no behaviour changes,
+no live-test required beyond confirming the staged
+`description.txt` actually appears in the published ZIPs.
+
+### Verification (release-time)
+
+Once tagged + pushed, the workflow run for `v0.5.2.4` should produce:
+
+  - `vanguard-v0.5.2.4-client.zip` containing
+    `vanguard/description.txt` + `vanguard/vanguard_v0.5.2.4.pk3`.
+  - `vanguard-v0.5.2.4-server.zip` containing the same plus all
+    .so/.dll modules and the omni-bot runtime.
+
+Quick check after download:
+`unzip -l vanguard-v0.5.2.4-client.zip | grep description.txt` →
+expects exactly one line. Same on the server zip.
+
 ## v0.5.2.3 — 2026-04-30 — Branding + hitbox quick-wins (HEAD r=7, NECK gap, ARM cylinders)
 
 > Bundled release: one branding fix and three hitbox geometry
