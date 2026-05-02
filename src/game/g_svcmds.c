@@ -35,6 +35,7 @@
  */
 
 #include "g_local.h"
+#include "wolfguard/wg_banner.h"
 
 #ifdef FEATURE_OMNIBOT
 #include "g_etbot_interface.h"
@@ -2546,6 +2547,16 @@ void Svcmd_Qsay_f(void)
 }
 
 /**
+ * @brief Svcmd_WG_Status_f — re-print the WolfGuard startup banner
+ *        on demand. Useful for admins joining a long-running server
+ *        who missed the G_InitGame banner. v0.6.0.
+ */
+static void Svcmd_WG_Status_f(void)
+{
+	WG_PrintStartupBanner();
+}
+
+/**
  * @brief Svcmd_PassVote_f
  */
 static void Svcmd_PassVote_f(void)
@@ -2620,6 +2631,7 @@ static consoleCommandTable_t consoleCommandTable[] =
 	{ "passvote",                   Svcmd_PassVote_f              },
 	{ "cancelvote",                 Svcmd_CancelVote_f            },
 	{ "qsay",                       Svcmd_Qsay_f                  },
+	{ "wg_status",                  Svcmd_WG_Status_f             },
 #ifdef FEATURE_LUA
 	{ "gLoadLua",                   Svcmd_LoadLua_f               },
 #endif
