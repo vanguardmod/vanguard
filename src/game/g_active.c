@@ -33,6 +33,7 @@
  */
 
 #include "g_local.h"
+#include "g_vanguard.h"        /* vg_Fun_GetInt + vg_fun (v0.7.1 falldamage) */
 
 #ifdef FEATURE_OMNIBOT
 #include "g_etbot_interface.h"
@@ -972,6 +973,16 @@ void ClientIntermissionThink(gclient_t *client)
 void G_FallDamage(gentity_t *ent, int event)
 {
 	int damage;
+	/* VanguardMod v0.7.1 (Phase 8.0b): falldamage values become
+	 * vg_fun-controlled. Helper API returns the cup_default at
+	 * vg_fun=0 (engine-default behaviour, byte-identical upgrade)
+	 * or the cvar value at vg_fun=1 (admin-tunable). Cvars
+	 * registered in g_vanguard.c::vg_Fun_Init with cup_defaults
+	 * matching the engine values, so even at vg_fun=1 with no
+	 * admin overrides the behaviour is identical to vg_fun=0.
+	 * Phase 8.0a NULL-guard at g_combat.c:1781-1784 is independent
+	 * of these values — gates on attacker/point/MOD only. */
+	const char *event_name = NULL;
 
 	if (ent->s.eType != ET_PLAYER)
 	{
@@ -980,36 +991,62 @@ void G_FallDamage(gentity_t *ent, int event)
 
 	if (event == EV_FALL_NDIE)
 	{
+		/* gib_health cvar: at vg_fun=0 returns -175 (engine default,
+		 * GIB_HEALTH constant, forces gib via over-damage). At
+		 * vg_fun=1 admin can lower (e.g. -300) to reduce gib
+		 * frequency on falls — though the global GIB_HEALTH macro
+		 * elsewhere in G_Damage still triggers gib if health drops
+		 * past it. Full gib-prevention semantics will be tuned in
+		 * follow-up release based on cup-tester data. */
+		int gib_h = vg_Fun_GetInt("vg_fun_falldmg_gib_health", -175);
+
 		// this damage is used for stats (pushing players to death) - ensure we gib
 		if (ent->health > 0)
 		{
-			damage = GIB_DAMAGE(ent->health);
+			damage = ent->health - gib_h + 1;
 		}
 		else
 		{
-			damage = -GIB_HEALTH + 1;
+			damage = -gib_h + 1;
 		}
+		event_name = "EV_FALL_NDIE";
 	}
 	else if (event == EV_FALL_DMG_50)
 	{
-		damage = 50;
+		damage = vg_Fun_GetInt("vg_fun_falldmg_dmg_50", 50);
+		event_name = "EV_FALL_DMG_50";
 	}
 	else if (event == EV_FALL_DMG_25)
 	{
-		damage = 25;
+		damage = vg_Fun_GetInt("vg_fun_falldmg_dmg_25", 25);
+		event_name = "EV_FALL_DMG_25";
 	}
 	else if (event == EV_FALL_DMG_15)
 	{
-		damage = 15;
+		damage = vg_Fun_GetInt("vg_fun_falldmg_dmg_15", 15);
+		event_name = "EV_FALL_DMG_15";
 	}
 	else if (event == EV_FALL_DMG_10)
 	{
-		damage = 10;
+		damage = vg_Fun_GetInt("vg_fun_falldmg_dmg_10", 10);
+		event_name = "EV_FALL_DMG_10";
 	}
 	else
 	{
 		damage = 5; // never used
+		event_name = "EV_FALL_unknown";
 	}
+
+	/* Diagnostic — only emits when vg_fun=1 AND g_developer 1.
+	 * Tuning workflow: admin sets g_developer 1 + vg_fun 1, drops
+	 * from known heights, observes per-event damage values to
+	 * verify their cvar overrides are taking effect. */
+	if (vg_fun.integer && g_developer.integer)
+	{
+		G_Printf("VG_Falldmg: event=%s dmg=%d (vg_fun=1, helper-resolved)\n",
+		         event_name, damage);
+	}
+
 	ent->pain_debounce_time = level.time + 200; // no normal pain sound
 	G_Damage(ent, NULL, NULL, NULL, NULL, damage, 0, MOD_FALLING);
 }
