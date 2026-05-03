@@ -53,6 +53,11 @@
 #include "wolfguard/wg_banner.h"
 #include "g_vanguard.h"
 
+/* VanguardMod v0.6.1: Phase 7.3 movement-diagnostics flag (storage
+ * + cvarTable entry in g_cvars.c). Read by G_InitGame's boot-line
+ * gate above. v0.7.x will read this from per-frame paths too. */
+extern vmCvar_t vanguard_diag_movement;
+
 #include "json.h"
 
 level_locals_t level;
@@ -1906,6 +1911,18 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	/* VanguardMod: Phase 7.2 netcode profile (registers
 	 * vanguard_netcode_profile, applies cup/public/custom preset). */
 	vg_Netcode_Init();
+
+	/* VanguardMod v0.6.1: Phase 7.3 diagnostics-foundation log.
+	 * vanguard_diag_movement is registered through gameCvarTable in
+	 * g_cvars.c (CVAR_TEMP, default 0). When an admin sets it for a
+	 * debugging session this one-shot line confirms the cvar was
+	 * actually picked up — mirrors the VG_Netcode/VG_Hitbox boot
+	 * lines for chronological log consistency. v0.7.x will gate
+	 * actual per-frame diagnostic emission on the same cvar. */
+	if (vanguard_diag_movement.integer)
+	{
+		G_Printf("VG_Diag: movement diagnostics ENABLED (re-arm per session)\n");
+	}
 }
 
 /**
