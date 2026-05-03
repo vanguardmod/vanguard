@@ -1,5 +1,24 @@
 # Cup vs Public — Netcode Profile
 
+## vg_fun Master Mode
+
+VanguardMod's primary mode-switch is `vg_fun` (since v0.7.0). It
+controls whether `vg_fun_*` sub-cvars are locked to cup-defaults
+or unlocked for public-server tuning.
+
+See `docs/VG_FUN_MODE.md` for the full specification + feature
+roadmap.
+
+The cup-vs-public netcode divergences documented below (sv_fps,
+g_pronedelay, lag-comp, Pterodactyl gotcha) are **independent of
+`vg_fun`** — they live in the netcode profile system from
+Phase 7.2 (`vanguard_netcode_profile`) and apply to all modes.
+
+Future feature divergences (Falldamage in v0.7.1, etc.) will be
+gated by `vg_fun=1` and documented in this file as they ship.
+
+---
+
 VanguardMod ships a single cvar that swaps the server between
 "cup-grade" and "public-grade" netcode tuning without touching
 `server.cfg`:

@@ -234,4 +234,74 @@ void vg_Netcode_Shutdown(void);
  */
 const char *vg_Netcode_ProfileName(void);
 
+/* ------------------------------------------------------------------ */
+/* vg_fun mode + helper API (Phase 9.0 foundation, v0.7.0).           */
+/*                                                                    */
+/* Master-switch + helper API for cup-orthodox vs fun-public modes.   */
+/* v0.7.0 ships infrastructure only; first controlled feature         */
+/* (Falldamage, Phase 8.0b) lands in v0.7.1.                          */
+/*                                                                    */
+/* The master cvar `vg_fun` is registered through gameCvarTable in    */
+/* g_cvars.c (CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO, default 0).*/
+/* ------------------------------------------------------------------ */
+
+extern vmCvar_t vg_fun;
+
+/**
+ * @brief Initialise the vg_fun subsystem. Reads vg_fun.integer (set
+ *        from cvarTable), emits the boot-line (`VG_Fun: mode=...`).
+ *        Call from G_InitGame AFTER vg_Netcode_Init so the mode line
+ *        appears in chronological log order with the other VG_*
+ *        subsystem boot lines.
+ */
+void vg_Fun_Init(void);
+
+/**
+ * @brief Print the full vg_fun status (mode + registered features +
+ *        per-feature cup-defaults). Backs the `vg_status` server
+ *        console command. Mirror of WG_PrintStartupBanner in spirit
+ *        but renders the registry table instead of a fixed banner.
+ */
+void vg_Fun_PrintStatus(void);
+
+/**
+ * @brief Helper API — Strategy C lock-mechanism (Phase 9.0 audit §1).
+ *        ALL `vg_fun_*` cvar reads MUST go through these helpers,
+ *        never `.integer` / `.value` direct. CI grep enforces this
+ *        at PR review (see audit §9 discipline gate).
+ *
+ *        Returns the cup_default if vg_fun=0; the cvar value if
+ *        vg_fun=1. The cvar is auto-registered on first read so
+ *        ad-hoc lookups don't require pre-registration via
+ *        vg_Fun_RegisterCvar (though the registry path is preferred
+ *        for introspection).
+ */
+int   vg_Fun_GetInt(const char *cvar_name, int cup_default);
+float vg_Fun_GetFloat(const char *cvar_name, float cup_default);
+
+/**
+ * @brief Pattern γ — feature self-registration. Subsystems call this
+ *        at their own Init time to register a sub-cvar with the
+ *        introspection registry. Pre-registers the cvar with the
+ *        engine using the supplied default + flags so admins can
+ *        `\set vg_fun_<feature>_<param> X` immediately.
+ *        v0.7.0 ships zero callers; v0.7.1 Falldamage is the first.
+ */
+void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_flags);
+
+/**
+ * @brief Mode query — fast path for log-line tagging and similar
+ *        hot uses. Equivalent to `(vg_fun.integer != 0)` but reads
+ *        more cleanly at call sites.
+ */
+qboolean vg_Fun_IsActive(void);
+
+/**
+ * @brief Returns the active mode name as a literal string: "cup"
+ *        (vg_fun=0) or "fun" (vg_fun=1). Used by stats log-tagging
+ *        sites in g_combat.c / g_client.c / g_main.c so future
+ *        leaderboard endpoints can bucket events per mode.
+ */
+const char *vg_Fun_ModeString(void);
+
 #endif /* VANGUARD_G_VANGUARD_H */
