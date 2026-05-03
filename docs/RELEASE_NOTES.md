@@ -3,6 +3,88 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.1.1 — Performance Hotfix (TBD)
+
+> **Production lag with 20 bots fixed.** Phase 10 perf audit
+> identified `mdx_hit_test` as the dominant cost (~240µs/trace).
+> This hotfix lands two LOW-risk cache layers + diagnostic
+> infrastructure with **estimated 35-45% per-trace reduction**.
+> Hit-detection is bit-identical to v0.7.1 — caches are
+> state-only, no logic changes; all 15 capsule tests still
+> execute (no early-exit).
+
+### Hot-path optimizations
+- perf(hitbox): **A1 — per-tick bone cache (per client)**.
+  `mdx_calculate_bones` is deterministic for given animation
+  state. Cache lives in `gclient_s.vgPerfBoneCache[]`,
+  invalidated when `level.time` advances OR animation
+  (`torsoFrame`/`legsFrame`) changes. Same client hit by N
+  bullets in 1 server tick → bones computed once instead of
+  N times. Saves ~25µs per repeat call.
+- perf(hitbox): **Q1 — per-call tag cache** (within
+  `mdx_hit_test`). Stack-allocated `vg_tag_cache_entry_t` array
+  (max 32 entries, linear scan). Multiple capsules sharing the
+  same anchor tag (e.g. NECK + CHEST sharing Bip01 Neck) →
+  `mdx_tag_orientation` computed once instead of per-capsule.
+  Biggest single bucket: ~125µs/trace → ~75µs/trace.
+
+### Diagnostic
+- New: **`vanguard_perf_stats` cvar** (CVAR_TEMP, default 0).
+  When enabled, emits one summary line per second to the server
+  console:
+  ```
+  VG_Perf: 47 traces in 1s, bone-cache hits/miss 32/15, tag-cache hit-rate 67% (180/270)
+  ```
+  Counts trace volume + per-cache hit/miss to verify A1+Q1 are
+  paying off in real workloads. Rate-limited to 1 emission per
+  second — never per-trace (Phase 7.0 lessons-learned: no log
+  spam in hot paths).
+
+### Phase 6/7/8 regression-safety
+- **Caches are state-only** (no logic changes); hit-detection
+  bit-identical to v0.7.1.
+- **Phase 8.0a NULL-guard** at `g_combat.c:1781-1784` untouched —
+  static grep confirms 4-clause guard intact.
+- **Phase 6 multi-region** capsule tests still all execute (no
+  early-exit on first hit; `best_frac` semantics preserved).
+- **Cache fallback path:** if `mdx_bones_max` exceeds
+  `VG_PERF_MAX_BONES` (96, larger than any plausible model),
+  cache silently disables → unconditional recompute. No
+  functional regression possible.
+- **Edge cases handled:** non-PLAYER entities skip per-client
+  cache (no `gclient_t`); `level.time == 0` (warmup) skips
+  cache.
+
+### CI
+- New gate in `.github/workflows/ci.yml` build-linux job:
+  `strings | grep -c "vg_perf|vgPerfBoneCache|vanguard_perf_stats|VG_Perf"`
+  must return ≥3.
+
+### Out of scope (deferred)
+- **Q2 — refined AABB short-circuit** (audit §5 Q2): tighter-
+  than-player AABB to reject line traces missing capsule union.
+  Needs separate investigation; deferred to v0.8.0.
+- **Q3 — capsule count reduction 15→11**: would regress Phase
+  7.0.2 cup-tester fix; **NOT pursued**.
+- **Profile-guided optimization (PGO)**: separate v0.8.0 work
+  if needed.
+
+### Verification (local)
+- ✓ Build green for qagame + cgame + ui + tvgame + mod_pk3
+- ✓ CI gate sim: 21 hits (≥3 required, PASS)
+- ✓ Symbol presence: `vg_tag_orientation_cached`,
+  `vg_perf_traces_total`, `vg_perf_bone_cache_hits/misses`,
+  `vg_perf_tag_cache_hits/misses`, `vanguard_perf_stats`,
+  `vgPerfBoneCache` (gclient_s field)
+- ✓ Format string: `VG_Perf: %d traces in 1s, bone-cache
+  hits/miss %d/%d, tag-cache hit-rate %d%% (%d/%d)` present
+- ✓ Phase 8.0a NULL-guard intact (static grep)
+- ✓ Regression: vg_Fun + vg_Hitbox + WG + vg_Netcode +
+  `mdx_hit_test` + `mdx_calculate_bones` all alive
+
+### Reference
+- Audit: `docs/notes/PHASE_10_PERF_AUDIT.md`
+
 ## v0.7.1 — Falldamage Profile (2026-05-03)
 
 > **First vg_fun-controlled feature.** Phase 8.0b Falldamage

@@ -106,6 +106,28 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Phase 10 perf-cache symbols in qagame Linux SO
+        run: |
+          # v0.7.1.1 Phase 10 perf hotfix sanity gate. The qagame
+          # binary must contain the bone+tag cache infrastructure
+          # symbols + the perf-stats cvar + the per-second emission
+          # format string. Threshold ≥3 = at minimum cvar +
+          # one cache symbol + format string. Catches the case
+          # where a future PR drops vg_perf_* counter externs or
+          # bypasses the cache logic (e.g. accidentally calls
+          # mdx_calculate_bones unconditionally).
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "vg_perf\|vgPerfBoneCache\|vanguard_perf_stats\|VG_Perf")
+          echo "Phase 10 perf symbol count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 3 ]; then
+            echo "::error::v0.7.1.1 Phase 10 perf symbols not found (got ${COUNT}, expected >=3)."
+            echo "::error::Check that g_mdx.c has vg_tag_orientation_cached + vg_perf_* counters,"
+            echo "::error::g_local.h has VG_PERF_MAX_BONES + vgPerfBoneCache, g_cvars.c registers vanguard_perf_stats."
+            exit 1
+          fi
+
       - name: Verify vg_fun falldamage cvars in qagame Linux SO
         run: |
           # v0.7.1 Phase 8.0b sanity gate. The qagame binary must

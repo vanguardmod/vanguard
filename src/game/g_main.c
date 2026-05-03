@@ -63,6 +63,7 @@
  * + cvarTable entry in g_cvars.c). Read by G_InitGame's boot-line
  * gate above. v0.7.x will read this from per-frame paths too. */
 extern vmCvar_t vanguard_diag_movement;
+extern vmCvar_t vanguard_perf_stats;     /* v0.7.1.1 Phase 10 perf-stats diagnostic */
 
 #include "json.h"
 
@@ -4661,6 +4662,45 @@ void G_RunFrame(int levelTime)
 
 	/* VanguardMod: per-frame WolfGuard tick. */
 	WG_Active->frame(level.time);
+
+	/* VanguardMod v0.7.1.1 (Phase 10 perf): rate-limited stats summary.
+	 * When vanguard_perf_stats is set, emits one VG_Perf line per
+	 * second with trace count + bone-cache hit/miss + tag-cache
+	 * hit-rate. Cup-tester runs this during 20-bot stress to verify
+	 * A1 + Q1 caches are paying off. Counters live in g_mdx.c
+	 * (extern below). Emission gated to once per second to avoid log
+	 * spam — never per-trace (Phase 7.0 lessons-learned). */
+	{
+		extern int vg_perf_traces_total;
+		extern int vg_perf_bone_cache_hits;
+		extern int vg_perf_bone_cache_misses;
+		extern int vg_perf_tag_cache_hits;
+		extern int vg_perf_tag_cache_misses;
+		static int vg_perf_last_emit_time = 0;
+
+		if (vanguard_perf_stats.integer && level.time - vg_perf_last_emit_time >= 1000)
+		{
+			if (vg_perf_traces_total > 0)
+			{
+				int total_tag_lookups = vg_perf_tag_cache_hits + vg_perf_tag_cache_misses;
+				int tag_hit_rate = (total_tag_lookups > 0)
+				                   ? (100 * vg_perf_tag_cache_hits / total_tag_lookups)
+				                   : 0;
+				G_Printf("VG_Perf: %d traces in 1s, "
+				         "bone-cache hits/miss %d/%d, "
+				         "tag-cache hit-rate %d%% (%d/%d)\n",
+				         vg_perf_traces_total,
+				         vg_perf_bone_cache_hits, vg_perf_bone_cache_misses,
+				         tag_hit_rate, vg_perf_tag_cache_hits, total_tag_lookups);
+			}
+			vg_perf_traces_total      = 0;
+			vg_perf_bone_cache_hits   = 0;
+			vg_perf_bone_cache_misses = 0;
+			vg_perf_tag_cache_hits    = 0;
+			vg_perf_tag_cache_misses  = 0;
+			vg_perf_last_emit_time    = level.time;
+		}
+	}
 
 	/* VanguardMod: per-frame dev mode tick (cvar transitions, periodic
 	 * admin reminder). Cheap; runs every server frame. */

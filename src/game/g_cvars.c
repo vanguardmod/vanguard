@@ -318,6 +318,13 @@ vmCvar_t vanguard_diag_movement;
  * (Falldamage) lands in v0.7.1. */
 vmCvar_t vg_fun;
 
+/* VanguardMod v0.7.1.1 (Phase 10 perf): hot-path stats diagnostic.
+ * 0 = silent, 1 = emit per-second summary line counting traces +
+ * cache hit/miss + tag-cache hit-rate. CVAR_TEMP — re-arm per
+ * session, not persisted. Use during cup-tester perf validation
+ * to confirm A1 + Q1 caches are paying off in real workloads. */
+vmCvar_t vanguard_perf_stats;
+
 vmCvar_t g_debugHitboxes;
 vmCvar_t g_debugPlayerHitboxes;
 
@@ -663,6 +670,8 @@ cvarTable_t gameCvarTable[] =
 	{ &vanguard_diag_movement,            "vanguard_diag_movement",            "0",                          CVAR_TEMP,                                       0, qfalse, qfalse },
 	// VanguardMod v0.7.0: vg_fun master switch — see g_cvars.c storage comment.
 	{ &vg_fun,                            "vg_fun",                            "0",                          CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO,     0, qfalse, qfalse },
+	/* VanguardMod v0.7.1.1: Phase 10 perf-stats diagnostic. */
+	{ &vanguard_perf_stats,               "vanguard_perf_stats",               "0",                          CVAR_TEMP,                                       0, qfalse, qfalse },
 	// Debug
 	{ &g_debugHitboxes,                   "g_debugHitboxes",                   "0",                          CVAR_CHEAT,                                      0, qfalse, qfalse },
 	{ &g_debugPlayerHitboxes,             "g_debugPlayerHitboxes",             "0",                          0,                                               0, qfalse, qfalse },     // no need to make this CVAR_CHEAT
