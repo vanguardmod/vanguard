@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.2.1 — Production Hotfix (TBD)
+## v0.7.2.1 — Production Hotfix (2026-05-03)
 
 > **Two v0.7.2 production-blocker bugs fixed.** Both surfaced
 > within 30 minutes of v0.7.2 release via wahke's live-test.
