@@ -45,6 +45,12 @@
 
 #define BODY_QUEUE_SIZE     8
 
+/* VanguardMod v0.7.1.1 (Phase 10 perf): per-client bone cache size.
+ * Sized to comfortably exceed the largest .mdx skeleton in use
+ * (~50-60 bones for the Bip01 human model). Audit:
+ * docs/notes/PHASE_10_PERF_AUDIT.md §6 A1. */
+#define VG_PERF_MAX_BONES   96
+
 #define EVENT_VALID_MSEC    300
 
 #define MG42_MULTIPLAYER_HEALTH 350
@@ -1088,6 +1094,20 @@ struct gclient_s
 	vec3_t legacyDownedViewAngles;            ///< View direction at the moment player got downed.
 	qboolean legacyDownedViewAnglesValid;     ///< True when downed angles are valid for revive restore.
 	int legacyRevivesSinceRespawn;            ///< Number of revives since last full respawn.
+
+	/* VanguardMod v0.7.1.1 (Phase 10 perf A1): per-tick bone cache.
+	 * mdx_calculate_bones is deterministic for given animation state;
+	 * caching its output between traces against the same client in
+	 * the same tick saves ~25µs per repeat call. See g_mdx.c
+	 * mdx_hit_test for cache lookup logic. Cache size
+	 * VG_PERF_MAX_BONES (96) safely exceeds the human_base mdx
+	 * (~50 bones); larger models silently fall back to unconditional
+	 * recompute (no functional regression). */
+	int      vgPerfBoneCachedTick;
+	int      vgPerfBoneCachedTorsoFrame;
+	int      vgPerfBoneCachedLegsFrame;
+	qboolean vgPerfBoneCacheValid;
+	vec3_t   vgPerfBoneCache[VG_PERF_MAX_BONES];
 };
 
 /**
