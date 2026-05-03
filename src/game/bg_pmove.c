@@ -893,6 +893,58 @@ static qboolean PM_CheckJump(void)
 		}
 	}
 
+	/* Phase 13b (v0.7.2.2) diagnostic: gated by vanguard_dev=1.
+	 *
+	 * Logs every jump-press attempt (rising edge: upmove>=10 and
+	 * !PMF_JUMP_HELD) so we can see exactly which gate fails when
+	 * a player expects a second mid-air jump. Server-side only —
+	 * cgame's local cvar pool does not see CVAR_SERVERINFO cvars
+	 * via trap_Cvar_VariableStringBuffer (cgame would always log
+	 * zeros, which is uninformative until v0.7.2.3 swaps cgame to
+	 * a CS_SERVERINFO + Info_ValueForKey path).
+	 *
+	 * Output fields (one line per press tick):
+	 *   ground   - groundEntityNum (must be ENTITYNUM_NONE = 1023 to be airborne)
+	 *   djUsed   - PMF_VG_DOUBLEJUMPED bit (must be 0 to allow second jump)
+	 *   fun      - vg_fun cvar (master switch, must be 1)
+	 *   dj       - vg_fun_doublejump cvar (must be 1)
+	 *   cls      - vg_fun_doublejump_classes bitmask (0=all, otherwise must include 1<<class)
+	 *   staCost  - vg_fun_doublejump_stamina (in 100-unit chunks)
+	 *   hgt      - vg_fun_doublejump_height (velocity[2] applied on success)
+	 *   stam     - STAT_SPRINTTIME (must be >= staCost*100)
+	 *   class    - STAT_PLAYER_CLASS (0..4)
+	 *   up       - cmd.upmove (jump press intensity)
+	 *   respawn  - PMF_RESPAWNED bit (must be 0)
+	 *   delay    - cmd.serverTime - pmext->jumpTime (PM_JUMP_DELAY=850ms gate; bypassed when candj=yes)
+	 *   candj    - eligibility result (yes = the v0.7.2 second-jump path will fire)
+	 *
+	 * Cleared in v0.7.2.3 once the failure mode is identified.
+	 * Audit: docs/notes/PHASE_13B_DIAGNOSTIC.md */
+#ifndef CGAMEDLL
+	if ((pm->cmd.upmove >= 10)
+	    && !(pm->ps->pm_flags & PMF_JUMP_HELD)
+	    && vg_pm_cvar_int("vanguard_dev", 0))
+	{
+		Com_Printf("VG_DJ[S] press: ground=%d djUsed=%d "
+		           "fun=%d dj=%d cls=%d staCost=%d hgt=%d "
+		           "stam=%d class=%d up=%d respawn=%d "
+		           "delay=%dms candj=%s\n",
+		           pm->ps->groundEntityNum,
+		           (pm->ps->pm_flags & PMF_VG_DOUBLEJUMPED) ? 1 : 0,
+		           vg_pm_cvar_int("vg_fun", 0),
+		           vg_pm_cvar_int("vg_fun_doublejump", 0),
+		           vg_pm_cvar_int("vg_fun_doublejump_classes", 0),
+		           vg_pm_cvar_int("vg_fun_doublejump_stamina", 0),
+		           vg_pm_cvar_int("vg_fun_doublejump_height", 270),
+		           pm->ps->stats[STAT_SPRINTTIME],
+		           pm->ps->stats[STAT_PLAYER_CLASS],
+		           pm->cmd.upmove,
+		           (pm->ps->pm_flags & PMF_RESPAWNED) ? 1 : 0,
+		           pm->cmd.serverTime - pm->pmext->jumpTime,
+		           canDoubleJump ? "yes" : "no");
+	}
+#endif
+
 	// jumping in multiplayer uses and requires sprint juice (to prevent turbo skating, sprint + jumps)
 	// don't allow jump accel
 

@@ -803,13 +803,7 @@ float vg_Fun_GetFloat(const char *cvar_name, float cup_default)
 void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_flags)
 {
 	vmCvar_t tmp;
-
-	if (s_vg_fun_registry_count >= VG_FUN_REGISTRY_MAX)
-	{
-		G_Printf("VG_Fun: registry full (max=%d); cannot register %s\n",
-		         VG_FUN_REGISTRY_MAX, name);
-		return;
-	}
+	int      i;
 
 	/* Phase 13 (v0.7.2.1): always add CVAR_SERVERINFO so cgame-side
 	 * bg_pmove.c reads via trap_Cvar_VariableStringBuffer return the
@@ -825,8 +819,54 @@ void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_fla
 	 * connected clients (gameplay transparency, no security concern
 	 * for vg_fun_*). Stored flags on the registry record reflect
 	 * the as-applied value so vg_Fun_PrintStatus accurately shows
-	 * what the engine sees. */
+	 * what the engine sees.
+	 *
+	 * Phase 13b (v0.7.2.2): SERVERINFO assignment moved ABOVE the
+	 * idempotent-lookup loop so that re-applied registrations get
+	 * the same engine flags as first-time registrations. */
 	cvar_flags |= CVAR_SERVERINFO;
+
+	/* Phase 13b (v0.7.2.2): idempotent registration.
+	 *
+	 * vg_Fun_Init runs from G_InitGame on EVERY map start AND every
+	 * map_restart (Q3 engine convention). The s_vg_fun_registry array
+	 * + counter are static globals that persist across G_InitGame calls
+	 * (the .so stays loaded between maps). Without this idempotent
+	 * check, every map_restart accumulates 9 entries (5 falldmg +
+	 * 4 doublejump) and the registry overflows VG_FUN_REGISTRY_MAX
+	 * after ~7 maps, silently rejecting all subsequent registrations.
+	 *
+	 * Discovered v0.7.2.1 production via wahke's server log:
+	 *   "VG_Fun: registry full (max=64); cannot register vg_fun_*"
+	 * appearing 8 times after several map_restart cycles.
+	 *
+	 * Effect of pre-fix overflow: registry slots silently dropped,
+	 * subsequent calls skipped trap_Cvar_Register (cvar already
+	 * existed from map 1 so no functional cvar-pool damage), and
+	 * vg_Fun_PrintStatus accuracy degraded. Engine cvar reads via
+	 * trap_Cvar_VariableStringBuffer were unaffected (registry-
+	 * independent path).
+	 *
+	 * Fix: walk the registry first; if the name already exists,
+	 * re-apply trap_Cvar_Register (engine merges flags + leaves the
+	 * live value untouched) and return without bumping the counter.
+	 * Behaviour for the genuine first registration is unchanged. */
+	for (i = 0; i < s_vg_fun_registry_count; i++)
+	{
+		if (Q_stricmp(s_vg_fun_registry[i].name, name) == 0)
+		{
+			s_vg_fun_registry[i].cvar_flags = cvar_flags;
+			trap_Cvar_Register(&tmp, name, cup_default, cvar_flags);
+			return;
+		}
+	}
+
+	if (s_vg_fun_registry_count >= VG_FUN_REGISTRY_MAX)
+	{
+		G_Printf("VG_Fun: registry full (max=%d); cannot register %s\n",
+		         VG_FUN_REGISTRY_MAX, name);
+		return;
+	}
 
 	Q_strncpyz(s_vg_fun_registry[s_vg_fun_registry_count].name,
 	           name, sizeof(s_vg_fun_registry[0].name));

@@ -141,6 +141,47 @@ jobs:
           fi
           echo "vg_Fun_RegisterCvar SERVERINFO OR-in: VERIFIED"
 
+      - name: Verify Phase 13b idempotent vg_Fun_RegisterCvar
+        run: |
+          # v0.7.2.2: vg_Fun_RegisterCvar must walk the registry
+          # for an existing entry by name before bumping the count.
+          # vg_Fun_Init is called from G_InitGame on every map_restart
+          # — without idempotent semantics the static registry
+          # accumulates 9 entries per map and overflows after ~7 maps,
+          # producing "VG_Fun: registry full (max=64); cannot register
+          # vg_fun_*" log lines and silently dropping registration.
+          # Static-source grep for the loop predicate.
+          set -euo pipefail
+          if ! grep -q "Q_stricmp(s_vg_fun_registry\[i\].name" src/game/g_vanguard.c; then
+            echo "::error::v0.7.2.2: vg_Fun_RegisterCvar missing idempotent-lookup loop."
+            echo "::error::Expected: 'for (i = 0; i < s_vg_fun_registry_count; i++) { if (Q_stricmp(s_vg_fun_registry[i].name, name) == 0) { ... } }'"
+            echo "::error::Check src/game/g_vanguard.c — without this, static registry overflows on map_restart cycles."
+            exit 1
+          fi
+          echo "vg_Fun_RegisterCvar idempotent-lookup loop: VERIFIED"
+
+      - name: Verify Phase 13b PM_CheckJump diagnostic in qagame Linux SO
+        run: |
+          # v0.7.2.2 diagnostic-first hotfix gate. PM_CheckJump must
+          # contain the server-side "VG_DJ[S] press:" diagnostic
+          # format string (gated by vanguard_dev=1 so it's quiet
+          # in production). Server-side only — cgame can't see
+          # CVAR_SERVERINFO cvars via trap_Cvar_VariableStringBuffer
+          # and would always log zeros until v0.7.2.3 swaps the
+          # cgame read path. Threshold ≥1 = format string present.
+          # Removed in v0.7.2.3 once root cause is identified — at
+          # that point this gate gets removed too.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "VG_DJ\[S\] press:" || true)
+          echo "Phase 13b diag string count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 1 ]; then
+            echo "::error::v0.7.2.2 PM_CheckJump diagnostic format string not found in qagame binary."
+            echo "::error::Check that bg_pmove.c contains the #ifndef CGAMEDLL block with Com_Printf(\"VG_DJ[S] press:...\")."
+            exit 1
+          fi
+
       - name: Verify vg_fun_doublejump cvars in qagame Linux SO
         run: |
           # v0.7.2 Phase 12 sanity gate. The qagame binary must
