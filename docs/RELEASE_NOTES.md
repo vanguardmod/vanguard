@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.1.1 — Performance Hotfix (TBD)
+## v0.7.1.1 — Performance Hotfix (2026-05-03)
 
 > **Production lag with 20 bots fixed.** Phase 10 perf audit
 > identified `mdx_hit_test` as the dominant cost (~240µs/trace).
