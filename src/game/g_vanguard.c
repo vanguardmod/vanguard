@@ -661,6 +661,26 @@ void vg_Fun_Init(void)
 	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_25",     "25",   CVAR_ARCHIVE);
 	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_50",     "50",   CVAR_ARCHIVE);
 	vg_Fun_RegisterCvar("vg_fun_falldmg_gib_health", "-175", CVAR_ARCHIVE);
+
+	/* Phase 12 (v0.7.2): Double-jump feature.
+	 *
+	 * 4 cvars: master toggle (off by default — cup-orthodox), height
+	 * (= JUMP_VELOCITY default = same as ground jump), class bitmask
+	 * (0 = all classes), stamina cost (0 = no cost, units of 100 on
+	 * STAT_SPRINTTIME's 0..20000 scale).
+	 *
+	 * Read in bg_pmove.c::PM_CheckJump via vg_pm_cvar_int helper
+	 * (trap_Cvar_VariableStringBuffer + atoi) so cgame and qagame
+	 * agree on prediction. CVAR_ARCHIVE = persisted in
+	 * etconfig_server.cfg, takes effect on next jump press. Master
+	 * gate vg_fun is CVAR_LATCH so cup-integrity is preserved at the
+	 * mode boundary.
+	 *
+	 * Audit: docs/notes/PHASE_12_DOUBLEJUMP_RECON.md */
+	vg_Fun_RegisterCvar("vg_fun_doublejump",         "0",    CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_doublejump_height",  "270",  CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_doublejump_classes", "0",    CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_doublejump_stamina", "0",    CVAR_ARCHIVE);
 }
 
 void vg_Fun_PrintStatus(void)

@@ -548,6 +548,13 @@ typedef enum
 #define PMF_BACKWARDS_RUN   16         ///< coast down to backwards run
 #define PMF_TIME_LAND       32         ///< pm_time is time before rejump
 #define PMF_TIME_KNOCKBACK  64         ///< pm_time is an air-accelerate only time
+
+/* VanguardMod v0.7.2 (Phase 12): double-jump state. Set when player
+ * executes a vg_fun mid-air second jump; cleared when player lands
+ * (PM_GroundTrace ground-detection). Bit 7 was free in upstream
+ * pm_flags layout (bit 6 = PMF_TIME_KNOCKBACK, bit 8 = PMF_TIME_WATERJUMP).
+ * Audit: docs/notes/PHASE_12_DOUBLEJUMP_RECON.md §2. */
+#define PMF_VG_DOUBLEJUMPED 128        ///< VanguardMod: airborne second-jump used this airtime
 #define PMF_TIME_WATERJUMP  256        ///< pm_time is waterjump
 #define PMF_RESPAWNED       512        ///< clear after attack and jump buttons come up
 //#define PMF_PRONE_BIPOD		1024	 ///< prone with a bipod set

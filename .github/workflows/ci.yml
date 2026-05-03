@@ -106,6 +106,25 @@ jobs:
             exit 1
           fi
 
+      - name: Verify vg_fun_doublejump cvars in qagame Linux SO
+        run: |
+          # v0.7.2 Phase 12 sanity gate. The qagame binary must
+          # contain all 4 vg_fun_doublejump_* cvar name strings
+          # registered by vg_Fun_Init: master toggle + height +
+          # classes + stamina. Threshold ≥4 = exact match. Catches
+          # the case where a future PR drops one of the
+          # vg_Fun_RegisterCvar calls or renames a cvar.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "vg_fun_doublejump")
+          echo "vg_fun_doublejump cvar count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 4 ]; then
+            echo "::error::v0.7.2 vg_fun_doublejump cvars not found (got ${COUNT}, expected >=4)."
+            echo "::error::Check that vg_Fun_Init in g_vanguard.c registers all 4 doublejump cvars."
+            exit 1
+          fi
+
       - name: Verify Phase 10 perf-cache symbols in qagame Linux SO
         run: |
           # v0.7.1.1 Phase 10 perf hotfix sanity gate. The qagame

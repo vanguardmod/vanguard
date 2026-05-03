@@ -236,6 +236,29 @@ when `vg_fun=1` is explicitly set. Phase 7.3 audit §3.4 confirmed
 no cup-mod tunes falldamage; v0.7.1 keeps cup-mode aligned with
 that, and only opens tuning on the public-mode side.
 
+## Double-Jump (v0.7.2+)
+
+Cup-orthodox (vg_fun=0) preserves engine-default single-jump.
+Fun-public (vg_fun=1 + vg_fun_doublejump=1) enables a second
+mid-air jump. See `docs/VG_FUN_MODE.md` Double-Jump section for
+the full cvar list.
+
+| Setting | Cup-orthodox (vg_fun=0) | Fun-public recommended | ETPro Crossfire | ETLegacy legacy6 |
+|---|---|---|---|---|
+| Double-jump | disabled (engine single-jump) | enabled when vg_fun=1 + doublejump=1 | disabled | disabled |
+| Default 2nd-jump height | N/A | 270 (= JUMP_VELOCITY, same as ground) | N/A | N/A |
+| Class restrictions | N/A | 0 (all) by default | N/A | N/A |
+| Stamina cost | N/A | 0 (no cost) by default | N/A | N/A |
+
+VanguardMod's vg_fun system makes double-jump opt-in only.
+Cup mode is byte-identical to upstream — no double-jump
+mechanic exposed at the server level. Phase 12 audit §3 chose
+in-place modification of `PM_CheckJump` (Option A) and `pm_flags`
+bit 128 (`PMF_VG_DOUBLEJUMPED`) — single function changed,
+~30 LoC addition, prediction-safe via `vg_pm_cvar_int`
+helper that uses `trap_Cvar_VariableStringBuffer` (available
+in both cgame + qagame).
+
 ## Movement: `g_pronedelay`
 
 | Setting | VanguardMod (v0.6.1+) | ETPro `b_pronedelay` | ETLegacy legacy6 |
