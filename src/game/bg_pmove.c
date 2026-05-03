@@ -77,6 +77,40 @@ extern vmCvar_t g_pronedelay;
 #define EXTENDEDPRONE_TIME 400
 #define PM_JUMP_DELAY 850
 
+/* VanguardMod v0.7.2 (Phase 12 double-jump): cvar reader for shared
+ * pmove code. bg_pmove.c is compiled into BOTH cgame (prediction)
+ * and qagame (server-authoritative); cgame syscalls don't expose
+ * trap_Cvar_VariableIntegerValue, but trap_Cvar_VariableStringBuffer
+ * IS in both (cg_syscalls.c:120, g_syscalls.c). This helper reads
+ * an integer cvar via the string-buffer trap so PM_CheckJump can
+ * gate on vg_fun_doublejump_* identically on client + server,
+ * preserving prediction parity. Cost: ~one trap call per cvar read
+ * per jump-press; PM_CheckJump runs at most once per pmove tick
+ * (PMF_JUMP_HELD gate), so overhead is negligible.
+ *
+ * trap_Cvar_VariableStringBuffer is declared in cg_local.h (already
+ * #included for CGAMEDLL) and g_local.h (NOT included by bg_pmove.c
+ * in the GAMEDLL build — only q_shared.h + bg_public.h are pulled
+ * in there). Forward-declare here so both build modes link cleanly,
+ * mirroring the existing trap_SnapVector pattern at line ~5044.
+ *
+ * Audit: docs/notes/PHASE_12_DOUBLEJUMP_RECON.md §2. */
+#ifndef CGAMEDLL
+void trap_Cvar_VariableStringBuffer(const char *varName, char *buffer, int bufsize);
+#endif
+
+static int vg_pm_cvar_int(const char *name, int default_value)
+{
+	char buf[64];
+
+	trap_Cvar_VariableStringBuffer(name, buf, sizeof(buf));
+	if (buf[0] == '\0')
+	{
+		return default_value;
+	}
+	return atoi(buf);
+}
+
 pmove_t * pm;
 pml_t pml;
 
@@ -787,17 +821,88 @@ static void PM_PlayJumpAnim(void)
  */
 static qboolean PM_CheckJump(void)
 {
+	/* VanguardMod v0.7.2 (Phase 12): double-jump eligibility check
+	 * computed at top so the existing PM_JUMP_DELAY (line ~834) can
+	 * skip the 850ms anti-bunnyhop gate when the player is mid-air,
+	 * has not yet used their second jump, and vg_fun + vg_fun_doublejump
+	 * are both on. Cup-orthodox path (vg_fun=0): canDoubleJump stays
+	 * qfalse, all checks behave byte-identical to upstream. */
+	qboolean canDoubleJump      = qfalse;
+	int      dj_height_velocity = JUMP_VELOCITY;
+	int      dj_stamina_drain   = 0;
+
 	// no jumpin when prone
 	if (pm->ps->eFlags & EF_PRONE)
 	{
 		return qfalse;
 	}
 
+	/* VanguardMod v0.7.2: evaluate double-jump eligibility once.
+	 * Reads via vg_pm_cvar_int (trap_Cvar_VariableStringBuffer +
+	 * atoi) so cgame and qagame agree on the same cvar values. */
+	if (pm->ps->groundEntityNum == ENTITYNUM_NONE
+	    && !(pm->ps->pm_flags & PMF_VG_DOUBLEJUMPED)
+	    && vg_pm_cvar_int("vg_fun", 0)
+	    && vg_pm_cvar_int("vg_fun_doublejump", 0))
+	{
+		/* All locals declared at block-top per C90 / -Wdeclaration-after-statement. */
+		int      dj_classes;
+		int      dj_stamina_cost;
+		int      playerClass;
+		int      class_bit;
+		int      h;
+		qboolean class_ok;
+		qboolean stamina_ok;
+
+		dj_classes      = vg_pm_cvar_int("vg_fun_doublejump_classes", 0);
+		dj_stamina_cost = vg_pm_cvar_int("vg_fun_doublejump_stamina", 0);
+
+		/* Class bitmask check (0 = all classes). Bits per class
+		 * follow STAT_PLAYER_CLASS enum: 0=soldier, 1=medic,
+		 * 2=engineer, 3=fieldops, 4=covertops → bits 1,2,4,8,16. */
+		class_ok = qtrue;
+		if (dj_classes != 0)
+		{
+			playerClass = pm->ps->stats[STAT_PLAYER_CLASS];
+			class_bit   = 1 << playerClass;
+			if (!(dj_classes & class_bit))
+			{
+				class_ok = qfalse;
+			}
+		}
+
+		/* Stamina cost check: dj_stamina_cost is in "units"; engine
+		 * STAT_SPRINTTIME runs on a 0..20000 scale, so we multiply
+		 * by 100 to give admins a 0..200 sensible range
+		 * (matches existing v0.7.1 falldamage units convention). */
+		stamina_ok = qtrue;
+		if (dj_stamina_cost > 0)
+		{
+			if (pm->ps->stats[STAT_SPRINTTIME] < dj_stamina_cost * 100)
+			{
+				stamina_ok = qfalse;
+			}
+		}
+
+		if (class_ok && stamina_ok)
+		{
+			h                  = vg_pm_cvar_int("vg_fun_doublejump_height", JUMP_VELOCITY);
+			canDoubleJump      = qtrue;
+			dj_height_velocity = (h > 0) ? h : JUMP_VELOCITY;
+			dj_stamina_drain   = (dj_stamina_cost > 0) ? dj_stamina_cost * 100 : 0;
+		}
+	}
+
 	// jumping in multiplayer uses and requires sprint juice (to prevent turbo skating, sprint + jumps)
 	// don't allow jump accel
 
-	// revert to using pmext for this since pmext is fixed now.
-	if (pm->cmd.serverTime - pm->pmext->jumpTime < PM_JUMP_DELAY)
+	/* revert to using pmext for this since pmext is fixed now.
+	 * VanguardMod v0.7.2: gate the 850ms anti-bunnyhop delay on
+	 * !canDoubleJump so a legitimate mid-air second jump bypasses
+	 * the cooldown. Ground-jumps still pay the delay (cup-orthodox
+	 * bunnyhop prevention preserved). */
+	if (!canDoubleJump
+	    && pm->cmd.serverTime - pm->pmext->jumpTime < PM_JUMP_DELAY)
 	{
 		return qfalse;
 	}
@@ -831,7 +936,24 @@ static qboolean PM_CheckJump(void)
 	pm->ps->pm_flags |= PMF_JUMP_HELD;
 
 	pm->ps->groundEntityNum = ENTITYNUM_NONE;
-	pm->ps->velocity[2]     = JUMP_VELOCITY;
+
+	/* VanguardMod v0.7.2: branch the velocity assignment. Cup-orthodox
+	 * (canDoubleJump=qfalse) → JUMP_VELOCITY (engine constant). Public
+	 * second jump (canDoubleJump=qtrue) → admin-tuned dj_height_velocity
+	 * (default JUMP_VELOCITY = same as ground jump). */
+	if (canDoubleJump)
+	{
+		pm->ps->velocity[2] = dj_height_velocity;
+		pm->ps->pm_flags   |= PMF_VG_DOUBLEJUMPED;
+		if (dj_stamina_drain > 0)
+		{
+			pm->ps->stats[STAT_SPRINTTIME] -= dj_stamina_drain;
+		}
+	}
+	else
+	{
+		pm->ps->velocity[2] = JUMP_VELOCITY;
+	}
 
 	PM_PlayJumpAnim();
 
@@ -1962,6 +2084,13 @@ static void PM_GroundTrace(void)
 		}
 
 		PM_CrashLand();
+
+		/* VanguardMod v0.7.2 (Phase 12): reset double-jump flag at the
+		 * landing instant so the next airtime gets a fresh second jump.
+		 * This branch fires exactly once per landing (groundEntityNum
+		 * transition NONE → real entity), which matches the semantic
+		 * "I've touched ground, my second-jump credit is restored". */
+		pm->ps->pm_flags &= ~PMF_VG_DOUBLEJUMPED;
 
 		// don't do landing time if we were just going down a slope
 		if (pml.previous_velocity[2] < -200)

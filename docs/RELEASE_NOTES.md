@@ -3,6 +3,108 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.2 — Double-Jump (TBD)
+
+> **Second vg_fun-controlled feature.** Players can jump a
+> second time while airborne when `vg_fun=1` AND
+> `vg_fun_doublejump=1`. Default behaviour matches engine
+> ground-jump; admins tune via 4 cvars (height / class-mask /
+> stamina cost). At default `vg_fun=0` (cup-orthodox) double-jump
+> is disabled entirely — byte-identical to upstream.
+>
+> Memory #8's vg_fun feature roadmap progresses: Falldamage
+> (v0.7.1) and Double-Jump (v0.7.2) both shipped; xp-save,
+> fast-reload, class-modifiers remain on the backlog.
+
+### vg_fun feature: Double-Jump
+
+- feat(movement): `vg_fun_doublejump` master toggle + 3 sub-cvars
+  enable a second mid-air jump. Cup mode (vg_fun=0) preserves
+  engine single-jump behaviour.
+- 4 new cvars (all CVAR_ARCHIVE):
+  - `vg_fun_doublejump` (default `0`) — master toggle
+  - `vg_fun_doublejump_height` (default `270` = engine
+    `JUMP_VELOCITY`) — second-jump vertical velocity
+  - `vg_fun_doublejump_classes` (default `0` = all classes) —
+    bitmask: 1=soldier, 2=medic, 4=engineer, 8=fieldops,
+    16=covertops
+  - `vg_fun_doublejump_stamina` (default `0` = no cost) —
+    sprint-bar drain per double-jump (units of 100 on
+    STAT_SPRINTTIME's 0..20000 scale)
+
+### Implementation
+
+- New `PMF_VG_DOUBLEJUMPED = 128` flag in `pm_flags` (bit 7,
+  free in upstream layout — sits between `PMF_TIME_KNOCKBACK`
+  bit 6 and `PMF_TIME_WATERJUMP` bit 8). Tracks
+  "second-jump-used-this-airtime" state.
+- `PM_CheckJump` (`bg_pmove.c:822`) modified in-place:
+  eligibility check at top, gates the existing 850ms
+  `PM_JUMP_DELAY` anti-bunnyhop on `!canDoubleJump`, executes
+  the second jump with the configurable height + sets the
+  flag + drains stamina.
+- `PM_GroundTrace` (`bg_pmove.c:~2078`) clears
+  `PMF_VG_DOUBLEJUMPED` at the landing instant
+  (`groundEntityNum` NONE → real entity), restoring
+  second-jump credit per airtime.
+- New helper `vg_pm_cvar_int` in `bg_pmove.c` reads cvars via
+  `trap_Cvar_VariableStringBuffer` (available in **both**
+  cgame and qagame syscalls — `trap_Cvar_VariableIntegerValue`
+  is qagame-only). Ensures cgame prediction agrees with
+  qagame authoritative pmove.
+
+### Cup-orthodox preservation
+
+- `vg_fun=0` short-circuits all double-jump logic via the
+  master-gate check; eligibility evaluation returns false
+  immediately
+- Engine's 850ms `PM_JUMP_DELAY` cooldown stays active in the
+  standard branch (no bunnyhop regression)
+- Phase 6 multi-region hitbox / Phase 7 strict-mode / Phase
+  8.0a NULL-guard / Phase 8.0b Falldamage all untouched
+  (movement layer is independent of damage / hitbox layers)
+- WolfGuard imposes zero constraints — current
+  `wg_interface_t` (v0.6.0) has no per-frame velocity-check
+  hook (only init/shutdown/client_connect/disconnect/frame).
+  Future protected builds with velocity-check hooks can
+  whitelist via `pm_flags & PMF_VG_DOUBLEJUMPED`.
+
+### CI
+
+- New gate in `.github/workflows/ci.yml` build-linux job:
+  `strings | grep -c "vg_fun_doublejump"` must return ≥ 4
+  (catches accidental drop of any cvar registration).
+
+### Verification (local)
+
+- ✓ Build green for qagame + cgame + ui + tvgame + mod_pk3
+  (with `-Werror=implicit-function-declaration` plus standard
+  warnings — zero warnings emitted)
+- ✓ CI gate sim: 4 cvar names found exactly
+  (`vg_fun_doublejump`, `_height`, `_classes`, `_stamina`)
+- ✓ Phase 8.0a NULL-guard at `g_combat.c:1781-1784` intact
+  (static grep)
+- ✓ Regression: vg_Fun_GetInt + vg_Hitbox_IsActive +
+  WG_Active + vg_perf_traces_total + mdx_hit_test all alive
+  in qagame.so
+
+### Out of scope (deferred per audit §11)
+
+- **Triple-jump** — Tier 2; defer indefinitely unless concrete
+  demand surfaces
+- **Per-class height** (e.g. light-class jumps higher) — Tier 2
+- **Jump-pads / map entities** — Phase 13+ territory
+- **Diagnostic cvar `vanguard_diag_doublejump`** — server-side
+  hook needed in `g_active.c::ClientThink`; deferred to
+  v0.7.2.x if cup-tester demand surfaces (cgame can't directly
+  log because it's shared bg_pmove code)
+- **WolfGuard whitelist flag** — current WG has no
+  velocity-check; documented for v0.8.x
+
+### Reference
+
+- Audit: `docs/notes/PHASE_12_DOUBLEJUMP_RECON.md`
+
 ## v0.7.1.1 — Performance Hotfix (2026-05-03)
 
 > **Production lag with 20 bots fixed.** Phase 10 perf audit
