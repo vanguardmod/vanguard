@@ -3,6 +3,100 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.2.2 — Diagnostic-first hotfix (TBD)
+
+> **Phase 13b — diagnostic-first follow-up to v0.7.2.1.** Two
+> separate problems addressed: a real registry-overflow bug
+> (vg_Fun_RegisterCvar accumulating entries across map_restart
+> cycles) is fixed outright; a second-jump runtime failure that
+> v0.7.2.1's CVAR_SERVERINFO change did not resolve gets a
+> targeted server-side diagnostic so v0.7.2.3 can land a
+> data-driven fix instead of a guess. No behaviour changes for
+> production servers (vanguard_dev=0 default). Cup-orthodox
+> preserved; Phase 8.0a NULL-guard untouched; v0.7.2.1 splash
+> bypass + SERVERINFO additions untouched.
+
+### Bug — Registry overflow on map_restart cycles (FIX)
+
+- fix(vg_fun): `vg_Fun_RegisterCvar` is now idempotent — it
+  walks `s_vg_fun_registry[]` for an existing entry by name
+  before bumping the counter. If the cvar already exists, the
+  function re-applies `trap_Cvar_Register` (engine merges flags,
+  live value untouched) and returns. New cvars take the previous
+  path (slot store + `trap_Cvar_Register` + count bump).
+- **Why**: `vg_Fun_Init` runs from `G_InitGame` on every map
+  start AND every map_restart (Q3 engine convention). The static
+  registry persists across `G_InitGame` calls (the .so stays
+  loaded between maps), so the previous implementation
+  accumulated 9 entries per cycle and overflowed
+  `VG_FUN_REGISTRY_MAX = 64` after ~7 maps. Symptom:
+  `VG_Fun: registry full (max=64); cannot register vg_fun_*`
+  log spam; `vg_Fun_PrintStatus` accuracy degraded.
+- **Functional impact of the pre-fix overflow**: registry
+  bookkeeping only — `vg_pm_cvar_int` reads the engine cvar
+  pool directly (registry-independent), and the cvars themselves
+  were registered on map 1 (so they exist in the engine pool
+  with `CVAR_SERVERINFO` from boot). The overflow did NOT cause
+  the v0.7.2 second-jump runtime failure.
+
+### Diagnostic — Server-side `PM_CheckJump` instrumentation
+
+- diag(pmove): new server-side log line in `PM_CheckJump` gated
+  by `vanguard_dev=1`. Fires on every airborne jump-press rising
+  edge (upmove >= 10 and !PMF_JUMP_HELD). Logs all eligibility
+  inputs in one line: `groundEntityNum`, `PMF_VG_DOUBLEJUMPED`,
+  read values for `vg_fun` / `vg_fun_doublejump` /
+  `vg_fun_doublejump_classes` / `vg_fun_doublejump_stamina` /
+  `vg_fun_doublejump_height`, `STAT_SPRINTTIME`,
+  `STAT_PLAYER_CLASS`, `cmd.upmove`, `PMF_RESPAWNED`,
+  `cmd.serverTime - pmext->jumpTime`, and the eligibility result
+  `candj=yes/no`.
+- **Why server-side only**: cgame's local cvar pool does not
+  see `CVAR_SERVERINFO` cvars via `trap_Cvar_VariableStringBuffer`
+  (confirmed by the existing `cg_servercmds.c` pattern that uses
+  `Info_ValueForKey` on the `CS_SERVERINFO` configstring instead).
+  A cgame-side log would always print zeros for the cvar fields,
+  which is uninformative noise. v0.7.2.3 swaps the cgame read path
+  to configstring + `Info_ValueForKey` and the diagnostic gets
+  cleaned up.
+- **Why diagnostic instead of speculative fix**: v0.7.2.1's
+  CVAR_SERVERINFO change addressed the cgame visibility theory
+  but server-side authoritative pmove should fire double-jump
+  regardless of client prediction. Player reports "absolutely
+  nothing" on second-press, which suggests a server-side gate
+  also blocks. Without instrumentation we cannot tell which gate
+  fails. v0.7.2.3 will be a chirurgical fix based on this log.
+
+### Notes / out-of-scope
+
+- WolfGuard untouched.
+- Phase 8.0a NULL-guard at `g_combat.c:1781-1784` untouched.
+- v0.7.2.1 splash-bypass helpers + CVAR_SERVERINFO addition
+  untouched (still present, still gated by their own CI checks).
+- The CVAR_SERVERINFO assignment line is moved ABOVE the
+  idempotent-lookup loop so re-applied registrations get the
+  same engine flags as first-time registrations. The assignment
+  line is unchanged in semantics — only repositioned.
+- No tagging convention change: four-digit hotfix per Memory #4.
+
+### CI gates added
+
+- `Verify Phase 13b idempotent vg_Fun_RegisterCvar` (static-source
+  grep for `Q_stricmp(s_vg_fun_registry[i].name, ...)` loop).
+- `Verify Phase 13b PM_CheckJump diagnostic in qagame Linux SO`
+  (binary-string check for `VG_DJ[S] press:`).
+- All v0.7.2.1 gates retained.
+
+### Verification
+
+- Build: cmake --build green for qagame + cgame + ui + tvgame + mod_pk3.
+- Diagnostic format string in qagame: present.
+- Diagnostic ABSENT from cgame (`#ifndef CGAMEDLL` gate works): 0 hits.
+- Idempotent loop pattern in source: present.
+- Regression: v0.7.2.1 splash bypass helpers (2/2), Phase 8.0a NULL-guard
+  reference, vg_Fun_GetInt + vg_Hitbox_IsActive + WG_Active +
+  vg_perf_traces_total + mdx_hit_test all alive (5/5).
+
 ## v0.7.2.1 — Production Hotfix (2026-05-03)
 
 > **Two v0.7.2 production-blocker bugs fixed.** Both surfaced
