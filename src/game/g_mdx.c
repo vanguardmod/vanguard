@@ -90,6 +90,87 @@ static hit_t *hits     = NULL;
 static int    mdx_bones_max = 0;
 static vec3_t *mdx_bones    = NULL;
 
+/* VanguardMod v0.7.1.1 (Phase 10 perf): hot-path stats counters.
+ * Gated on vanguard_perf_stats cvar (declared in g_cvars.c, extern
+ * below). Reset to zero each second by the per-tick emission hook
+ * in g_main.c::G_RunFrame. Audit: docs/notes/PHASE_10_PERF_AUDIT.md */
+extern vmCvar_t vanguard_perf_stats;
+
+#ifdef BONE_HITTESTS
+/* Forward declaration so vg_tag_orientation_cached (defined below
+ * before mdx_tag_orientation) can call it. mdx_tag_orientation
+ * itself is static and defined later in the file (line ~1774). */
+static void mdx_tag_orientation(/*const*/ grefEntity_t *refent, int idx,
+                                vec3_t origin, vec3_t axis[3],
+                                qboolean withhead, int recursion);
+#endif
+int vg_perf_traces_total       = 0;
+int vg_perf_bone_cache_hits    = 0;
+int vg_perf_bone_cache_misses  = 0;
+int vg_perf_tag_cache_hits     = 0;
+int vg_perf_tag_cache_misses   = 0;
+
+/* Per-call tag-orientation cache (Phase 10 Q1). Stack-allocated
+ * inside mdx_hit_test, lookup via vg_tag_orientation_cached below.
+ * Multiple capsules sharing the same anchor tag (e.g. NECK + CHEST
+ * both anchor at Bip01 Neck) compute the orientation once instead
+ * of per-capsule. Cap of 32 covers the ~12-15 unique tags in
+ * human_base.hit with ~2x margin. */
+#define VG_TAG_CACHE_MAX 32
+
+typedef struct
+{
+	int      tag_idx;     /* hit->tag[N] index */
+	qboolean withhead;    /* withhead arg — same tag with different withhead = different orientation */
+	vec3_t   origin;
+	vec3_t   axis[3];
+} vg_tag_cache_entry_t;
+
+/*
+ * vg_tag_orientation_cached — cache-wrapper around mdx_tag_orientation.
+ * Linear scan over the per-call cache (small N, faster than hash).
+ * On miss, calls the underlying mdx_tag_orientation and stores result.
+ * Cap of VG_TAG_CACHE_MAX silently overflows to recompute (no
+ * functional regression) if a future .hit file references >32 tags.
+ */
+static void vg_tag_orientation_cached(/*const*/ grefEntity_t *refent,
+                                       int idx, qboolean withhead,
+                                       vec3_t origin, vec3_t axis[3],
+                                       vg_tag_cache_entry_t *cache,
+                                       int *cache_count)
+{
+	int j;
+
+	for (j = 0; j < *cache_count; j++)
+	{
+		if (cache[j].tag_idx == idx && cache[j].withhead == withhead)
+		{
+			VectorCopy(cache[j].origin, origin);
+			AxisCopy(cache[j].axis, axis);
+			if (vanguard_perf_stats.integer)
+			{
+				vg_perf_tag_cache_hits++;
+			}
+			return;
+		}
+	}
+
+	mdx_tag_orientation(refent, idx, origin, axis, withhead, 0);
+
+	if (*cache_count < VG_TAG_CACHE_MAX)
+	{
+		cache[*cache_count].tag_idx  = idx;
+		cache[*cache_count].withhead = withhead;
+		VectorCopy(origin, cache[*cache_count].origin);
+		AxisCopy(axis, cache[*cache_count].axis);
+		(*cache_count)++;
+	}
+	if (vanguard_perf_stats.integer)
+	{
+		vg_perf_tag_cache_misses++;
+	}
+}
+
 #define INDEXTOQHANDLE(idx)     (qhandle_t)((idx) + 1)
 /**
   * @var Index may be NULL sometimes, so just default to the first model
@@ -2847,6 +2928,16 @@ qboolean mdx_hit_test(const vec3_t start, const vec3_t end, /*const*/ gentity_t 
 	int                     best_type;
 	animScriptImpactPoint_t best_impactpoint;
 
+	/* VanguardMod v0.7.1.1 (Phase 10 Q1): per-call tag-orientation cache.
+	 * Stack-allocated; zeroed below by setting tag_cache_count=0. */
+	vg_tag_cache_entry_t    tag_cache[VG_TAG_CACHE_MAX];
+	int                     tag_cache_count = 0;
+
+	if (vanguard_perf_stats.integer)
+	{
+		vg_perf_traces_total++;
+	}
+
 	if (ent->s.eType == ET_PLAYER)
 	{
 		character = BG_GetCharacter(ent->client->sess.sessionTeam, ent->client->sess.playerType);
@@ -2870,7 +2961,52 @@ qboolean mdx_hit_test(const vec3_t start, const vec3_t end, /*const*/ gentity_t 
 	}
 	hitModel = &hits[i];
 
-	mdx_calculate_bones(refent);
+	/* VanguardMod v0.7.1.1 (Phase 10 A1): per-tick per-client bone cache.
+	 *
+	 * mdx_calculate_bones is deterministic for given (frame, oldframe,
+	 * torsoFrame, oldTorsoFrame, *_FrameModel) — repeating it for the
+	 * same client in the same tick wastes ~25µs per call. Cache lives
+	 * in gclient_s.vgPerfBoneCache[]; populated on miss, snapshotted
+	 * to/from mdx_bones[] global. Skip cache when:
+	 *   - ent is non-PLAYER (ent->client may be invalid)
+	 *   - mdx_bones_max exceeds VG_PERF_MAX_BONES (cache too small —
+	 *     fall back to unconditional recompute, no functional regression)
+	 *   - level.time is 0 (server warm-up; safer to recompute) */
+	{
+		gclient_t *cl = (ent->s.eType == ET_PLAYER) ? ent->client : NULL;
+		qboolean   useCache = (cl != NULL && level.time > 0 && mdx_bones_max <= VG_PERF_MAX_BONES);
+
+		if (useCache &&
+		    cl->vgPerfBoneCacheValid &&
+		    cl->vgPerfBoneCachedTick == level.time &&
+		    cl->vgPerfBoneCachedTorsoFrame == refent->torsoFrame &&
+		    cl->vgPerfBoneCachedLegsFrame == refent->frame)
+		{
+			/* Cache hit — restore stored bones into global mdx_bones[]. */
+			memcpy(mdx_bones, cl->vgPerfBoneCache, mdx_bones_max * sizeof(vec3_t));
+			if (vanguard_perf_stats.integer)
+			{
+				vg_perf_bone_cache_hits++;
+			}
+		}
+		else
+		{
+			/* Cache miss (or non-cacheable) — compute and snapshot. */
+			mdx_calculate_bones(refent);
+			if (useCache)
+			{
+				cl->vgPerfBoneCachedTick        = level.time;
+				cl->vgPerfBoneCachedTorsoFrame  = refent->torsoFrame;
+				cl->vgPerfBoneCachedLegsFrame   = refent->frame;
+				cl->vgPerfBoneCacheValid        = qtrue;
+				memcpy(cl->vgPerfBoneCache, mdx_bones, mdx_bones_max * sizeof(vec3_t));
+			}
+			if (vanguard_perf_stats.integer)
+			{
+				vg_perf_bone_cache_misses++;
+			}
+		}
+	}
 
 	best_type        = MDX_NONE;
 	best_frac        = 2.0;
@@ -2884,13 +3020,15 @@ qboolean mdx_hit_test(const vec3_t start, const vec3_t end, /*const*/ gentity_t 
 		vec3_t          a1[3], a2[3];
 		vec3_t          t1;
 
-		mdx_tag_orientation(refent, hit->tag[0], o1, a1, hit->ishead[0], 0);
+		vg_tag_orientation_cached(refent, hit->tag[0], hit->ishead[0], o1, a1,
+		                          tag_cache, &tag_cache_count);
 		if (hit->tag[1] != -1)
 		{
 			vec3_t o2, t2;
 			vec_t  hit_frac1, hit_frac2;
 
-			mdx_tag_orientation(refent, hit->tag[1], o2, a2, hit->ishead[1], 0);
+			vg_tag_orientation_cached(refent, hit->tag[1], hit->ishead[1], o2, a2,
+			                          tag_cache, &tag_cache_count);
 
 			// Calculate axis
 			VectorSubtract(o2, o1, a1[2]);
