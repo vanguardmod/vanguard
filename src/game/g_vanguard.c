@@ -393,13 +393,11 @@ qboolean vg_Hitbox_IsSelfDamageMod(meansOfDeath_t mod)
 	 *   - MOD_FLAMETHROWER (g_active.c:210) — has a real player
 	 *     attacker; multi-region trace makes sense for direct fire.
 	 *   - MOD_DYNAMITE / MOD_LANDMINE / MOD_AIRSTRIKE / etc. —
-	 *     splash MODs that take the radius_damage path; G_Damage
-	 *     point is the radius origin, valid for tracing. The
-	 *     splash-damage branch's `isExplosive` filter already
-	 *     diverts those before they hit the multi-region path
-	 *     anyway, but listing them here would be wrong-doctrine
-	 *     (capsule-region multipliers DO apply to direct splash
-	 *     hits in some MOD configs). */
+	 *     splash MODs handled by vg_Hitbox_IsSplashMod (Phase 13,
+	 *     v0.7.2.1). They have a valid point (radius origin) so
+	 *     they don't trip the Phase 8.0a NULL-guard; their problem
+	 *     is the strict-mode rejection at g_combat.c:2040 — which
+	 *     vg_Hitbox_IsBypassMod handles. */
 	switch (mod)
 	{
 	case MOD_WATER:
@@ -417,6 +415,64 @@ qboolean vg_Hitbox_IsSelfDamageMod(meansOfDeath_t mod)
 	default:
 		return qfalse;
 	}
+}
+
+qboolean vg_Hitbox_IsSplashMod(meansOfDeath_t mod)
+{
+	/* Phase 13 (v0.7.2.1): splash-damage MOD detection.
+	 *
+	 * Splash damage (G_RadiusDamage path) calls G_Damage with the
+	 * explosion ORIGIN as the damage point — not a per-player
+	 * hit-point. Phase 6 multi-region capsule tests do not match
+	 * because the explosion centre is typically outside the player
+	 * volume. Phase 7.0 strict-mode then rejects the AABB-only hit
+	 * → 0 damage, the v0.7.2 production-blocker bug.
+	 *
+	 * vg_Hitbox_IsSelfDamageMod (Phase 8.0a) is a SEPARATE concern
+	 * — those MODs have NULL points and are filtered earlier at
+	 * g_combat.c:1781 (multi-region branch entry-gate). Splash MODs
+	 * have valid points; they reach the strict-rejection at
+	 * g_combat.c:2040 and need to bypass IT specifically. The two
+	 * helpers are orthogonal and both required.
+	 *
+	 * MODs covered: every weapon whose damage flow originates from
+	 * G_RadiusDamage in g_combat.c. List based on bg_public.h:1081+
+	 * MOD enum, filtered to explosion / splash entries. SMOKEGRENADE
+	 * deliberately omitted (non-damaging). FLAMETHROWER omitted —
+	 * it's a direct-fire weapon, not splash. */
+	switch (mod)
+	{
+	case MOD_GRENADE:
+	case MOD_GRENADE_LAUNCHER:        /* Axis grenade */
+	case MOD_GRENADE_PINEAPPLE:       /* Allied grenade */
+	case MOD_PANZERFAUST:
+	case MOD_BAZOOKA:                 /* Allied panzerfaust */
+	case MOD_DYNAMITE:
+	case MOD_AIRSTRIKE:
+	case MOD_EXPLOSIVE:
+	case MOD_GPG40:                   /* Axis riflegrenade */
+	case MOD_M7:                      /* Allied riflegrenade */
+	case MOD_LANDMINE:
+	case MOD_SATCHEL:
+	case MOD_MORTAR:                  /* Allied mortar */
+	case MOD_MORTAR2:                 /* Axis mortar */
+	case MOD_MAPMORTAR:               /* map-script mortar */
+	case MOD_MAPMORTAR_SPLASH:        /* map-script mortar splash */
+		return qtrue;
+	default:
+		return qfalse;
+	}
+}
+
+qboolean vg_Hitbox_IsBypassMod(meansOfDeath_t mod)
+{
+	/* Phase 13 combined helper — true if the MOD should bypass the
+	 * Phase 7.0 strict-mode capsule-only damage rejection. Covers
+	 * both Phase 8.0a self-damage (already filtered earlier, but
+	 * defensive depth) and Phase 13 splash-damage (the actual fix
+	 * point at g_combat.c:2040). Future MOD-class bypasses should
+	 * extend this rather than adding a third helper. */
+	return vg_Hitbox_IsSelfDamageMod(mod) || vg_Hitbox_IsSplashMod(mod);
 }
 
 float vg_Hitbox_DamageMultiplierFor(animScriptImpactPoint_t impactpoint)
@@ -754,6 +810,23 @@ void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_fla
 		         VG_FUN_REGISTRY_MAX, name);
 		return;
 	}
+
+	/* Phase 13 (v0.7.2.1): always add CVAR_SERVERINFO so cgame-side
+	 * bg_pmove.c reads via trap_Cvar_VariableStringBuffer return the
+	 * server's authoritative value. Without this, cgame's local
+	 * cvar pool returns empty string → atoi("") = 0 → vg_fun
+	 * features (vg_pm_cvar_int helper) silently fail in client
+	 * prediction. Discovered v0.7.2 production: double-jump cvars
+	 * registered correctly server-side but never reached the cgame
+	 * eligibility check.
+	 *
+	 * Cup-orthodox safety: CVAR_SERVERINFO does not change the cvar
+	 * value — only its propagation. Visible via /serverinfo to
+	 * connected clients (gameplay transparency, no security concern
+	 * for vg_fun_*). Stored flags on the registry record reflect
+	 * the as-applied value so vg_Fun_PrintStatus accurately shows
+	 * what the engine sees. */
+	cvar_flags |= CVAR_SERVERINFO;
 
 	Q_strncpyz(s_vg_fun_registry[s_vg_fun_registry_count].name,
 	           name, sizeof(s_vg_fun_registry[0].name));
