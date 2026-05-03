@@ -134,7 +134,7 @@ menuDef {
 
 	LABELWHITE( 6, 264, WINDOW_WIDTH-12, 10, "vanguardmod.com (coming soon)", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
 	LABELWHITE( 6, 274, WINDOW_WIDTH-12, 10, "github.com/vanguardmod/vanguard", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
-	LABELWHITE( 6, 284, WINDOW_WIDTH-12, 10, "Discord: discord.gg/umnM8wVrth", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
+	LABELWHITE( 6, 284, WINDOW_WIDTH-12, 10, "Discord: discord.gg/GNSy7JTHV9", .2, ITEM_ALIGN_CENTER, .5*(WINDOW_WIDTH-12), 8 )
 
 // BUILT ON //
 	itemDef {

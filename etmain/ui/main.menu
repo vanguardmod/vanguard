@@ -143,8 +143,10 @@ menuDef {
 			setitemcolor "discord_logo" forecolor .55 .55 .55 1 ;
 			clearFocus ;
 			/* VANGUARD: redirect Discord button to VanguardMod community
-			 * server (was https://discord.gg/UBAZFys, ETLegacy upstream). */
-			uiScript validate_openURL "https://discord.gg/umnM8wVrth"
+			 * server (was https://discord.gg/UBAZFys, ETLegacy upstream;
+			 * was discord.gg/umnM8wVrth in v0.5.x-v0.7.0). v0.7.0.1
+			 * updates to the current invite GNSy7JTHV9. */
+			uiScript validate_openURL "https://discord.gg/GNSy7JTHV9"
 		}
 	}
 
