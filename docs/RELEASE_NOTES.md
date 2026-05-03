@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.0.1 — UI Cosmetic Updates (TBD)
+## v0.7.0.1 — UI Cosmetic Updates (2026-05-03)
 
 > Hotfix release. Two UI-cosmetic improvements bundled into a
 > single PR — both rebuild the same `ui_mp_*.so/.dll`, both
