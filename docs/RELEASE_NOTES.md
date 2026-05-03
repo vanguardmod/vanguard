@@ -3,6 +3,52 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.0 — vg_fun Foundation (TBD)
+
+> Architectural pivot. v0.7.0 was originally scoped for Falldamage
+> Redesign (Phase 8.0b). After review, scope changed to **vg_fun
+> master-switch foundation first** — Falldamage becomes v0.7.1 as
+> the first feature gated by vg_fun. Reasoning: building features
+> as `vanguard_falldamage_*` cvars first and renaming to
+> `vg_fun_falldmg_*` later would create tech debt.
+>
+> **v0.7.0 ships infrastructure with zero functional changes to
+> gameplay.** Default `vg_fun=0` (cup-orthodox) preserves
+> byte-identical behaviour for upgraders.
+
+### Architecture
+- feat(vg_fun): add `vg_fun` master-switch cvar (CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO, default `0`)
+- feat(vg_fun): helper API `vg_Fun_GetInt` / `vg_Fun_GetFloat` enforces the cup-default lock when `vg_fun=0` (Strategy C from Phase 9.0 audit). All future `vg_fun_*` cvar reads must go through these helpers.
+- feat(vg_fun): introspection registry powers `vg_status` server console command. v0.7.0 ships with the registry empty (foundation only); v0.7.1 Falldamage registers the first 5 sub-cvars.
+- feat(vg_fun): mode-aware stats log-tagging at 5 sites (Kill, ClientConnect, ClientDisconnect, WeaponStats, InitGame) so future leaderboard endpoints can bucket events per mode (Memory #25).
+
+### Banner
+- Banner now shows current vg_fun mode line — `^5cup-orthodox` (cyan, vg_fun=0) or `^3fun-public` (yellow, vg_fun=1) — between Backend / Info and Build mode lines. Both community + protected variants updated.
+
+### Server commands
+- New: `vg_status` — prints vg_fun mode + registered features + cup-defaults. Mirrors the existing `wg_status` pattern.
+
+### Documentation
+- New: `docs/VG_FUN_MODE.md` — full vg_fun specification, mode-switching semantics, helper API contract, feature roadmap.
+- Updated: `docs/CUP_VS_PUBLIC.md` — vg_fun master mode section above the existing netcode profile content.
+- Committed: `docs/notes/PHASE_9_0_VG_FUN_FOUNDATION_AUDIT.md` (recon doc, was untracked).
+- Committed: `docs/notes/PHASE_8_0B_AUDIT.md` (Falldamage recon, was untracked) with new §13 architectural-pivot note recording the Falldamage → v0.7.1 relocation. Tier 1 scope unchanged, just renamed: `vanguard_falldmg_*` → `vg_fun_falldmg_*`.
+
+### Mode-switching semantics
+- `vg_fun` is `CVAR_LATCH` — mode changes take effect at the next `map_restart`. Cup-integrity guarantee: a match cannot start cup-mode and silently switch mid-game.
+- Sub-cvars (`vg_fun_*`, registered by future features) are `CVAR_ARCHIVE` (no LATCH) — admins can pre-stage tuned values for the next mode switch.
+
+### CI
+- New CI gate in `.github/workflows/ci.yml` build-linux job: `strings | grep -c "vg_fun\|VG_Fun"` must return ≥3 (covers cvar name, boot-line, status-command symbols).
+
+### Foundation only — no functional changes
+v0.7.0 ships infrastructure with **zero behavioural change** at default `vg_fun=0`. The first vg_fun-controlled feature (Falldamage, Phase 8.0b) ships in v0.7.1.
+
+### Reference
+- Audit: `docs/notes/PHASE_9_0_VG_FUN_FOUNDATION_AUDIT.md`
+- Spec source: VanguardMod Memory #8 (vg_fun architecture) + #25 (multi-endpoint stats)
+- Phase 8.0b cross-reference: `docs/notes/PHASE_8_0B_AUDIT.md` §13
+
 ## v0.6.2 — Copyright Attribution Sweep (2026-05-02)
 
 ### Hygiene

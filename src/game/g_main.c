@@ -1583,7 +1583,7 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 		else
 		{
 			G_LogPrintf("------------------------------------------------------------\n");
-			G_LogPrintf("InitGame: %s\n", cs);
+			G_LogPrintf("InitGame: %s mode=%s\n", cs, vg_Fun_ModeString());
 		}
 	}
 	else
@@ -1917,6 +1917,15 @@ void G_InitGame(int levelTime, int randomSeed, int restart, int etLegacyServer, 
 	/* VanguardMod: Phase 7.2 netcode profile (registers
 	 * vanguard_netcode_profile, applies cup/public/custom preset). */
 	vg_Netcode_Init();
+
+	/* VanguardMod v0.7.0: Phase 9.0 vg_fun foundation. Reads vg_fun
+	 * (set by gameCvarTable), emits the VG_Fun: mode=... boot line
+	 * mirroring VG_Netcode / VG_Hitbox. Must run AFTER vg_Netcode_Init
+	 * so the mode line appears below the netcode line in
+	 * chronological log order. v0.7.0 ships foundation only —
+	 * registry is empty until v0.7.1 Falldamage registers the first
+	 * sub-cvars. */
+	vg_Fun_Init();
 
 	/* VanguardMod v0.6.1: Phase 7.3 diagnostics-foundation log.
 	 * vanguard_diag_movement is registered through gameCvarTable in

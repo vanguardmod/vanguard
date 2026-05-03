@@ -42,6 +42,7 @@
 
 #include "g_local.h"
 #include "wolfguard/wg_banner.h"
+#include "g_vanguard.h"           /* vg_Fun_PrintStatus (v0.7.0) */
 
 #ifdef FEATURE_OMNIBOT
 #include "g_etbot_interface.h"
@@ -2563,6 +2564,17 @@ static void Svcmd_WG_Status_f(void)
 }
 
 /**
+ * @brief Svcmd_VG_Status_f — print the vg_fun mode + registered
+ *        sub-cvar registry on demand. Mirror of wg_status.
+ *        Foundation in v0.7.0 (registry empty); v0.7.1 Falldamage
+ *        registers the first entries.
+ */
+static void Svcmd_VG_Status_f(void)
+{
+	vg_Fun_PrintStatus();
+}
+
+/**
  * @brief Svcmd_PassVote_f
  */
 static void Svcmd_PassVote_f(void)
@@ -2638,6 +2650,7 @@ static consoleCommandTable_t consoleCommandTable[] =
 	{ "cancelvote",                 Svcmd_CancelVote_f            },
 	{ "qsay",                       Svcmd_Qsay_f                  },
 	{ "wg_status",                  Svcmd_WG_Status_f             },
+	{ "vg_status",                  Svcmd_VG_Status_f             },
 #ifdef FEATURE_LUA
 	{ "gLoadLua",                   Svcmd_LoadLua_f               },
 #endif
