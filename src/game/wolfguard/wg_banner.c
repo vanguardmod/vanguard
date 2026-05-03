@@ -15,6 +15,7 @@
  */
 
 #include "../g_local.h"           /* G_Printf */
+#include "../g_vanguard.h"        /* vg_Fun_IsActive (v0.7.0) */
 #include "wg_interface.h"
 #include "wg_banner.h"
 #include "version_generated.h"    /* ETL_BUILD_VERSION */
@@ -38,6 +39,9 @@ void WG_PrintStartupBanner(void)
 		G_Printf("^7  WolfGuard:    ^2[ ACTIVE ]  ^9v%s\n", WG_Version);
 		G_Printf("^7  Protection:   ^2enabled\n");
 		G_Printf("^7  Backend:      ^5api.vanguardmod.com\n");
+		G_Printf("^7  Mode:         ^%s%s\n",
+		         vg_Fun_IsActive() ? "3" : "5",
+		         vg_Fun_IsActive() ? "fun-public" : "cup-orthodox");
 		G_Printf("^7  Build mode:   ^5protected\n");
 	}
 	else
@@ -45,6 +49,9 @@ void WG_PrintStartupBanner(void)
 		G_Printf("^7  WolfGuard:    ^1[ NOT INCLUDED ]\n");
 		G_Printf("^7  Protection:   ^1disabled\n");
 		G_Printf("^7  Info:         ^5https://vanguardmod.com\n");
+		G_Printf("^7  Mode:         ^%s%s\n",
+		         vg_Fun_IsActive() ? "3" : "5",
+		         vg_Fun_IsActive() ? "fun-public" : "cup-orthodox");
 		G_Printf("^7  Build mode:   ^3community\n");
 	}
 

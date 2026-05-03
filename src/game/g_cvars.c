@@ -309,6 +309,15 @@ vmCvar_t g_pronedelay;
  * per-session — admins re-arm explicitly when investigating. */
 vmCvar_t vanguard_diag_movement;
 
+/* VanguardMod v0.7.0: vg_fun master switch (Memory #8 spec, Phase 9.0
+ * audit Strategy C lock-mechanism). 0 = cup-orthodox (sub-cvars locked
+ * to cup-defaults via vg_Fun_GetInt/Float helpers), 1 = fun-public
+ * (sub-cvars unlocked, admin can tune). CVAR_LATCH preserves
+ * cup-integrity — mid-match `set vg_fun 1` waits for map_restart.
+ * v0.7.0 ships infrastructure only; first controlled feature
+ * (Falldamage) lands in v0.7.1. */
+vmCvar_t vg_fun;
+
 vmCvar_t g_debugHitboxes;
 vmCvar_t g_debugPlayerHitboxes;
 
@@ -652,6 +661,8 @@ cvarTable_t gameCvarTable[] =
 	// VanguardMod v0.6.1: Phase 7.3 movement-diagnostics foundation.
 	// CVAR_TEMP — re-arm per session, not persisted.
 	{ &vanguard_diag_movement,            "vanguard_diag_movement",            "0",                          CVAR_TEMP,                                       0, qfalse, qfalse },
+	// VanguardMod v0.7.0: vg_fun master switch — see g_cvars.c storage comment.
+	{ &vg_fun,                            "vg_fun",                            "0",                          CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO,     0, qfalse, qfalse },
 	// Debug
 	{ &g_debugHitboxes,                   "g_debugHitboxes",                   "0",                          CVAR_CHEAT,                                      0, qfalse, qfalse },
 	{ &g_debugPlayerHitboxes,             "g_debugPlayerHitboxes",             "0",                          0,                                               0, qfalse, qfalse },     // no need to make this CVAR_CHEAT

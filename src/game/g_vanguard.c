@@ -612,3 +612,135 @@ const char *vg_Netcode_ProfileName(void)
  * For now Phase 6.0's manual verification (VG_HITDUMP, archived in
  * docs/notes/hitdump_2026-04-27.txt) covers the deployment check.
  */
+
+/* ================================================================== */
+/* vg_fun subsystem (Phase 9.0 foundation, v0.7.0)                    */
+/*                                                                    */
+/* Master-switch + helper API + introspection registry. See            */
+/* docs/notes/PHASE_9_0_VG_FUN_FOUNDATION_AUDIT.md for the full       */
+/* design discussion (Strategy C lock-mechanism, Pattern γ registry). */
+/* ================================================================== */
+
+#define VG_FUN_REGISTRY_MAX 64
+
+typedef struct
+{
+	char name[64];
+	char cup_default[64];
+	int  cvar_flags;
+} vg_fun_cvar_entry_t;
+
+static vg_fun_cvar_entry_t s_vg_fun_registry[VG_FUN_REGISTRY_MAX];
+static int                 s_vg_fun_registry_count = 0;
+
+void vg_Fun_Init(void)
+{
+	/* The vg_fun cvar itself is registered through gameCvarTable in
+	 * g_cvars.c (CVAR_LATCH | CVAR_ARCHIVE | CVAR_SERVERINFO). This
+	 * function only emits the boot-line confirming what mode the
+	 * server came up in — mirrors VG_Netcode: profile=cup pattern. */
+	G_Printf("VG_Fun: mode=%s (vg_fun=%d, %s)\n",
+	         vg_Fun_ModeString(),
+	         vg_fun.integer,
+	         vg_fun.integer ?
+	             "fun-public — sub-cvars unlocked" :
+	             "cup-orthodox — sub-cvars locked to cup-defaults");
+}
+
+void vg_Fun_PrintStatus(void)
+{
+	int i;
+
+	G_Printf("^7========================================================\n");
+	G_Printf("^7  VG_FUN STATE\n");
+	G_Printf("^7--------------------------------------------------------\n");
+	G_Printf("^7  Master:           vg_fun = %d (%s)\n",
+	         vg_fun.integer, vg_Fun_ModeString());
+	G_Printf("^7  Registered:       %d sub-cvars\n",
+	         s_vg_fun_registry_count);
+
+	if (s_vg_fun_registry_count == 0)
+	{
+		G_Printf("^7    (none — v0.7.0 foundation only; v0.7.1 adds first feature)\n");
+	}
+	else
+	{
+		for (i = 0; i < s_vg_fun_registry_count; i++)
+		{
+			G_Printf("^7    %-36s (cup-default: %s)\n",
+			         s_vg_fun_registry[i].name,
+			         s_vg_fun_registry[i].cup_default);
+		}
+	}
+
+	G_Printf("^7========================================================\n");
+}
+
+int vg_Fun_GetInt(const char *cvar_name, int cup_default)
+{
+	vmCvar_t tmp;
+	char     buf[64];
+
+	if (vg_fun.integer == 0)
+	{
+		return cup_default;
+	}
+
+	Com_sprintf(buf, sizeof(buf), "%d", cup_default);
+	trap_Cvar_Register(&tmp, cvar_name, buf, CVAR_ARCHIVE);
+	trap_Cvar_Update(&tmp);
+	return tmp.integer;
+}
+
+float vg_Fun_GetFloat(const char *cvar_name, float cup_default)
+{
+	vmCvar_t tmp;
+	char     buf[64];
+
+	if (vg_fun.integer == 0)
+	{
+		return cup_default;
+	}
+
+	Com_sprintf(buf, sizeof(buf), "%f", (double)cup_default);
+	trap_Cvar_Register(&tmp, cvar_name, buf, CVAR_ARCHIVE);
+	trap_Cvar_Update(&tmp);
+	return tmp.value;
+}
+
+void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_flags)
+{
+	vmCvar_t tmp;
+
+	if (s_vg_fun_registry_count >= VG_FUN_REGISTRY_MAX)
+	{
+		G_Printf("VG_Fun: registry full (max=%d); cannot register %s\n",
+		         VG_FUN_REGISTRY_MAX, name);
+		return;
+	}
+
+	Q_strncpyz(s_vg_fun_registry[s_vg_fun_registry_count].name,
+	           name, sizeof(s_vg_fun_registry[0].name));
+	Q_strncpyz(s_vg_fun_registry[s_vg_fun_registry_count].cup_default,
+	           cup_default, sizeof(s_vg_fun_registry[0].cup_default));
+	s_vg_fun_registry[s_vg_fun_registry_count].cvar_flags = cvar_flags;
+	s_vg_fun_registry_count++;
+
+	/* Pre-register with the engine so admins can `\set name X`
+	 * immediately, and so trap_Cvar_VariableString lookups in
+	 * vg_Fun_PrintStatus return the live admin-set value rather
+	 * than a placeholder. The local `tmp` is throwaway — features
+	 * that need to read the cvar repeatedly should keep their own
+	 * vmCvar_t handle (or use vg_Fun_GetInt for ad-hoc reads). */
+	trap_Cvar_Register(&tmp, name, cup_default, cvar_flags);
+}
+
+qboolean vg_Fun_IsActive(void)
+{
+	return (vg_fun.integer != 0) ? qtrue : qfalse;
+}
+
+const char *vg_Fun_ModeString(void)
+{
+	return vg_fun.integer ? "fun" : "cup";
+}

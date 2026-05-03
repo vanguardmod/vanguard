@@ -56,6 +56,7 @@
 #endif
 
 #include "wolfguard/wg_interface.h"
+#include "g_vanguard.h"           /* vg_Fun_ModeString (v0.7.0 stats tag) */
 
 /* VANGUARD: tighter XY footprint for competitive play.
  * Reduces phantom hits from overly generous bounding boxes.
@@ -2568,7 +2569,7 @@ char *ClientConnect(int clientNum, qboolean firstTime, qboolean isBot)
 #endif
 
 	// get and distribute relevent paramters
-	G_LogPrintf("ClientConnect: %i\n", clientNum);
+	G_LogPrintf("ClientConnect: %i mode=%s\n", clientNum, vg_Fun_ModeString());
 
 #ifdef FEATURE_OMNIBOT
 	if (!(tv & 1))
@@ -3715,7 +3716,7 @@ void ClientDisconnect(int clientNum)
 		}
 
 		// Log stats
-		G_LogPrintf("WeaponStats: %s\n", G_createStats(ent));
+		G_LogPrintf("WeaponStats: %s mode=%s\n", G_createStats(ent), vg_Fun_ModeString());
 	}
 
 	// remove mapvote
@@ -3742,7 +3743,7 @@ void ClientDisconnect(int clientNum)
 		G_IntermissionVoteTally(NULL);
 	}
 
-	G_LogPrintf("ClientDisconnect: %i\n", clientNum);
+	G_LogPrintf("ClientDisconnect: %i mode=%s\n", clientNum, vg_Fun_ModeString());
 
 	trap_UnlinkEntity(ent);
 	ent->s.modelindex                      = 0;

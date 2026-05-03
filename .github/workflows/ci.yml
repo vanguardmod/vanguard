@@ -106,6 +106,29 @@ jobs:
             exit 1
           fi
 
+      - name: Verify vg_fun foundation in qagame Linux SO
+        run: |
+          # v0.7.0 sanity gate (Phase 9.0 audit §9). The qagame binary
+          # must contain the vg_fun master cvar + helper API symbols +
+          # boot-line / status-banner strings. Threshold ≥3 covers the
+          # cvar name, the VG_Fun: log line, and the VG_FUN STATE
+          # banner header at minimum. v0.7.1+ feature additions push
+          # the count higher; the gate stays at ≥3 (foundation
+          # presence check, not feature-count enforcement).
+          # TODO v0.7.1: add a discipline grep that catches direct
+          # `.integer`/`.value` reads on `vg_fun_*` cvars outside
+          # `g_vanguard.c` (Strategy C lock-mechanism enforcement).
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "vg_fun\|VG_Fun")
+          echo "vg_fun foundation symbol count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 3 ]; then
+            echo "::error::CI gate FAILED: vg_fun symbols not found in qagame binary (got ${COUNT}, expected >=3)."
+            echo "::error::Check that vg_Fun_* subsystem in g_vanguard.c is compiled and the master cvar registered in g_cvars.c."
+            exit 1
+          fi
+
   # -------------------------------------------------------------------
   # build-windows-x64 — Windows x86_64 cross via mingw-w64. Same
   # flags as the release workflow, just no upload.
