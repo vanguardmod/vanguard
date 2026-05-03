@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.0 — vg_fun Foundation (TBD)
+## v0.7.0 — vg_fun Foundation (2026-05-03)
 
 > Architectural pivot. v0.7.0 was originally scoped for Falldamage
 > Redesign (Phase 8.0b). After review, scope changed to **vg_fun
