@@ -3,6 +3,27 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.6.1 — Phase 7.3 Cup-Movement Foundation (TBD)
+
+### Configuration changes
+- chore(config): bump `g_pronedelay` from 0 → 1 in defaultpublic.config
+  (ETPro Cup orthodoxy: TOGGLE bit, 1750ms unprone lock). See
+  `docs/CUP_VS_PUBLIC.md` for rationale.
+
+### New files
+- `docs/CUP_VS_PUBLIC.md` extended with Phase 7.3 sections: ETLegacy
+  issue #1637 caveats for `sv_fps 40` (cv-ops disguise / flamer /
+  script_movers / pause), and the new Movement / `g_pronedelay`
+  divergence section. Existing Phase 7.2 netcode coverage preserved.
+
+### Foundation
+- feat(diag): register `vanguard_diag_movement` cvar (no-op stub,
+  CVAR_TEMP, default 0). Foundation for v0.7.x movement diagnostics.
+  Reads no-op for now; v0.7.x will gate diagnostic emission on this cvar.
+
+### Reference
+- Phase 7.3 audit: `docs/notes/PHASE_7_3_AUDIT.md`
+
 ## v0.6.0 — WolfGuard Foundation (2026-05-02)
 
 ### Features

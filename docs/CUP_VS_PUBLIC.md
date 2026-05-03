@@ -129,6 +129,31 @@ animation issues, so the comment is likely a latent issue with no
 real bug behind it. Flagged here in case a future cup live-test
 turns up an animation glitch that traces to it.
 
+### ETLegacy issue #1637 — sv_fps 40 mechanics caveats
+
+The ET engine has mechanics hardcoded for the 50ms tick (`sv_fps 20`).
+At `sv_fps 40` (25ms tick) the following are known to misbehave per
+[etlegacy/etlegacy#1637](https://github.com/etlegacy/etlegacy/issues/1637):
+
+  - **Cv-ops disguise theft** — disguise grab range and timing window
+    shift; some grabs that work at sv_fps 20 fail at sv_fps 40.
+  - **Flamer max range** — flame-tick scaling means the visual flame
+    reaches further than the damage hitbox at sv_fps 40.
+  - **Script_movers** — map-script-driven movers (doors, lifts on some
+    custom maps) timed against 50ms ticks may de-sync.
+  - **Pause timer** — match-pause countdown skews against wall-clock
+    time at sv_fps 40.
+
+**Mitigation in cup play:** match-rules typically forbid disguise theft
+in critical situations and use referee-managed pauses, sidestepping
+the worst issues.
+
+**If your cup ruleset requires strict sv_fps 20:** the canonical
+escape hatch is the `custom` profile (see "Pterodactyl gotcha" below
+for the same `set sv_fps … + profile custom` pattern). A future
+`cup-strict` profile (sv_fps 20 baseline) may ship in v0.7.x if
+cup-tester feedback demands it.
+
 ### Pterodactyl gotcha
 
 Some managed-hosting providers (most prominently Pterodactyl) lock
@@ -172,6 +197,34 @@ the next map's `G_InitGame` re-evaluates the cvar):
 \map oasis    // or whatever map the server is running
 ```
 
+## Movement: `g_pronedelay`
+
+| Setting | VanguardMod (v0.6.1+) | ETPro `b_pronedelay` | ETLegacy legacy6 |
+|---|---|---|---|
+| `g_pronedelay` | **1** (TOGGLE bit, 1750ms unprone lock) | 1 (1750ms unprone lock) | 3 (TOGGLE + JUMP-block) |
+
+**As of v0.6.1:** `defaultpublic.config` sets `g_pronedelay 1` to
+match ETPro Cup orthodoxy. Previously (v0.6.0 and earlier) the
+default was `0` (750ms gate, no jump block) which was softer than
+every cup-mod listed in the Phase 7.3 audit.
+
+`g_pronedelay` is a bitfield, not a duration:
+
+  - bit 0 (`+1`) — `PRONEDELAY_TOGGLE`: 1750ms unprone lock instead
+    of the default 750ms gate. ETPro convention.
+  - bit 1 (`+2`) — `PRONEDELAY_JUMP`: blocks prone for 850ms after a
+    jump, preventing prone-spam exploits.
+
+If your server prefers the stricter ETLegacy `legacy6` ruleset,
+override in your `server.cfg`:
+
+```
+set g_pronedelay 3
+```
+
+This activates both bits (TOGGLE + JUMP-block). Phase 7.3 audit §3.2
+covers the cross-mod comparison.
+
 ## Verifying the active profile
 
 Three places to check:
@@ -213,6 +266,13 @@ set vanguard_netcode_profile "cup"
 
 Running `\exec configs/vanguard_competitive.cfg` followed by a
 map restart applies the full cup posture.
+
+## Reference
+
+- Phase 7.2 audit: `docs/notes/PHASE_7_2_AUDIT.md`
+- Phase 7.3 audit: `docs/notes/PHASE_7_3_AUDIT.md`
+- ETLegacy issue #1637: <https://github.com/etlegacy/etlegacy/issues/1637>
+- ETPro Crossfire/EuroCup configs: `b_pronedelay 1` in `global1.config` + `global6.config`
 
 ---
 
