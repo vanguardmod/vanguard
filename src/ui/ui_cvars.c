@@ -115,6 +115,9 @@ vmCvar_t ui_cg_shoutcastGrenadeTrail;
 vmCvar_t ui_customFont1;
 vmCvar_t ui_customFont2;
 
+/* VanguardMod v0.7.0.1: Phase Branding 2 diagnostic flag. */
+vmCvar_t vanguard_diag_branding;
+
 // Table {{{1
 typedef struct
 {
@@ -299,6 +302,12 @@ static cvarTable_t cvarTable[] =
 
 	{ &ui_serverBrowserSettings,           "ui_serverBrowserSettings",            "0",                          CVAR_INIT,                      0 },
 	{ NULL,                                "cg_allowGeoIP",                       "1",                          CVAR_ARCHIVE | CVAR_USERINFO,   0 },
+
+	/* VanguardMod v0.7.0.1: Phase Branding 2 diagnostic. CVAR_TEMP —
+	 * re-arm per session; not persisted. When set, UI_LoadMods prints
+	 * the lookup table + per-mod resolution outcomes. Mirrors the
+	 * v0.6.1 vanguard_diag_movement pattern. */
+	{ &vanguard_diag_branding,             "vanguard_diag_branding",              "0",                          CVAR_TEMP,                      0 },
 };
 
 static const unsigned int cvarTableSize = sizeof(cvarTable) / sizeof(cvarTable[0]);
