@@ -100,6 +100,77 @@ on it. The first vg_fun-controlled feature ships in v0.7.1:
 | v0.7.x | Fast-reload (`vg_fun_fastreload_multiplier`) | backlog |
 | v0.7.x | Class modifiers (`vg_fun_classmod_*`) | backlog |
 
+## Falldamage (v0.7.1+) — first vg_fun-controlled feature
+
+When `vg_fun 1`, the following cvars become tunable. Defaults
+match cup-orthodox (engine values); recommended public-profile
+values listed:
+
+| Cvar | Cup default | Public recommended | Description |
+|---|---|---|---|
+| `vg_fun_falldmg_dmg_10` | 10 | 8 | Damage at "moderate fall" velocity (`EV_FALL_DMG_10`) |
+| `vg_fun_falldmg_dmg_15` | 15 | 12 | Damage at "high fall" velocity (`EV_FALL_DMG_15`) |
+| `vg_fun_falldmg_dmg_25` | 25 | 20 | Damage at "severe fall" velocity (`EV_FALL_DMG_25`) |
+| `vg_fun_falldmg_dmg_50` | 50 | 40 | Damage at "near-death fall" velocity (`EV_FALL_DMG_50`) |
+| `vg_fun_falldmg_gib_health` | -175 | -300 | Health threshold for fall-NDIE gib formula (engine: -175 = always gib on NDIE; -300 = aggressive gib-prevention) |
+
+Public profile recommends symmetrical -20% damage scaling plus
+aggressive gib-prevention. Server admins tune to taste.
+
+### Activation
+
+```
+\rcon vg_fun 1
+\rcon map_restart
+\rcon vg_fun_falldmg_dmg_10 8
+\rcon vg_fun_falldmg_dmg_15 12
+\rcon vg_fun_falldmg_dmg_25 20
+\rcon vg_fun_falldmg_dmg_50 40
+\rcon vg_fun_falldmg_gib_health -300
+```
+
+Cup servers leave `vg_fun 0` and inherit engine defaults
+unconditionally. The helper API at `vg_Fun_GetInt` short-circuits
+to the cup_default when vg_fun=0, so any admin-set sub-cvar
+values are silently ignored.
+
+### Diagnostic
+
+Set both `vg_fun 1` AND `g_developer 1` to see per-event damage
+log lines:
+
+```
+VG_Falldmg: event=EV_FALL_DMG_10 dmg=8 (vg_fun=1, helper-resolved)
+VG_Falldmg: event=EV_FALL_NDIE dmg=176 (vg_fun=1, helper-resolved)
+```
+
+Tuning workflow: drop from known oasis heights, observe damage
+output, adjust cvar, repeat.
+
+### Phase 8.0a regression-safety
+
+Phase 8.0a's NULL-guard (`g_combat.c::G_Damage` v0.5.2.2 hotfix)
+prevents SIGSEGV on `MOD_FALLING` with NULL attacker / point.
+v0.7.1 adds tuning on top — the guard reads attacker / point /
+mod, not the damage value, so new cvar values can't reach the
+crash. Verified via `die -1` rcon test: 0 SIGSEGV before and
+after, with vg_fun=0 and vg_fun=1.
+
+### What's NOT in v0.7.1 (deferred)
+
+- **Velocity threshold cvars** (`delta_short`, `delta_10`, etc. —
+  6 cvars in `bg_pmove.c::PM_CrashLand`). Tier 2 in Phase 8.0b
+  audit; deferred to v0.7.x because cgame + qagame share
+  `bg_pmove.c` and prediction-correctness needs configstring sync.
+- **PMF_TIME_KNOCKBACK durations** (4 cvars). Same prediction
+  problem; deferred to v0.7.x with thresholds.
+- **Lag-spike z-velocity clamp** (Phase 7.3 audit §2.5). The
+  classic ET resync-spike-instant-fatal-fall bug. Deferred to
+  v0.8.0 with netem testing infrastructure.
+- **Class-based modifiers** (e.g. soldier-takes-less-falldamage).
+  Cup-orthodox forbids — Phase 7.3 audit §3.4 confirmed every
+  cup-mod treats classes identically. Deferred indefinitely.
+
 ## Implementation notes
 
 All `vg_fun_*` cvar reads MUST use the helper API

@@ -216,6 +216,26 @@ the next map's `G_InitGame` re-evaluates the cvar):
 \map oasis    // or whatever map the server is running
 ```
 
+## Falldamage (v0.7.1+)
+
+Cup-orthodox (vg_fun=0) preserves engine-default falldamage.
+Fun-public (vg_fun=1) allows admin tuning via 5 sub-cvars. See
+`docs/VG_FUN_MODE.md` Falldamage section for the full cvar list
++ recommended public-profile values.
+
+| Setting | Cup-orthodox (vg_fun=0) | Fun-public recommended | ETPro Crossfire | ETLegacy legacy6 |
+|---|---|---|---|---|
+| Falldamage tuning | locked to engine defaults via `vg_Fun_GetInt` short-circuit | cvars unlocked, helper resolves admin values | engine defaults (no cvar surface) | engine defaults (no cvar surface) |
+| `vg_fun_falldmg_dmg_10` | 10 (engine) | 8 recommended | 10 | 10 |
+| `vg_fun_falldmg_dmg_50` | 50 (engine) | 40 recommended | 50 | 50 |
+| `vg_fun_falldmg_gib_health` | -175 (`GIB_HEALTH` engine constant) | -300 recommended | -175 | -175 |
+
+VanguardMod's vg_fun system makes falldamage tuning the first
+divergence from upstream cup-orthodox that's enabled — and only
+when `vg_fun=1` is explicitly set. Phase 7.3 audit §3.4 confirmed
+no cup-mod tunes falldamage; v0.7.1 keeps cup-mode aligned with
+that, and only opens tuning on the public-mode side.
+
 ## Movement: `g_pronedelay`
 
 | Setting | VanguardMod (v0.6.1+) | ETPro `b_pronedelay` | ETLegacy legacy6 |

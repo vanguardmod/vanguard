@@ -3,6 +3,82 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.1 — Falldamage Profile (TBD)
+
+> **First vg_fun-controlled feature.** Phase 8.0b Falldamage
+> Redesign shipped on top of the v0.7.0 vg_fun foundation. At
+> default `vg_fun=0` (cup-orthodox) falldamage is byte-identical
+> to v0.7.0.1 — engine defaults preserved via the
+> `vg_Fun_GetInt` helper short-circuit. At `vg_fun=1` admins can
+> tune 5 cvars for public-server-friendly falls.
+
+### vg_fun first feature
+- feat(falldmg): falldamage values become vg_fun-controlled.
+  Five sub-cvars expose engine-default damage + gib values:
+  - `vg_fun_falldmg_dmg_10` (default `10`)
+  - `vg_fun_falldmg_dmg_15` (default `15`)
+  - `vg_fun_falldmg_dmg_25` (default `25`)
+  - `vg_fun_falldmg_dmg_50` (default `50`)
+  - `vg_fun_falldmg_gib_health` (default `-175`)
+- feat(falldmg): per-event diagnostic log gated on
+  `g_developer 1` AND `vg_fun 1`. Tuning workflow: admin drops
+  from known heights, observes the `VG_Falldmg: event=X dmg=Y`
+  log lines, adjusts cvar, repeats.
+
+### Validation
+- First production use of the `vg_Fun_GetInt` helper API from
+  v0.7.0 foundation. Pattern validated end-to-end: cvar
+  registration via `vg_Fun_RegisterCvar`, lookup via
+  `vg_Fun_GetInt`, `vg_status` shows the 5 registered features.
+- Cup-orthodox behaviour preserved — byte-identical falldamage
+  at `vg_fun=0`.
+- Public-profile recommended values: -20% damage scaling
+  (8/12/20/40 vs 10/15/25/50), gib_health=-300 (aggressive
+  gib-prevention).
+
+### Hygiene — Triple-Header retrofit on bg_pmove.c
+- chore(copyright): VanguardMod attribution added to
+  `src/game/bg_pmove.c` (Triple-Header: id Software + ET:Legacy
+  + VanguardMod + SPDX). v0.6.2 Copyright-Sweep deferred this
+  file because git-log showed zero post-import modifications;
+  Phase 8.0b's hook into PM_CrashLand context (the falldamage
+  velocity-event chain) makes this the natural moment to retrofit
+  per Memory #10 deferral plan. **No code changes** to
+  `bg_pmove.c` itself in this release — pure header-only edit.
+
+### Phase 8.0a regression-safety
+- NULL-guard in `g_combat.c::G_Damage` (v0.5.2.2 hotfix)
+  unchanged — gates on attacker / point / MOD only, doesn't
+  read damage values. New cvar values can't reach the crash
+  path. Static-grep verified the 4-clause guard is intact.
+
+### CI
+- New gate in `.github/workflows/ci.yml` build-linux job:
+  `strings build/vanguard/qagame.mp.x86_64.so | grep -c
+  "vg_fun_falldmg"` must return ≥5 (one per cvar).
+
+### Out of scope (deferred)
+- **Tier 2 cvars** (velocity thresholds — `delta_short`,
+  `delta_10/15/25/50/die`, `kb_*` knockback durations). 10 cvars
+  in `bg_pmove.c::PM_CrashLand`. Need configstring-sync for
+  prediction-correctness; deferred to v0.7.x. Audit §4 covers
+  the design.
+- **Lag-spike z-velocity clamp** (Phase 7.3 audit §2.5). Classic
+  ET resync-instant-fatal-fall bug. Deferred to v0.8.0 with
+  netem testing infrastructure.
+- **Class-based modifiers** — cup-orthodox forbids per Phase 7.3
+  §3.4. Deferred indefinitely.
+
+### Reference
+- Audit: `docs/notes/PHASE_8_0B_AUDIT.md` (committed in v0.7.0
+  PR; §13 architectural-pivot note records the rename
+  `vanguard_falldmg_*` → `vg_fun_falldmg_*`)
+- Helper API spec: `docs/VG_FUN_MODE.md` (Falldamage section
+  added in this release)
+- Cup-vs-public falldamage divergences:
+  `docs/CUP_VS_PUBLIC.md` (Falldamage section added in this
+  release)
+
 ## v0.7.0.1 — UI Cosmetic Updates (2026-05-03)
 
 > Hotfix release. Two UI-cosmetic improvements bundled into a
