@@ -3,6 +3,130 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.2.3 — CS_SERVERINFO overflow fix + airborne diag (TBD)
+
+> **Phase 13c follow-up to v0.7.2.2.** Two changes: (1) drop the
+> erroneous `CVAR_SERVERINFO` OR-in from `vg_Fun_RegisterCvar`
+> that was added in v0.7.2.1 — it never solved the cgame
+> visibility problem it was meant to fix and caused
+> `Info_SetValueForKey: Info string length exceeded` warnings
+> in production. (2) add a second airborne diagnostic block
+> (`VG_DJ[A]`) to `PM_CheckJump` so we can finally observe what
+> happens on a true mid-air press. The v0.7.2.2 ground-press
+> diag (`VG_DJ[S]`) is retained for ground-state comparison.
+> No production behaviour change at `vanguard_dev=0`. Cup-orthodox
+> preserved; Phase 8.0a NULL-guard untouched; v0.7.2.1 splash
+> bypass + v0.7.2.2 idempotent-register untouched.
+
+### Bug — CS_SERVERINFO buffer overflow (FIX)
+
+- fix(vg_fun): `vg_Fun_RegisterCvar` no longer auto-applies
+  `CVAR_SERVERINFO` to registered cvars. The 9 `vg_fun_*` cvars
+  (5 falldmg + 4 doublejump) drop out of the `CS_SERVERINFO`
+  configstring entirely.
+- **Why it was wrong**: v0.7.2.1's OR-in was added under the
+  assumption that `CVAR_SERVERINFO` would let cgame read the
+  values via `trap_Cvar_VariableStringBuffer`. It does not —
+  cgame's local cvar pool is not auto-populated from
+  `CS_SERVERINFO`. The correct cgame-side read pattern is
+  `Info_ValueForKey(CS_SERVERINFO_string, "name")`, e.g.
+  `cg_servercmds.c:276` for `vanguard_dev`. Until cgame uses
+  that path, the values are server-only anyway — and falldmg /
+  doublejump are server-authoritative gameplay cvars that cgame
+  doesn't strictly need for the gate logic (the server-side
+  pmove fires the jump regardless of client mispredict).
+- **Why it was also actively harmful**: 9 extra cvars pushed
+  the `CS_SERVERINFO` configstring past `MAX_INFO_STRING` (1024
+  bytes), producing repeated `Info_SetValueForKey: Info string
+  length exceeded` warnings in the server log.
+- `vg_fun` master switch keeps `CVAR_SERVERINFO` (registered
+  separately via `gameCvarTable` in `g_cvars.c`). UI mode-
+  indication still works.
+
+### Diagnostic — Airborne `VG_DJ[A]` block
+
+- diag(pmove): new server-side log line in `PM_CheckJump`
+  (`#ifndef CGAMEDLL`, gated by `vanguard_dev=1`). Fires when
+  `groundEntityNum == ENTITYNUM_NONE` (1023) AND `cmd.upmove >= 10`,
+  regardless of `PMF_JUMP_HELD`. Throttled to 1 per 100ms (server-
+  static last-fire timestamp; designed for solo-tester use).
+- **Why a second diag**: v0.7.2.2's `VG_DJ[S]` block requires
+  `!PMF_JUMP_HELD` (rising edge), which suppresses subsequent
+  ticks once the player holds SPACE through the first jump. As
+  a result, every captured line in v0.7.2.2 testing showed
+  `ground=1022` (`ENTITYNUM_WORLD` — player on map geometry),
+  not `ground=1023` (`ENTITYNUM_NONE` — airborne). We never
+  observed a true mid-air press. The new `[A]` block fixes that.
+- Same field set as `[S]` plus a `held=` field (so we can see
+  `PMF_JUMP_HELD` state explicitly). Distinct prefix lets log
+  readers `grep VG_DJ\[A\]` for airborne-only observations.
+- v0.7.2.2's `VG_DJ[S]` block is retained unchanged — useful
+  for ground-state comparison and to keep the existing CI gate
+  semantics stable.
+
+### Notes / out-of-scope
+
+- WolfGuard untouched.
+- Phase 8.0a NULL-guard at `g_combat.c:1781-1784` untouched.
+- v0.7.2.1 splash-bypass helpers untouched.
+- v0.7.2.2 idempotent `vg_Fun_RegisterCvar` registration loop
+  untouched.
+- cgame `vg_pm_cvar_int` reads still go through
+  `trap_Cvar_VariableStringBuffer` (will return empty for the
+  `vg_fun_*` cvars). The actual cgame cvar-visibility fix —
+  swapping to `Info_ValueForKey(CS_SERVERINFO, ...)` — is a
+  separate later release once we have airborne diag data on
+  the actual server-side eligibility behaviour.
+- No tagging convention change: four-digit hotfix per Memory #4.
+
+### CI gates added / inverted
+
+- **Inverted** `Verify Phase 13c vg_Fun_RegisterCvar SERVERINFO
+  OR-in REMOVED` (was: must be present; now: must be absent).
+  Code-only grep anchored to leading whitespace + identifier
+  so the comment-block reference is not matched.
+- **Extended** `Verify Phase 13b/c PM_CheckJump diagnostic
+  strings in qagame Linux SO` — threshold raised from ≥1 to ≥2,
+  pattern broadened to `VG_DJ\[(S|A)\]` so both diag blocks
+  are required.
+- All other v0.7.2.2 gates retained.
+
+### Verification
+
+- Build: cmake --build green for qagame + cgame + ui + tvgame + mod_pk3.
+- SERVERINFO OR-in code-only grep: 0 hits (REMOVED).
+- `VG_DJ[A] air:` format string in qagame: present.
+- `VG_DJ[S] press:` format string still in qagame: present.
+- Both diagnostics ABSENT from cgame (`#ifndef CGAMEDLL`): 0 hits.
+- Idempotent loop pattern in source: still present (1 hit).
+- Regression: v0.7.2.1 splash bypass helpers (2/2), Phase 8.0a NULL-guard
+  reference, vg_Fun_GetInt + vg_Hitbox_IsActive + WG_Active +
+  vg_perf_traces_total + mdx_hit_test all alive (5/5).
+
+### Live-test plan (post-release)
+
+1. `\set vanguard_dev 1`, `\set vg_fun 1`, `\set vg_fun_doublejump 1`,
+   `\set vg_fun_doublejump_classes 31`, `\set vg_fun_doublejump_height 400`,
+   `\map_restart`.
+2. Test A — deliberate key-release: jump from ground → release SPACE
+   → wait <850ms → press SPACE again mid-air. Repeat across classes.
+3. Test B — natural play: just hold/release as feels natural and
+   try to double-jump.
+4. Grep server log for `VG_DJ\[(S|A)\]` to see ground vs airborne
+   observations side by side.
+5. Run a few map_restart cycles. Grep `Info_SetValueForKey: Info
+   string length exceeded` — expected 0 (or significantly fewer)
+   hits compared to v0.7.2.2.
+
+### Decision tree for v0.7.2.4 based on `VG_DJ[A]` data
+
+| Pattern | Diagnosis | v0.7.2.4 fix |
+|---|---|---|
+| `VG_DJ[A]` lines appear with `candj=yes` and player feels jump | Issue resolved by Phase 13b idempotent register or some upstream side-effect; just remove diag | Diag cleanup only |
+| `VG_DJ[A]` lines with `ground=1023 candj=no` and one of the expected gates failing | Targeted gate fix | Gate-specific |
+| `VG_DJ[A]` lines with `candj=yes` but player still feels nothing | PMF_JUMP_HELD blocks the actual fire path despite passing the rising-edge gate elsewhere; or velocity gets re-zeroed downstream | Trace post-`PM_CheckJump` flow |
+| No `VG_DJ[A]` lines at all even on confirmed airborne presses | Player input not reaching `PM_CheckJump` (cmd.upmove dropped, or pmove not invoked) | cmd-flow audit |
+
 ## v0.7.2.2 — Diagnostic-first hotfix (TBD)
 
 > **Phase 13b — diagnostic-first follow-up to v0.7.2.1.** Two
