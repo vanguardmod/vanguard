@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.2 — Double-Jump (TBD)
+## v0.7.2 — Double-Jump (2026-05-03)
 
 > **Second vg_fun-controlled feature.** Players can jump a
 > second time while airborne when `vg_fun=1` AND
