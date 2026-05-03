@@ -895,16 +895,24 @@ static qboolean PM_CheckJump(void)
 
 	/* Phase 13b (v0.7.2.2) diagnostic: gated by vanguard_dev=1.
 	 *
-	 * Logs every jump-press attempt (rising edge: upmove>=10 and
-	 * !PMF_JUMP_HELD) so we can see exactly which gate fails when
-	 * a player expects a second mid-air jump. Server-side only —
-	 * cgame's local cvar pool does not see CVAR_SERVERINFO cvars
-	 * via trap_Cvar_VariableStringBuffer (cgame would always log
-	 * zeros, which is uninformative until v0.7.2.3 swaps cgame to
-	 * a CS_SERVERINFO + Info_ValueForKey path).
+	 * Logs every jump-press rising edge (upmove>=10 and !PMF_JUMP_HELD)
+	 * so we can see exactly which gate fails on press transitions.
+	 * Server-side only — cgame's local cvar pool does not see
+	 * CVAR_SERVERINFO cvars via trap_Cvar_VariableStringBuffer (a
+	 * future release will swap cgame to a CS_SERVERINFO +
+	 * Info_ValueForKey path).
+	 *
+	 * Phase 13c (v0.7.2.3): kept as-is. The rising-edge gate filters
+	 * out subsequent ticks once the player holds SPACE through a
+	 * jump, so this block tends to capture only the FIRST press of
+	 * each "press, hold-through-jump" sequence — typically a ground
+	 * press. Live-test data from v0.7.2.2 confirmed this: every
+	 * captured line had ground=1022 (ENTITYNUM_WORLD, NOT
+	 * ENTITYNUM_NONE=1023). For airborne mid-press capture see the
+	 * VG_DJ[A] block below.
 	 *
 	 * Output fields (one line per press tick):
-	 *   ground   - groundEntityNum (must be ENTITYNUM_NONE = 1023 to be airborne)
+	 *   ground   - groundEntityNum (1023 = ENTITYNUM_NONE = airborne; other values = on entity)
 	 *   djUsed   - PMF_VG_DOUBLEJUMPED bit (must be 0 to allow second jump)
 	 *   fun      - vg_fun cvar (master switch, must be 1)
 	 *   dj       - vg_fun_doublejump cvar (must be 1)
@@ -918,7 +926,6 @@ static qboolean PM_CheckJump(void)
 	 *   delay    - cmd.serverTime - pmext->jumpTime (PM_JUMP_DELAY=850ms gate; bypassed when candj=yes)
 	 *   candj    - eligibility result (yes = the v0.7.2 second-jump path will fire)
 	 *
-	 * Cleared in v0.7.2.3 once the failure mode is identified.
 	 * Audit: docs/notes/PHASE_13B_DIAGNOSTIC.md */
 #ifndef CGAMEDLL
 	if ((pm->cmd.upmove >= 10)
@@ -942,6 +949,57 @@ static qboolean PM_CheckJump(void)
 		           (pm->ps->pm_flags & PMF_RESPAWNED) ? 1 : 0,
 		           pm->cmd.serverTime - pm->pmext->jumpTime,
 		           canDoubleJump ? "yes" : "no");
+	}
+#endif
+
+	/* Phase 13c (v0.7.2.3) airborne diagnostic — VG_DJ[A].
+	 *
+	 * The VG_DJ[S] block above suppresses on PMF_JUMP_HELD, so any
+	 * mid-air press while the player is still holding SPACE from
+	 * the first jump is invisible. This block fires whenever the
+	 * player is airborne (groundEntityNum == ENTITYNUM_NONE = 1023)
+	 * AND has cmd.upmove >= 10, regardless of PMF_JUMP_HELD, so
+	 * we can observe the actual second-jump-attempt state.
+	 *
+	 * Throttled via a server-static last-fire-time to one line per
+	 * 100ms (across all clients on the server — solo-tester scope
+	 * is the design target; for multi-tester we'd index by clientNum
+	 * but the diag is meant to be enabled briefly with vanguard_dev=1
+	 * so single-tester is fine).
+	 *
+	 * Same field set as VG_DJ[S] for grep parity. Different prefix
+	 * lets log readers separate ground-press observations from
+	 * airborne-press observations. Audit:
+	 * docs/notes/PHASE_13C_HOTFIX.md §3. */
+#ifndef CGAMEDLL
+	{
+		static int s_vg_dj_air_last_fire = 0;
+
+		if ((pm->ps->groundEntityNum == ENTITYNUM_NONE)
+		    && (pm->cmd.upmove >= 10)
+		    && (pm->cmd.serverTime - s_vg_dj_air_last_fire >= 100)
+		    && vg_pm_cvar_int("vanguard_dev", 0))
+		{
+			s_vg_dj_air_last_fire = pm->cmd.serverTime;
+			Com_Printf("VG_DJ[A] air:   ground=%d djUsed=%d "
+			           "fun=%d dj=%d cls=%d staCost=%d hgt=%d "
+			           "stam=%d class=%d up=%d respawn=%d "
+			           "delay=%dms held=%d candj=%s\n",
+			           pm->ps->groundEntityNum,
+			           (pm->ps->pm_flags & PMF_VG_DOUBLEJUMPED) ? 1 : 0,
+			           vg_pm_cvar_int("vg_fun", 0),
+			           vg_pm_cvar_int("vg_fun_doublejump", 0),
+			           vg_pm_cvar_int("vg_fun_doublejump_classes", 0),
+			           vg_pm_cvar_int("vg_fun_doublejump_stamina", 0),
+			           vg_pm_cvar_int("vg_fun_doublejump_height", 270),
+			           pm->ps->stats[STAT_SPRINTTIME],
+			           pm->ps->stats[STAT_PLAYER_CLASS],
+			           pm->cmd.upmove,
+			           (pm->ps->pm_flags & PMF_RESPAWNED) ? 1 : 0,
+			           pm->cmd.serverTime - pm->pmext->jumpTime,
+			           (pm->ps->pm_flags & PMF_JUMP_HELD) ? 1 : 0,
+			           canDoubleJump ? "yes" : "no");
+		}
 	}
 #endif
 

@@ -125,21 +125,31 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Phase 13 CVAR_SERVERINFO in vg_Fun_RegisterCvar
+      - name: Verify Phase 13c vg_Fun_RegisterCvar SERVERINFO OR-in REMOVED
         run: |
-          # v0.7.2.1: vg_Fun_RegisterCvar must always add
-          # CVAR_SERVERINFO so cgame's bg_pmove.c reads via
-          # trap_Cvar_VariableStringBuffer return correct values
-          # (otherwise vg_fun features in shared pmove silently
-          # fail in client prediction). Static-source check —
-          # the OR-in is a single line that must be present.
+          # v0.7.2.3 inverts the v0.7.2.1 gate. The CVAR_SERVERINFO
+          # OR-in in vg_Fun_RegisterCvar caused CS_SERVERINFO buffer
+          # overflow in production (9 vg_fun_* cvars + 4 other
+          # SERVERINFO cvars exceeded MAX_INFO_STRING). Removing the
+          # OR-in does NOT regress the v0.7.2.2 cgame visibility
+          # situation: trap_Cvar_VariableStringBuffer in cgame never
+          # saw CVAR_SERVERINFO cvars from the local pool anyway
+          # (the correct cgame-side read pattern is Info_ValueForKey
+          # on CS_SERVERINFO, e.g. cg_servercmds.c:276 for vanguard_dev
+          # — that fix is a separate later release).
+          #
+          # Code-only grep (anchored to leading whitespace + identifier,
+          # ignores comment lines that mention the line for context).
           set -euo pipefail
-          if ! grep -q "cvar_flags |= CVAR_SERVERINFO" src/game/g_vanguard.c; then
-            echo "::error::v0.7.2.1: vg_Fun_RegisterCvar missing CVAR_SERVERINFO OR-in."
-            echo "::error::Check src/game/g_vanguard.c — the line 'cvar_flags |= CVAR_SERVERINFO' must be present."
+          COUNT=$(grep -cE '^[[:space:]]*cvar_flags \|= CVAR_SERVERINFO' src/game/g_vanguard.c || true)
+          echo "Active SERVERINFO OR-in lines: ${COUNT}"
+          if [ "${COUNT}" -gt 0 ]; then
+            echo "::error::v0.7.2.3: vg_Fun_RegisterCvar still ORs in CVAR_SERVERINFO."
+            echo "::error::This would re-introduce the CS_SERVERINFO buffer overflow."
+            echo "::error::Remove the 'cvar_flags |= CVAR_SERVERINFO' assignment from src/game/g_vanguard.c."
             exit 1
           fi
-          echo "vg_Fun_RegisterCvar SERVERINFO OR-in: VERIFIED"
+          echo "vg_Fun_RegisterCvar SERVERINFO OR-in: REMOVED (verified)"
 
       - name: Verify Phase 13b idempotent vg_Fun_RegisterCvar
         run: |
@@ -160,25 +170,25 @@ jobs:
           fi
           echo "vg_Fun_RegisterCvar idempotent-lookup loop: VERIFIED"
 
-      - name: Verify Phase 13b PM_CheckJump diagnostic in qagame Linux SO
+      - name: Verify Phase 13b/c PM_CheckJump diagnostic strings in qagame Linux SO
         run: |
-          # v0.7.2.2 diagnostic-first hotfix gate. PM_CheckJump must
-          # contain the server-side "VG_DJ[S] press:" diagnostic
-          # format string (gated by vanguard_dev=1 so it's quiet
-          # in production). Server-side only — cgame can't see
+          # v0.7.2.2 introduced the VG_DJ[S] (rising-edge ground-press)
+          # diag block; v0.7.2.3 added the VG_DJ[A] (airborne, throttled,
+          # PMF_JUMP_HELD-independent) diag block alongside it. Both
+          # gated by vanguard_dev=1 so they are quiet in production.
+          # Both server-side only (#ifndef CGAMEDLL) — cgame can't see
           # CVAR_SERVERINFO cvars via trap_Cvar_VariableStringBuffer
-          # and would always log zeros until v0.7.2.3 swaps the
-          # cgame read path. Threshold ≥1 = format string present.
-          # Removed in v0.7.2.3 once root cause is identified — at
-          # that point this gate gets removed too.
+          # and would always log zeros for the cvar fields. Threshold
+          # ≥2 = both format strings present. Both get removed once
+          # the failure mode is identified and the production fix lands.
           set -euo pipefail
           BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
           test -n "${BIN}"
-          COUNT=$(strings -a "${BIN}" | grep -c "VG_DJ\[S\] press:" || true)
-          echo "Phase 13b diag string count in ${BIN}: ${COUNT}"
-          if [ "${COUNT}" -lt 1 ]; then
-            echo "::error::v0.7.2.2 PM_CheckJump diagnostic format string not found in qagame binary."
-            echo "::error::Check that bg_pmove.c contains the #ifndef CGAMEDLL block with Com_Printf(\"VG_DJ[S] press:...\")."
+          COUNT=$(strings -a "${BIN}" | grep -cE 'VG_DJ\[(S|A)\]' || true)
+          echo "Phase 13b/c diag string count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 2 ]; then
+            echo "::error::v0.7.2.3 PM_CheckJump diagnostic format strings missing in qagame binary (got ${COUNT}, expected >=2)."
+            echo "::error::Check that bg_pmove.c contains both #ifndef CGAMEDLL blocks: VG_DJ[S] press: ... and VG_DJ[A] air: ..."
             exit 1
           fi
 

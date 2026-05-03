@@ -805,26 +805,36 @@ void vg_Fun_RegisterCvar(const char *name, const char *cup_default, int cvar_fla
 	vmCvar_t tmp;
 	int      i;
 
-	/* Phase 13 (v0.7.2.1): always add CVAR_SERVERINFO so cgame-side
-	 * bg_pmove.c reads via trap_Cvar_VariableStringBuffer return the
-	 * server's authoritative value. Without this, cgame's local
-	 * cvar pool returns empty string → atoi("") = 0 → vg_fun
-	 * features (vg_pm_cvar_int helper) silently fail in client
-	 * prediction. Discovered v0.7.2 production: double-jump cvars
-	 * registered correctly server-side but never reached the cgame
-	 * eligibility check.
+	/* Phase 13c (v0.7.2.3): CVAR_SERVERINFO is no longer auto-applied.
 	 *
-	 * Cup-orthodox safety: CVAR_SERVERINFO does not change the cvar
-	 * value — only its propagation. Visible via /serverinfo to
-	 * connected clients (gameplay transparency, no security concern
-	 * for vg_fun_*). Stored flags on the registry record reflect
-	 * the as-applied value so vg_Fun_PrintStatus accurately shows
-	 * what the engine sees.
+	 * v0.7.2.1 Phase 13 OR-in (`cvar_flags |= CVAR_SERVERINFO`) was
+	 * removed because:
+	 *   1. It did not solve the cgame visibility problem it was
+	 *      intended to fix — `trap_Cvar_VariableStringBuffer` in cgame
+	 *      reads the client process's local cvar pool, which is NOT
+	 *      auto-populated from CS_SERVERINFO. The correct cgame-side
+	 *      pattern is `Info_ValueForKey` on the configstring (see
+	 *      `cg_servercmds.c:276` for `vanguard_dev`).
+	 *   2. It caused CS_SERVERINFO buffer overflow in production: 9
+	 *      vg_fun_* cvars (5 falldmg + 4 doublejump) plus the legacy
+	 *      vg_fun master + vanguard_hitbox_mode + g_netcode_profile +
+	 *      vanguard_dev pushed the configstring past MAX_INFO_STRING
+	 *      (1024 bytes), producing repeated server-log warnings:
+	 *        "Info_SetValueForKey: Info string length exceeded"
 	 *
-	 * Phase 13b (v0.7.2.2): SERVERINFO assignment moved ABOVE the
-	 * idempotent-lookup loop so that re-applied registrations get
-	 * the same engine flags as first-time registrations. */
-	cvar_flags |= CVAR_SERVERINFO;
+	 * The 9 vg_fun_* cvars are server-authoritative: falldmg is read
+	 * server-only in `g_active.c::G_FallDamage`; doublejump is read
+	 * server-side in `bg_pmove.c::PM_CheckJump` (which also runs on
+	 * the client for prediction, but that read needs the configstring
+	 * fix in a future release — until then client prediction silently
+	 * mismatches and the server-authoritative pmove fires the actual
+	 * second-jump).
+	 *
+	 * `vg_fun` master switch keeps CVAR_SERVERINFO via `gameCvarTable`
+	 * in `g_cvars.c` — that is necessary for UI mode-indication and
+	 * is a single cvar (no overflow risk).
+	 *
+	 * Audit: docs/notes/PHASE_13C_HOTFIX.md §2. */
 
 	/* Phase 13b (v0.7.2.2): idempotent registration.
 	 *
