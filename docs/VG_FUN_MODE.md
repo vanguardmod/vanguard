@@ -171,6 +171,97 @@ after, with vg_fun=0 and vg_fun=1.
   Cup-orthodox forbids — Phase 7.3 audit §3.4 confirmed every
   cup-mod treats classes identically. Deferred indefinitely.
 
+## Double-Jump (v0.7.2+) — second vg_fun-controlled feature
+
+When `vg_fun 1` AND `vg_fun_doublejump 1`, players can jump a
+second time while airborne. Default behaviour matches engine
+ground-jump (full height, no cost, all classes); admins tune
+via 4 cvars.
+
+| Cvar | Cup default | Public recommended | Description |
+|---|---|---|---|
+| `vg_fun_doublejump` | 0 | 1 | Master toggle for the feature |
+| `vg_fun_doublejump_height` | 270 | 270 (or 200 for "lower second jump") | Vertical velocity for the second jump (engine `JUMP_VELOCITY` = 270) |
+| `vg_fun_doublejump_classes` | 0 (all) | 0 or bitmask | Restrict to specific classes |
+| `vg_fun_doublejump_stamina` | 0 (no cost) | 50 (drains sprint) | Sprint-bar cost per second jump (units of 100 on STAT_SPRINTTIME's 0..20000 scale) |
+
+### Class bitmask
+
+```
+0  = all classes (default)
+1  = soldier
+2  = medic
+4  = engineer
+8  = field-ops
+16 = covert-ops
+```
+
+Combine bits: `5` = soldier + engineer only.
+
+### Activation
+
+```
+\rcon vg_fun 1
+\rcon map_restart
+\rcon vg_fun_doublejump 1
+```
+
+Cup servers leave `vg_fun 0` and inherit engine single-jump
+behaviour unconditionally — `vg_pm_cvar_int` reads the master
+gate; cup-orthodox path returns 0 and skips the entire
+double-jump branch in `PM_CheckJump`.
+
+### How the second jump works
+
+1. Player jumps from ground (engine standard, `velocity[2] = JUMP_VELOCITY`)
+2. While airborne, player can press jump once more (after release —
+   the existing `PMF_JUMP_HELD` anti-spam still applies)
+3. Engine's 850ms `PM_JUMP_DELAY` anti-bunnyhop cooldown is
+   bypassed for the second jump only; ground-jumps still pay the
+   delay (cup-orthodox bunnyhop prevention preserved)
+4. `PMF_VG_DOUBLEJUMPED` flag set on the player; further jump
+   presses while airborne are rejected
+5. Flag cleared at the landing instant in `PM_GroundTrace`
+   (transition `groundEntityNum` NONE → real entity), restoring
+   the second-jump credit for next airtime
+
+### Falldamage interaction
+
+Higher jumps mean harder lands. Public-server admins running
+`vg_fun_doublejump 1` should consider tuning
+`vg_fun_falldmg_*` together for a balanced feel:
+
+```
+\rcon vg_fun_falldmg_dmg_50 35       # was 50 (cup), 40 (public-recommended)
+\rcon vg_fun_falldmg_gib_health -300 # no-gib-on-fall
+```
+
+### Cup-orthodox preservation
+
+`vg_fun=0` short-circuits double-jump entirely:
+
+- `vg_pm_cvar_int("vg_fun", 0)` returns 0 → eligibility check
+  fails immediately, byte-identical to upstream behaviour
+- The 850ms `PM_JUMP_DELAY` gate stays active in the standard
+  branch
+- `PMF_VG_DOUBLEJUMPED` bit is never set; engine sees normal
+  `pm_flags` layout
+- Phase 6 multi-region hitbox + Phase 7 strict-mode + Phase 8.0a
+  NULL-guard untouched (movement layer is independent)
+
+### Edge cases handled by upstream
+
+- **Prone:** PM_CheckJump early-returns on `EF_PRONE` (line 825),
+  so prone players don't double-jump
+- **Ladder:** `PM_LadderMove` dispatches before `PM_AirMove`, so
+  PM_CheckJump never fires on ladders
+- **Swimming:** `PM_CheckWaterJump` runs before, water-jump path
+  takes precedence
+- **Spectator/free-fly:** different pm_type dispatches; PM_CheckJump
+  doesn't fire
+- **MG42-mounted, vehicles:** `EF_MOUNTEDTANK` blocks all jumps
+  upstream
+
 ## Implementation notes
 
 All `vg_fun_*` cvar reads MUST use the helper API
