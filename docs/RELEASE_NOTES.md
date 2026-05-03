@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.6.1 — Phase 7.3 Cup-Movement Foundation (TBD)
+## v0.6.1 — Phase 7.3 Cup-Movement Foundation (2026-05-02)
 
 ### Configuration changes
 - chore(config): bump `g_pronedelay` from 0 → 1 in defaultpublic.config
