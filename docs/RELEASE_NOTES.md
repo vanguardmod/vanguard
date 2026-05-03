@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.7.1 — Falldamage Profile (TBD)
+## v0.7.1 — Falldamage Profile (2026-05-03)
 
 > **First vg_fun-controlled feature.** Phase 8.0b Falldamage
 > Redesign shipped on top of the v0.7.0 vg_fun foundation. At
