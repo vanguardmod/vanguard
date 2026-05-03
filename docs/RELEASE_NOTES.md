@@ -3,6 +3,54 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.6.2 — Copyright Attribution Sweep (TBD)
+
+### Hygiene
+
+- chore(copyright): add VanguardMod attribution to **13** modified
+  ETLegacy files (Triple-Header: id Software + ET:Legacy + VanguardMod
+  + SPDX-License-Identifier). Per Memory #10 / Phase A recon.
+
+### Files updated
+
+- `src/game/`: g_main.c, g_client.c, g_svcmds.c, g_cvars.c
+- `src/cgame/`: cg_weapons.c, cg_loadpanel.c, cg_cvars.c, cg_cvars.h,
+  cg_servercmds.c, cg_view.c, cg_local.h
+- `src/ui/`: ui_main.c
+- `src/qcommon/`: common.c
+
+### Pre-existing attributions preserved (not modified by this PR)
+
+Phase A recon initially flagged 18 files (16 Triple + 2 Dual). On
+deeper inspection (`head -80` instead of `head -30`), 5 files
+already carry valid VanguardMod attribution from the v0.4.3 SPDX
+sweep — just in a different format (a separate "Modifications for
+VanguardMod" comment block following the GPL boilerplate, with
+SPDX-FileCopyrightText / SPDX-License-Identifier lines and
+descriptive paragraphs explaining what was modified).
+
+Per wahke review (recon §8 Option α): these are legally correct as-is;
+reformatting would not add legal value and would lose the descriptive
+paragraphs. **Skipped:**
+
+- `src/game/g_combat.c` — separate VG block at lines 32-46
+- `src/game/bg_animgroup.c` — same pattern
+- `src/game/bg_public.h` — same pattern
+- `src/game/g_mdx.c` — separate VG block (lines 31-44), no ETLegacy
+  boilerplate (3rd-party Christopher Lais zlib-license header)
+- `src/game/g_mdx.h` — same pattern (lines 29-41)
+
+### Deferred
+
+- `src/game/bg_pmove.c` — currently unmodified post-import per Phase A
+  recon (`git log de8ab0a..HEAD -- src/game/bg_pmove.c` returns no
+  commits). VanguardMod attribution will be added when Phase 7.3
+  falldamage redesign first modifies the file (v0.7.0).
+
+### Reference
+
+- Audit: `docs/notes/PHASE_COPYRIGHT_SWEEP_RECON.md` (§9 execution log)
+
 ## v0.6.1 — Phase 7.3 Cup-Movement Foundation (2026-05-02)
 
 ### Configuration changes
