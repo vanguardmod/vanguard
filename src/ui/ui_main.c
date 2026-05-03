@@ -39,6 +39,8 @@
  */
 
 #include "ui_local.h"
+#include "ui_cvars.h"           /* vanguard_diag_branding (v0.7.0.1) */
+#include "ui_vg_branding.h"     /* Phase Branding 2 (v0.7.0.1) */
 #include "../qcommon/q_oss.h"
 #include "ui_cvars.h"
 
@@ -8083,14 +8085,40 @@ const char *UI_FeederItemText(int feederID, int index, int column, qhandle_t *ha
 	case FEEDER_MODS:
 		if (index >= 0 && index < uiInfo.modCount)
 		{
+			/* VanguardMod v0.7.0.1: Phase Branding 2 — TIER 1 hardcoded
+			 * lookup table. Returns a color-coded display string for
+			 * known mods. Overrides description.txt for consistency
+			 * across the mod list (most community mods don't ship a
+			 * branded description.txt). See docs/VG_BRANDING.md +
+			 * src/ui/ui_vg_branding.c for the table + override
+			 * rationale. Diagnostic gate: vanguard_diag_branding 1 */
+			const char *vgBrand = VG_Branding_GetModDisplay(uiInfo.modList[index].modName);
+			if (vgBrand)
+			{
+				if (vanguard_diag_branding.integer)
+				{
+					Com_Printf("VG_Brand: %-12s -> %s^7 (table)\n",
+					           uiInfo.modList[index].modName, vgBrand);
+				}
+				return vgBrand;
+			}
+			/* TIER 2: description.txt content (existing ETLegacy behaviour). */
 			if (uiInfo.modList[index].modDescr && *uiInfo.modList[index].modDescr)
 			{
+				if (vanguard_diag_branding.integer)
+				{
+					Com_Printf("VG_Brand: %-12s -> %s^7 (description.txt)\n",
+					           uiInfo.modList[index].modName, uiInfo.modList[index].modDescr);
+				}
 				return uiInfo.modList[index].modDescr;
 			}
-			else
+			/* TIER 3: raw directory name (existing fallback). */
+			if (vanguard_diag_branding.integer)
 			{
-				return uiInfo.modList[index].modName;
+				Com_Printf("VG_Brand: %-12s -> (no table, no description; raw dir name)\n",
+				           uiInfo.modList[index].modName);
 			}
+			return uiInfo.modList[index].modName;
 		}
 		break;
 	case FEEDER_CINEMATICS:

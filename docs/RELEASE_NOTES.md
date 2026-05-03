@@ -3,6 +3,83 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.0.1 — UI Cosmetic Updates (TBD)
+
+> Hotfix release. Two UI-cosmetic improvements bundled into a
+> single PR — both rebuild the same `ui_mp_*.so/.dll`, both
+> low-risk. **No gameplay changes, no server-side changes,
+> no regressions to Phase 8.0a / WolfGuard / vg_fun /
+> vg_Hitbox.** Falldamage Redesign (Phase 8.0b) stays as
+> separate v0.7.1 — different testing window.
+
+### Branding-2 — Mod-list color-codes
+
+- feat(ui): add hardcoded mod-name lookup table for the Mods
+  menu. All known ET mods (Jaymod, ETLegacy, NoQuarter, silEnT,
+  ETPub, ETPro, CompET, Nitmod, xmod, etmain base game) now
+  display in their respective brand colors. VanguardMod itself
+  shows as `^8Vanguard^7Mod`.
+- New: `src/ui/ui_vg_branding.{c,h}` — lookup table + helper API.
+- New: `vanguard_diag_branding` cvar (CVAR_TEMP, default 0) for
+  per-mod resolution debugging.
+- Hook point: `src/ui/ui_main.c::UI_FeederItemText case
+  FEEDER_MODS` — TIER 1 (lookup table) → TIER 2
+  (`description.txt`) → TIER 3 (raw dir name) cascade.
+- Default behaviour for unknown mods unchanged
+  (description.txt → raw dir name).
+- New: `docs/VG_BRANDING.md` — full spec, currently branded mods,
+  contribution instructions, license attribution (Nitmod
+  acknowledged for pattern inspiration; clean-room
+  re-implementation).
+
+### Discord-link update
+
+- chore(ui): update VanguardMod Discord invite from
+  `umnM8wVrth` to `GNSy7JTHV9` across both UI menu files
+  that reference our community server:
+  - `etmain/ui/main.menu:147` (main-menu Discord button URL)
+  - `etmain/ui/credits_vanguardmod.menu:137` (credits-page
+    Discord label)
+- ETLegacy attribution Discord (`UBAZFys`) in
+  `etmain/ui/etlegacy_discord.menu` is **untouched** — that's
+  the upstream ETLegacy team's Discord, linked from their
+  credits page as proper attribution.
+
+### CI
+
+- New gate in `.github/workflows/ci.yml` build-linux job:
+  `strings build/vanguard/ui.mp.x86_64.so | grep -c
+  "vg_mod_brands\|VG_Branding"` must return ≥2. Catches missing
+  lookup-table linkage.
+
+### Verification (local)
+
+- ✓ Build green: Linux x86_64 (CI builds Win64 + Linux; Win32
+  ships at release time)
+- ✓ Symbol presence in `ui.mp.x86_64.so`: `VG_Branding_GetModDisplay`,
+  `VG_Branding_PrintTable`, `vg_mod_brands`, `vanguard_diag_branding`
+  + 7 string hits for the CI gate (≥2 required, PASS)
+- ✓ Color-coded display strings present in binary
+  (`^8Vanguard^7Mod`, `^3Jay^7mod`, `^7silEnT`, `^7Comp^1ET`)
+- ✓ All 3 TIER log lines present (`VG_Brand: ... (table)`,
+  `... (description.txt)`, `... (raw dir name)`)
+- ✓ Discord URL `GNSy7JTHV9` present in pk3-staged
+  `ui/main.menu`; old `umnM8wVrth` no longer in any Vanguard
+  reference (one mention remains in the v0.5.x-v0.7.0 history
+  comment at main.menu:147 — intentional for context)
+- ✓ Regression: existing UI cvars still alive (`ui_brassTime`,
+  `ui_drawCrosshair`, `UI_LoadMods` etc.); WolfGuard banner,
+  vg_fun mode-line, vg_Hitbox, Phase 8.0a NULL-guard all
+  untouched (UI module doesn't link against qagame).
+
+### Reference
+
+- Audit: `docs/notes/PHASE_BRANDING_2_AUDIT.md` (also committed
+  as part of this PR)
+- Earlier branding work: `docs/notes/PHASE_BRANDING_AUDIT.md`
+  (the v0.5.2.4 description.txt deployment fix — superseded for
+  multi-mod consistency by Branding 2)
+
 ## v0.7.0 — vg_fun Foundation (2026-05-03)
 
 > Architectural pivot. v0.7.0 was originally scoped for Falldamage

@@ -34,6 +34,11 @@
 
 #include "../qcommon/q_shared.h"
 
+/* VanguardMod v0.7.0.1: Phase Branding 2 diagnostic flag. CVAR_TEMP
+ * (re-arm per session). When set, UI_FeederItemText prints each
+ * mod-name resolution outcome. */
+extern vmCvar_t vanguard_diag_branding;
+
 extern vmCvar_t ui_brassTime;
 extern vmCvar_t ui_drawCrosshair;
 extern vmCvar_t ui_drawCrosshairPickups;

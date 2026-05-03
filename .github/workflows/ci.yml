@@ -106,6 +106,25 @@ jobs:
             exit 1
           fi
 
+      - name: Verify VG_Branding lookup table in ui Linux SO
+        run: |
+          # v0.7.0.1 Phase Branding 2 sanity gate. The ui module must
+          # contain the vg_mod_brands lookup table + the VG_Branding_*
+          # helper symbols. Threshold ≥2 covers the table symbol +
+          # at least one VG_Branding_* string. Catches the case where
+          # ui_vg_branding.c got dropped from the UI build (cmake
+          # FILE(GLOB) re-glob misses on stale configure state).
+          set -euo pipefail
+          BIN=$(find build -name 'ui.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "vg_mod_brands\|VG_Branding")
+          echo "VG_Branding symbol count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 2 ]; then
+            echo "::error::v0.7.0.1 VG_Branding lookup table not found in ui binary (got ${COUNT}, expected >=2)."
+            echo "::error::Check that src/ui/ui_vg_branding.c is compiled into the ui module (cmake re-configure if needed)."
+            exit 1
+          fi
+
       - name: Verify vg_fun foundation in qagame Linux SO
         run: |
           # v0.7.0 sanity gate (Phase 9.0 audit §9). The qagame binary
