@@ -3,7 +3,7 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
-## v0.6.2 — Copyright Attribution Sweep (TBD)
+## v0.6.2 — Copyright Attribution Sweep (2026-05-02)
 
 ### Hygiene
 
