@@ -3,6 +3,88 @@
 User-visible changes per published version. For build / release
 mechanics, see `docs/RELEASE_PROCESS.md`.
 
+## v0.7.2.1 — Production Hotfix (TBD)
+
+> **Two v0.7.2 production-blocker bugs fixed.** Both surfaced
+> within 30 minutes of v0.7.2 release via wahke's live-test.
+> Single hotfix release; combined diff ~80 LoC across 3 source
+> files. Phase 8.0a NULL-guard untouched; cup-orthodox preserved.
+
+### Bug 1 — Splash damage restored (CRITICAL)
+
+- fix(combat): grenades, Panzerfaust, rifle-grenades, dynamite,
+  satchel, mortars, airstrike, landmines now apply damage
+  correctly. v0.7.2 strict-mode (`vanguard_hitbox_strict 1`)
+  rejected splash-damage AABB-only hits because the explosion
+  origin sits outside the player capsule volume.
+- New helper `vg_Hitbox_IsSplashMod` in `g_vanguard.c` covers
+  16 explosion MODs (`MOD_GRENADE`, `_LAUNCHER`, `_PINEAPPLE`,
+  `MOD_PANZERFAUST`, `MOD_BAZOOKA`, `MOD_DYNAMITE`,
+  `MOD_AIRSTRIKE`, `MOD_EXPLOSIVE`, `MOD_GPG40`, `MOD_M7`,
+  `MOD_LANDMINE`, `MOD_SATCHEL`, `MOD_MORTAR`, `MOD_MORTAR2`,
+  `MOD_MAPMORTAR`, `MOD_MAPMORTAR_SPLASH`). `MOD_FLAMETHROWER`
+  + `MOD_SMOKEGRENADE` deliberately omitted (non-splash).
+- New helper `vg_Hitbox_IsBypassMod` combines self-damage
+  (Phase 8.0a) + splash (Phase 13). Future MOD-class bypasses
+  extend this single predicate.
+- Strict-rejection at `g_combat.c:2040` now bypasses for
+  `IsBypassMod` MODs — falls through to the multiplier path
+  with `dmg_default` (1.0x) for `IMPACTPOINT_UNUSED`, matching
+  upstream uniform-splash semantics.
+
+### Bug 2 — Double-jump now triggers (HIGH)
+
+- fix(vg_fun): `vg_Fun_RegisterCvar` now always adds
+  `CVAR_SERVERINFO` flag. v0.7.2 double-jump silently failed
+  because cgame's local cvar pool returned empty values for
+  `vg_fun_doublejump_*` (registered only server-side); shared
+  `bg_pmove.c::vg_pm_cvar_int` helper reads via
+  `trap_Cvar_VariableStringBuffer` got empty string →
+  `atoi("")` = 0 → eligibility check failed.
+- `CVAR_SERVERINFO` makes the engine push values to all clients
+  via configstring; cgame's cvar pool now sees the
+  authoritative server value. Cup-orthodox preserved (flag
+  does not change values, only propagation).
+- Affected cvars (newly carry CVAR_SERVERINFO):
+  - `vg_fun_falldmg_*` (5 cvars, v0.7.1)
+  - `vg_fun_doublejump_*` (4 cvars, v0.7.2 — the bug-trigger)
+  - All future `vg_fun_*` registered via `vg_Fun_RegisterCvar`
+
+### Phase 6/7/8 regression-safety
+
+- **Phase 8.0a NULL-guard** at `g_combat.c:1781-1784` UNTOUCHED
+  (static grep verified)
+- **Multi-region direct-hit damage** unchanged (only the
+  strict-mode reject branch is bypassed; multiplier path
+  identical)
+- **Strict-mode** still rejects non-bypass AABB-only hits
+  exactly as before
+- **Cup-orthodox** preserved at default `vg_fun=0` (master
+  gate short-circuits regardless of cgame cvar reads)
+
+### CI
+
+- New gate: splash-bypass helpers presence (`vg_Hitbox_IsSplashMod`
+  + `vg_Hitbox_IsBypassMod` symbols in qagame.so, ≥2)
+- New gate: `CVAR_SERVERINFO` OR-in in `vg_Fun_RegisterCvar`
+  (static-source check)
+
+### Verification (local)
+
+- ✓ Build green for qagame + cgame + ui + tvgame + mod_pk3
+- ✓ CI gate sims: 2 splash helpers ✓, SERVERINFO OR-in line ✓
+- ✓ Phase 8.0a NULL-guard intact (4-clause guard via grep)
+- ✓ `BYPASS` + existing `reject` strings both in binary
+  (both diagnostic paths compiled)
+- ✓ Regression: vg_Fun_GetInt + vg_Hitbox_IsActive + WG_Active
+  + vg_perf_traces_total + mdx_hit_test all alive in qagame.so
+
+### Reference
+
+- Audit: `docs/notes/PHASE_13_PRODUCTION_HOTFIX.md`
+- Discovery: 2026-05-03 v0.7.2 live-test (wahke)
+- Bundled fixes per Memory #4 four-digit hotfix pattern
+
 ## v0.7.2 — Double-Jump (2026-05-03)
 
 > **Second vg_fun-controlled feature.** Players can jump a

@@ -2039,16 +2039,48 @@ void G_DamageExt(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec
 			 * admins who need byte-identical fallback. */
 			if (mdx_ip == IMPACTPOINT_UNUSED && vg_Hitbox_StrictMode())
 			{
-				if (vg_Hitbox_DebugActive())
+				/* Phase 13 (v0.7.2.1): splash-damage MOD bypass.
+				 * Grenades, Panzerfaust, rifle-grenades, dynamite,
+				 * satchel, mortars, airstrike, landmines call
+				 * G_Damage with the explosion ORIGIN as the point.
+				 * That point is typically outside the player volume,
+				 * so mdx_hit_test returns IMPACTPOINT_UNUSED — but
+				 * the AABB hit is real and damage MUST apply (the
+				 * G_RadiusDamage caller already ran the radius
+				 * filter). Bypass the strict reject for these MODs;
+				 * fall through to the multiplier path with
+				 * dmg_default for uniform splash damage.
+				 *
+				 * Phase 8.0a self-damage MODs (NULL-point) never
+				 * reach this code — they are filtered at the
+				 * multi-region branch entry-gate (line 1781). */
+				if (vg_Hitbox_IsBypassMod(mod))
 				{
-					G_Printf("VG_DIAG: strict-hitbox reject "
-					         "(AABB hit but no capsule) "
-					         "attacker=%d target=%d weapon=%d mod=%d\n",
-					         (int)(attacker - g_entities),
-					         (int)(targ - g_entities),
-					         (int)attacker->s.weapon, (int)mod);
+					if (vg_Hitbox_DebugActive())
+					{
+						G_Printf("VG_DIAG: strict-hitbox BYPASS "
+						         "(splash/self mod=%d) "
+						         "attacker=%d target=%d weapon=%d\n",
+						         (int)mod,
+						         (int)(attacker - g_entities),
+						         (int)(targ - g_entities),
+						         (int)attacker->s.weapon);
+					}
+					/* fall through to multiplier path — do NOT return */
 				}
-				return;
+				else
+				{
+					if (vg_Hitbox_DebugActive())
+					{
+						G_Printf("VG_DIAG: strict-hitbox reject "
+						         "(AABB hit but no capsule) "
+						         "attacker=%d target=%d weapon=%d mod=%d\n",
+						         (int)(attacker - g_entities),
+						         (int)(targ - g_entities),
+						         (int)attacker->s.weapon, (int)mod);
+					}
+					return;
+				}
 			}
 
 			mult      = vg_Hitbox_DamageMultiplierFor(mdx_ip);
