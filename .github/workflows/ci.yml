@@ -106,6 +106,26 @@ jobs:
             exit 1
           fi
 
+      - name: Verify vg_fun falldamage cvars in qagame Linux SO
+        run: |
+          # v0.7.1 Phase 8.0b sanity gate. The qagame binary must
+          # contain the 5 vg_fun_falldmg_* cvar name strings (4 damage
+          # values + gib_health) registered by vg_Fun_Init via
+          # vg_Fun_RegisterCvar. Threshold ≥5 = exact match. Catches
+          # the case where a future PR drops one of the
+          # vg_Fun_RegisterCvar calls or renames a cvar without
+          # updating the helper-API call site in g_active.c.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(strings -a "${BIN}" | grep -c "vg_fun_falldmg")
+          echo "vg_fun_falldmg cvar count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 5 ]; then
+            echo "::error::v0.7.1 vg_fun_falldmg cvars not found (got ${COUNT}, expected >=5)."
+            echo "::error::Check that vg_Fun_Init in g_vanguard.c registers all 5 falldamage cvars."
+            exit 1
+          fi
+
       - name: Verify VG_Branding lookup table in ui Linux SO
         run: |
           # v0.7.0.1 Phase Branding 2 sanity gate. The ui module must

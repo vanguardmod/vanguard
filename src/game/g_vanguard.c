@@ -645,6 +645,22 @@ void vg_Fun_Init(void)
 	         vg_fun.integer ?
 	             "fun-public — sub-cvars unlocked" :
 	             "cup-orthodox — sub-cvars locked to cup-defaults");
+
+	/* vg_fun-controlled features registry (v0.7.1+).
+	 *
+	 * First feature: Falldamage (Phase 8.0b). Five sub-cvars expose
+	 * the engine-default damage values + gib_health threshold from
+	 * G_FallDamage (g_active.c:972-1015). At vg_fun=0 the helper
+	 * returns the cup_default (engine value) regardless of cvar
+	 * setting — byte-identical upgrade. At vg_fun=1 the cvar value
+	 * wins; admin can tune via server.cfg. Cvar defaults match
+	 * cup-defaults (engine values) so even at vg_fun=1 with no
+	 * admin tweaks the behaviour is identical to vg_fun=0. */
+	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_10",     "10",   CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_15",     "15",   CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_25",     "25",   CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_falldmg_dmg_50",     "50",   CVAR_ARCHIVE);
+	vg_Fun_RegisterCvar("vg_fun_falldmg_gib_health", "-175", CVAR_ARCHIVE);
 }
 
 void vg_Fun_PrintStatus(void)
