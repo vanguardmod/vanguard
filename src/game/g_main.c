@@ -5,6 +5,10 @@
  * ET: Legacy
  * Copyright (C) 2012-2024 ET:Legacy team <mail@etlegacy.com>
  *
+ * VanguardMod
+ * Copyright (C) 2026 wahke <info@wahke.lu> (https://wahke.lu)
+ * Copyright (C) 2026 VanguardMod Project Contributors
+ *
  * This file is part of ET: Legacy - http://www.etlegacy.com
  *
  * ET: Legacy is free software: you can redistribute it and/or modify
@@ -27,6 +31,8 @@
  * If not, please request a copy in writing from id Software at the address below.
  *
  * id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 /**
  * @file g_main.c
