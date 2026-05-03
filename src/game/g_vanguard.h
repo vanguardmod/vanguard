@@ -161,6 +161,27 @@ qboolean vg_Hitbox_ConsumeDiagDumpRequest(void);
 qboolean vg_Hitbox_IsSelfDamageMod(meansOfDeath_t mod);
 
 /**
+ * @brief Phase 13 (v0.7.2.1): splash-damage MOD detection. Returns
+ *        qtrue for explosion-origin MODs (grenades, Panzerfaust,
+ *        rifle-grenades, dynamite, satchel, mortar, airstrike,
+ *        landmines). Used by g_combat.c strict-rejection bypass at
+ *        line ~2040 — splash hits resolve to IMPACTPOINT_UNUSED
+ *        because the explosion centre is outside the player volume,
+ *        and would otherwise be rejected by strict-mode → 0 damage.
+ *        Distinct from vg_Hitbox_IsSelfDamageMod (Phase 8.0a) which
+ *        handles MODs with NULL points filtered earlier.
+ */
+qboolean vg_Hitbox_IsSplashMod(meansOfDeath_t mod);
+
+/**
+ * @brief Phase 13 combined predicate — true if the MOD should bypass
+ *        the strict-mode capsule rejection. Currently
+ *        IsSelfDamageMod || IsSplashMod. Future MOD-class bypass
+ *        additions should extend this helper.
+ */
+qboolean vg_Hitbox_IsBypassMod(meansOfDeath_t mod);
+
+/**
  * @brief Tear down. No-op currently — vmCvars have module lifetime.
  *        Call once per map from G_ShutdownGame for symmetry / hook
  *        point for any future teardown.

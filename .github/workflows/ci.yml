@@ -106,6 +106,41 @@ jobs:
             exit 1
           fi
 
+      - name: Verify Phase 13 splash-bypass helpers in qagame Linux SO
+        run: |
+          # v0.7.2.1 Phase 13 sanity gate: splash-damage MOD bypass
+          # helpers (vg_Hitbox_IsSplashMod, vg_Hitbox_IsBypassMod) must
+          # be linked into qagame, otherwise the strict-rejection
+          # bypass at g_combat.c:2040 silently fails (= splash damage
+          # broken, the v0.7.2 production-blocker bug). Threshold ≥2
+          # = both helper symbols present.
+          set -euo pipefail
+          BIN=$(find build -name 'qagame.mp.*.so' -print -quit)
+          test -n "${BIN}"
+          COUNT=$(nm -a "${BIN}" | grep -cE "vg_Hitbox_IsSplashMod|vg_Hitbox_IsBypassMod" || true)
+          echo "Splash-bypass helper count in ${BIN}: ${COUNT}"
+          if [ "${COUNT}" -lt 2 ]; then
+            echo "::error::v0.7.2.1 splash-bypass helpers not found (got ${COUNT}, expected >=2)."
+            echo "::error::Check that g_vanguard.c defines vg_Hitbox_IsSplashMod + vg_Hitbox_IsBypassMod."
+            exit 1
+          fi
+
+      - name: Verify Phase 13 CVAR_SERVERINFO in vg_Fun_RegisterCvar
+        run: |
+          # v0.7.2.1: vg_Fun_RegisterCvar must always add
+          # CVAR_SERVERINFO so cgame's bg_pmove.c reads via
+          # trap_Cvar_VariableStringBuffer return correct values
+          # (otherwise vg_fun features in shared pmove silently
+          # fail in client prediction). Static-source check —
+          # the OR-in is a single line that must be present.
+          set -euo pipefail
+          if ! grep -q "cvar_flags |= CVAR_SERVERINFO" src/game/g_vanguard.c; then
+            echo "::error::v0.7.2.1: vg_Fun_RegisterCvar missing CVAR_SERVERINFO OR-in."
+            echo "::error::Check src/game/g_vanguard.c — the line 'cvar_flags |= CVAR_SERVERINFO' must be present."
+            exit 1
+          fi
+          echo "vg_Fun_RegisterCvar SERVERINFO OR-in: VERIFIED"
+
       - name: Verify vg_fun_doublejump cvars in qagame Linux SO
         run: |
           # v0.7.2 Phase 12 sanity gate. The qagame binary must

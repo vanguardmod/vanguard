@@ -262,6 +262,45 @@ Higher jumps mean harder lands. Public-server admins running
 - **MG42-mounted, vehicles:** `EF_MOUNTEDTANK` blocks all jumps
   upstream
 
+## Splash-damage handling (v0.7.2.1+)
+
+VanguardMod's Phase 6 multi-region hitbox is **bypassed for
+splash-damage MODs** (grenades, Panzerfaust, rifle-grenades,
+dynamite, satchel, mortars, airstrike, landmines). Direct-hit
+damage still uses Multi-Region capsules; splash uses engine
+AABB radius — same as ETLegacy/W:ET upstream.
+
+The bypass is implemented via `vg_Hitbox_IsBypassMod` (combined
+self-damage + splash) at the strict-mode rejection point in
+`g_combat.c::G_Damage`. With `vanguard_hitbox_strict 1` (default,
+cup-orthodox), splash MODs that resolve to `IMPACTPOINT_UNUSED`
+fall through to the multiplier path with `dmg_default` instead
+of being rejected.
+
+This fix shipped in v0.7.2.1 after v0.7.2 production-test
+revealed all explosion MODs were dealing 0 damage. The fix is
+a Phase 8.0a-pattern extension — same architectural class as
+the v0.5.2.2 NULL-guard for self-damage MODs.
+
+## Cvar sync (v0.7.2.1+)
+
+All `vg_fun_*` cvars registered via `vg_Fun_RegisterCvar` now
+have `CVAR_SERVERINFO` flag automatically applied. This enables
+client-prediction in shared `bg_pmove.c` (e.g. double-jump,
+falldamage thresholds) to read correct values via
+`trap_Cvar_VariableStringBuffer`.
+
+The flag affects propagation only — cvar VALUES are unchanged,
+admins still set them server-side. Visible via `/serverinfo`
+to connected clients (gameplay transparency, no security
+concern for `vg_fun_*` cvars).
+
+This fix shipped in v0.7.2.1 after v0.7.2 production-test
+revealed `vg_fun_doublejump_*` cvars were not reaching cgame's
+prediction context (returned empty string → `atoi("")` = 0 →
+eligibility check failed silently). Future `vg_fun_*` features
+inherit the fix automatically.
+
 ## Implementation notes
 
 All `vg_fun_*` cvar reads MUST use the helper API
