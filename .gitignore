@@ -90,3 +90,9 @@ vendor/omnibot-runtime/
 # untracked siblings of the actual file in `git status` and have no
 # business in version control.
 *:Zone.Identifier
+
+# Internal engineering notes — local only, never committed
+.notes-private/
+
+# Build artefacts
+build/

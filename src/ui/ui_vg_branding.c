@@ -31,7 +31,7 @@ static const vg_mod_brand_t vg_mod_brands[] =
 {
 	{ "vanguard",  "^8Vanguard^7Mod"   }, /* VanguardMod own branding */
 	{ "legacy",    "^1ET^7:Legacy"     }, /* ETLegacy upstream */
-	{ "jaymod",    "^3Jay^7mod"        }, /* Jaymod */
+	{ "jaymod",    "^8Jay^4mod"        }, /* Jaymod */
 	{ "nitmod",    "^7N^1!^7tmod"      }, /* Nitmod */
 	{ "noquarter", "^1No Quarter"      }, /* NoQuarter */
 	{ "etpro",     "^7ETPro"           }, /* ETPro (cup) */

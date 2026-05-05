@@ -152,7 +152,7 @@ TAG _vg_foot_r    "Bip01 R Foot"
 
 // Head — sphere on the head bone (1 tag, no box → sphere).
 //
-// v0.5.2.3: radius 6 → 7. Cup tester cup tester reported headshots
+// v0.5.2.3: radius 6 → 7. A cup tester reported headshots
 // "almost impossible" on v0.5.2.1; the visible helmet half-width on
 // the soldier mesh is ~7-8 units, so r=6 left a ~1-2 unit gap on
 // each lateral side. r=7 covers the typical helmet width. Vertical

@@ -147,7 +147,7 @@ static const vg_hit_area_t vg_hit_areas[] = {
 	 *
 	 * Radius history: v0.4.2-v0.5.2.2 used radius 6 (legacy
 	 * g_realHead inheritance, g_combat.c:988-989). v0.5.2.3 bumps to 7
-	 * — cup tester cup-test feedback "headshots almost impossible"
+	 * — cup-test feedback "headshots almost impossible"
 	 * indicated the visible helmet's ~7-8 unit half-width was outside
 	 * the radius-6 sphere; r=7 covers the lateral edge. See
 	 * docs/notes/PHASE_7_0_2_AUDIT.md §G.1.

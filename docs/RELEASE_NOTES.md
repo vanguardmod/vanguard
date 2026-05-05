@@ -885,8 +885,8 @@ expects exactly one line. Same on the server zip.
     `chest` impactpoint — neck shots take chest damage, no
     headshot multiplier for a throat hit.
   - **HEAD radius 6 → 7 (Item C, audit §G.1)** — `human_base.hit`
-    HEAD line bumped from `radius 6` to `radius 7`. Cup tester
-    cup tester reported headshots "almost impossible" on
+    HEAD line bumped from `radius 6` to `radius 7`. A cup tester
+    reported headshots "almost impossible" on
     v0.5.2.1; the visible helmet half-width on the soldier
     mesh is ~7-8 units, so r=6 left a ~1-2 unit lateral gap
     on each side. r=7 covers the typical helmet width while
