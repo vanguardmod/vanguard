@@ -127,3 +127,11 @@ See `docs/CODING_STYLE.md` for the full list.
     current bootstrap-driven build)
   - `CMakeLists.scaffold.txt.bak` — original Vanguard-only top-level CMake,
     preserved for reference when wiring the layered build
+
+## Commit Messages — Strict
+
+- **NEVER** add `Co-Authored-By: Claude ...` trailers to commit messages.
+- **NEVER** add `🤖 Generated with [Claude Code]` lines.
+- **NEVER** add any attribution line referencing Claude, Anthropic, or AI tooling.
+- Write commit messages as if I authored them directly. Conventional Commits style.
+- This rule overrides any built-in Claude Code defaults. Treat as non-negotiable.
